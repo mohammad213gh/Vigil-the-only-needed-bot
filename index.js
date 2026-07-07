@@ -464,7 +464,7 @@ const commandDefs = [
         .addUserOption(opt =>
             opt.setName('user')
                 .setDescription('The user (defaults to you)')
-                .setRequired(false)),
+                .setRequired(false))),
     new SlashCommandBuilder()
         .setName('deploy')
         .setDescription('Re-register all slash commands (owner only)'),
