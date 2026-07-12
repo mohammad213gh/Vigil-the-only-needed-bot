@@ -14,7 +14,7 @@ async function executeDashboard(interaction) {
         footer: { text: 'Dashboard v2.0' },
         timestamp: true,
     });
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function executeDashAccess(interaction) {
