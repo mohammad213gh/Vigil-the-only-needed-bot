@@ -74,16 +74,25 @@ function getDashUsers() {
     return config[DASH_USERS_KEY];
 }
 
+function generateAccessToken() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let s = '';
+    for (let i = 0; i < 24; i++) s += chars[Math.floor(Math.random() * chars.length)];
+    return 'dash_' + s;
+}
+
 function addDashUser(userId, addedBy) {
     const config = loadConfig();
     if (!config[DASH_USERS_KEY]) config[DASH_USERS_KEY] = {};
+    const token = generateAccessToken();
     config[DASH_USERS_KEY][userId] = {
         addedAt: Date.now(),
         addedBy: addedBy || 'unknown',
         active: true,
+        accessToken: token,
     };
     saveConfig(config);
-    return config[DASH_USERS_KEY];
+    return { users: config[DASH_USERS_KEY], accessToken: token };
 }
 
 function removeDashUser(userId) {
@@ -94,9 +103,13 @@ function removeDashUser(userId) {
     }
 }
 
-function isDashUser(userId) {
+function isDashUser(userId, accessToken) {
     const users = getDashUsers();
-    return !!(userId && users[userId] && users[userId].active);
+    if (!userId || !users[userId] || !users[userId].active) return false;
+    if (accessToken) {
+        return users[userId].accessToken === accessToken;
+    }
+    return false;
 }
 
 // ──── Sessions ────
@@ -140,18 +153,26 @@ function createDashboard() {
         next();
     });
 
-    // ── Auth (password OR Discord ID) ──
+    // ── Auth (password OR Discord ID + Access Token) ──
     app.post('/api/login', (req, res) => {
-        const { password, discordId } = req.body;
+        const { password, discordId, accessToken } = req.body;
         if (password && password === dashboardPassword) {
             const token = generateSession();
             sessions.set(token, true);
             return res.json({ success: true, token });
         }
-        if (discordId && isDashUser(discordId)) {
-            const token = generateSession();
-            sessions.set(token, true);
-            return res.json({ success: true, token, method: 'discord' });
+        if (discordId && accessToken) {
+            // Check if user exists but has no access token (legacy user)
+            const users = getDashUsers();
+            const existing = users[discordId];
+            if (existing && existing.active && !existing.accessToken) {
+                return res.status(401).json({ success: false, error: 'This user needs a new access token. Run /dashaccess remove ' + discordId + ' then /dashaccess add @user again.' });
+            }
+            if (isDashUser(discordId, accessToken)) {
+                const token = generateSession();
+                sessions.set(token, true);
+                return res.json({ success: true, token, method: 'discord' });
+            }
         }
         res.status(401).json({ success: false, error: 'Invalid credentials' });
     });
