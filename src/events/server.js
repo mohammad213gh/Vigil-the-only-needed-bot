@@ -1,6 +1,92 @@
 const { EmbedBuilder } = require('discord.js');
 const { CHANNEL_TYPE_NAMES } = require('../constants');
 
+// ─── Permission Name Lookup (friendly display for channel overwrites) ───
+const PERM_NAMES = {
+    'Administrator': 'Administrator',
+    'ManageGuild': 'Manage Server',
+    'ManageRoles': 'Manage Roles',
+    'ManageChannels': 'Manage Channels',
+    'ManageMessages': 'Manage Messages',
+    'ManageNicknames': 'Manage Nicknames',
+    'ManageWebhooks': 'Manage Webhooks',
+    'ManageThreads': 'Manage Threads',
+    'ManageEvents': 'Manage Events',
+    'KickMembers': 'Kick Members',
+    'BanMembers': 'Ban Members',
+    'ModerateMembers': 'Timeout Members',
+    'MentionEveryone': 'Mention @everyone',
+    'ViewChannel': 'View Channels',
+    'SendMessages': 'Send Messages',
+    'SendTTSMessages': 'Send TTS Messages',
+    'SendMessagesInThreads': 'Send Thread Messages',
+    'CreatePrivateThreads': 'Create Private Threads',
+    'CreatePublicThreads': 'Create Public Threads',
+    'ReadMessageHistory': 'Read History',
+    'AttachFiles': 'Attach Files',
+    'AddReactions': 'Add Reactions',
+    'EmbedLinks': 'Embed Links',
+    'UseExternalEmojis': 'Use External Emojis',
+    'UseExternalStickers': 'Use External Stickers',
+    'UseExternalSounds': 'Use External Sounds',
+    'UseApplicationCommands': 'Use Commands',
+    'Connect': 'Connect',
+    'Speak': 'Speak',
+    'MuteMembers': 'Mute Members',
+    'DeafenMembers': 'Deafen Members',
+    'MoveMembers': 'Move Members',
+    'UseVAD': 'Use Voice Activity',
+    'PrioritySpeaker': 'Priority Speaker',
+    'Stream': 'Stream',
+    'CreateInstantInvite': 'Create Invite',
+    'ChangeNickname': 'Change Nickname',
+    'ViewAuditLog': 'View Audit Log',
+    'ViewGuildInsights': 'View Insights',
+    'SendPolls': 'Send Polls',
+};
+
+function formatPermList(perms) {
+    if (!perms || perms.length === 0) return '(none)';
+    return perms.slice(0, 8).map(p => PERM_NAMES[p] || p).join(', ') + (perms.length > 8 ? ' (+' + (perms.length - 8) + ' more)' : '');
+}
+
+function diffOWPermissions(oldOW, newOW) {
+    // Returns a detailed diff string for a single permission overwrite
+    const oldAllow = oldOW.allow.toArray();
+    const oldDeny = oldOW.deny.toArray();
+    const newAllow = newOW.allow.toArray();
+    const newDeny = newOW.deny.toArray();
+
+    const parts = [];
+
+    // Permissions that went from neutral/granted to denied
+    const denied = newDeny.filter(p => !oldDeny.includes(p));
+    // Permissions that went from neutral/denied to granted
+    const granted = newAllow.filter(p => !oldAllow.includes(p));
+    // Permissions that went from granted to neutral
+    const removed = oldAllow.filter(p => !newAllow.includes(p));
+    // Permissions that went from denied to neutral
+    const unDenied = oldDeny.filter(p => !newDeny.includes(p));
+
+    if (granted.length > 0) parts.push('\u2705 ' + formatPermList(granted));
+    if (denied.length > 0) parts.push('\u274C Denied: ' + formatPermList(denied));
+    if (removed.length > 0) parts.push('\u2796 Removed: ' + formatPermList(removed));
+    if (unDenied.length > 0) parts.push('\u2705 Unrestricted: ' + formatPermList(unDenied));
+
+    // If no specific changes detected but bitfields differ, show the full set
+    if (parts.length === 0) {
+        const allowed = newAllow.length > 0 ? 'Allowed: ' + formatPermList(newAllow) : '';
+        const denied2 = newDeny.length > 0 ? 'Denied: ' + formatPermList(newDeny) : '';
+        return (allowed || '(none)') + (denied2 ? ' | ' + denied2 : '');
+    }
+
+    return parts.join(' | ');
+}
+
+function getOWTargetName(guild, ow) {
+    return guild.roles.cache.get(ow.id)?.name || guild.members.cache.get(ow.id)?.user?.tag || ow.id;
+}
+
 module.exports = [
     {
         name: 'channelCreate',
@@ -26,7 +112,7 @@ module.exports = [
 
             if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
 
-            deps.sendLog(embed, 'server', null, channel.guild.id);
+            deps.sendLog(embed, 'webhooks', null, channel.guild.id);
         },
     },
     {
@@ -52,7 +138,7 @@ module.exports = [
 
             if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
 
-            deps.sendLog(embed, 'server', null, channel.guild.id);
+            deps.sendLog(embed, 'webhooks', null, channel.guild.id);
         },
     },
     {
@@ -92,6 +178,7 @@ module.exports = [
             if (oldChannel.permissionOverwrites && newChannel.permissionOverwrites) {
                 const oldOverwrites = oldChannel.permissionOverwrites.cache;
                 const newOverwrites = newChannel.permissionOverwrites.cache;
+                const guild = newChannel.guild;
 
                 // Check for added overwrites
                 const added = newOverwrites.filter((ow, id) => !oldOverwrites.has(id));
@@ -104,21 +191,38 @@ module.exports = [
                 });
 
                 if (added.size > 0) {
-                    const names = added.map(ow => {
-                        const target = newChannel.guild.roles.cache.get(ow.id)?.name || newChannel.guild.members.cache.get(ow.id)?.user?.tag || ow.id;
-                        return '\u2795 ' + target;
-                    });
-                    changes.push({ name: 'Permission Overwrites Added', old: 'None', new: deps.truncate(names.join(', '), 800) });
+                    for (const [, ow] of added) {
+                        const target = getOWTargetName(guild, ow);
+                        const allowed = ow.allow.toArray();
+                        const denied = ow.deny.toArray();
+                        const parts = [];
+                        if (allowed.length > 0) parts.push('\u2705 ' + formatPermList(allowed));
+                        if (denied.length > 0) parts.push('\u274C Denied: ' + formatPermList(denied));
+                        changes.push({ name: '\u2795 Permissions: ' + target, old: 'None', new: parts.join(' | ') || '(none)' });
+                    }
                 }
                 if (removed.size > 0) {
-                    const names = removed.map(ow => {
-                        const target = oldChannel.guild.roles.cache.get(ow.id)?.name || oldChannel.guild.members.cache.get(ow.id)?.user?.tag || ow.id;
-                        return '\u2796 ' + target;
-                    });
-                    changes.push({ name: 'Permission Overwrites Removed', old: 'None', new: deps.truncate(names.join(', '), 800) });
+                    for (const [, ow] of removed) {
+                        const target = getOWTargetName(guild, ow);
+                        const oldAllowed = ow.allow.toArray();
+                        const oldDenied = ow.deny.toArray();
+                        const parts = [];
+                        if (oldAllowed.length > 0) parts.push('\u2705 ' + formatPermList(oldAllowed));
+                        if (oldDenied.length > 0) parts.push('\u274C Denied: ' + formatPermList(oldDenied));
+                        changes.push({ name: '\u2796 Permissions Removed: ' + target, old: parts.join(' | ') || '(none)', new: 'All permissions cleared' });
+                    }
                 }
                 if (modified.size > 0) {
-                    changes.push({ name: 'Permission Overwrites Modified', old: 'Permissions changed', new: String(modified.size) + ' overwrite(s) modified' });
+                    for (const [, ow] of modified) {
+                        const nw = newOverwrites.get(ow.id);
+                        if (!nw) continue;
+                        const target = getOWTargetName(guild, ow);
+                        const diff = diffOWPermissions(ow, nw);
+                        const oldAllowFormatted = formatPermList(ow.allow.toArray());
+                        const oldDenyArr = ow.deny.toArray();
+                        const oldFull = 'Allowed: ' + oldAllowFormatted + (oldDenyArr.length ? ' | \u274C Denied: ' + formatPermList(oldDenyArr) : '');
+                        changes.push({ name: '\uD83D\uDD04 Permissions: ' + target, old: oldFull, new: diff });
+                    }
                 }
             }
 
@@ -197,7 +301,7 @@ module.exports = [
 
             if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
 
-            deps.sendLog(embed, 'server', null, channel.guild.id);
+            deps.sendLog(embed, 'webhooks', null, channel.guild.id);
         },
     },
 ];
