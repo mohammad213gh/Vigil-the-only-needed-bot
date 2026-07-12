@@ -211,22 +211,30 @@ app.listen(PORT, () => {
 
 // ──────────────────── DIAGNOSTIC: Intercept ALL channel.send() calls with stack trace ────────────────────
 
-const { TextChannel } = require('discord.js');
-const origTextChannelSend = TextChannel.prototype.send;
-TextChannel.prototype.send = function (...args) {
-    const stack = new Error().stack.split('\n').slice(2, 12).join('\n').trim();
-    const guildId = this.guildId || 'DM';
-    const channelName = this.name || 'Unknown';
-    const diagMsg = '[CHANNEL.SEND] guild: ' + guildId + ' | channel: ' + this.id + ' (' + channelName + ')\n--- STACK ---\n' + stack;
-    console.log(diagMsg);
-    const ownerId = process.env.OWNER_ID;
-    if (ownerId && client?.user) {
-        client.users.fetch(ownerId).then(owner => {
-            owner.send('```\n' + diagMsg.slice(0, 1900) + '\n```').catch(() => {});
-        }).catch(() => {});
-    }
-    return origTextChannelSend.apply(this, args);
-};
+function interceptSend(channelProto, name) {
+    const orig = channelProto.send;
+    channelProto.send = function (...args) {
+        const stack = new Error().stack.split('\n').slice(2, 12).join('\n').trim();
+        const guildId = this.guildId || 'DM';
+        const channelName = this.name || 'Unknown';
+        const diagMsg = '[SEND-' + name + '] guild: ' + guildId + ' | channel: ' + this.id + ' (' + channelName + ')\n--- STACK ---\n' + stack;
+        console.log(diagMsg);
+        const ownerId = process.env.OWNER_ID;
+        if (ownerId && client?.user) {
+            client.users.fetch(ownerId).then(owner => {
+                owner.send('```\n' + diagMsg.slice(0, 1900) + '\n```').catch(() => {});
+            }).catch(() => {});
+        }
+        return orig.apply(this, args);
+    };
+}
+
+const { TextChannel, NewsChannel, VoiceChannel, StageChannel, ThreadChannel } = require('discord.js');
+interceptSend(TextChannel.prototype, 'Text');
+interceptSend(NewsChannel.prototype, 'News');
+interceptSend(VoiceChannel.prototype, 'Voice');
+interceptSend(StageChannel.prototype, 'Stage');
+interceptSend(ThreadChannel.prototype, 'Thread');
 
 // ──────────────────── Login ────────────────────
 
