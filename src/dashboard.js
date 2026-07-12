@@ -346,6 +346,32 @@ function createDashboard() {
         res.json(channels);
     });
 
+    // ── Server Management: Audit Log ──
+    app.get('/api/server/:id/audit', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const auditLog = await guild.fetchAuditLogs({ limit: 25 });
+            const entries = auditLog.entries.map(e => ({
+                id: e.id,
+                action: e.action,
+                actionType: e.actionType,
+                targetType: e.target?.constructor?.name || 'Unknown',
+                targetId: e.target?.id || e.targetId || null,
+                executorId: e.executor?.id || null,
+                executorTag: e.executor?.tag || 'Unknown',
+                executorAvatar: e.executor?.displayAvatarURL({ size: 32 }) || null,
+                reason: e.reason || null,
+                changes: e.changes?.slice(0, 5).map(c => ({ key: c.key, old: String(c.old ?? '').slice(0, 100), new: String(c.new ?? '').slice(0, 100) })) || [],
+                createdTimestamp: e.createdTimestamp,
+            }));
+            res.json(entries);
+        } catch (err) {
+            res.status(500).json({ error: 'Failed to fetch audit log: ' + err.message });
+        }
+    });
+
     // ── Server Management: Update logging config ──
     app.post('/api/server/:id/log/config', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
@@ -353,12 +379,25 @@ function createDashboard() {
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         const config = loadConfig();
         if (!config[guild.id]) config[guild.id] = {};
-        const { category, channelId, enabled } = req.body;
+        const { category, channelId, enabled, trackedChannel, trackedChannels } = req.body;
         if (!config[guild.id].logChannels) config[guild.id].logChannels = {};
         if (!config[guild.id].logCategories) config[guild.id].logCategories = {};
+        if (!config[guild.id].trackedChannels) config[guild.id].trackedChannels = [];
         if (category) {
             if (channelId !== undefined) config[guild.id].logChannels[category] = channelId || null;
             if (enabled !== undefined) config[guild.id].logCategories[category] = enabled;
+        }
+        if (trackedChannel !== undefined) {
+            const tc = config[guild.id].trackedChannels;
+            if (trackedChannels === 'set') {
+                config[guild.id].trackedChannels = Array.isArray(trackedChannel) ? trackedChannel : [trackedChannel];
+            } else if (trackedChannels === 'add') {
+                if (!tc.includes(trackedChannel)) tc.push(trackedChannel);
+            } else if (trackedChannels === 'remove') {
+                config[guild.id].trackedChannels = tc.filter(id => id !== trackedChannel);
+            } else if (trackedChannels === 'clear') {
+                config[guild.id].trackedChannels = [];
+            }
         }
         saveConfig(config);
         res.json({ success: true });
