@@ -1,8 +1,8 @@
 module.exports = {
-    name: 'ready',
+    name: 'clientReady',
     once: true,
     execute: (deps) => async (client) => {
-        console.log('Logged in as ' + client.user.tag);
+        console.log('Logged in as ' + client.user.username);
 
         if (!process.env.OWNER_ID) {
             console.warn('[WARN] OWNER_ID is not set! All owner-only commands will be locked for everyone.');
