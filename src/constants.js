@@ -1,6 +1,6 @@
 // ──────────────────── Log Categories ────────────────────
 
-const LOG_CATEGORIES = ['messages', 'reactions', 'members', 'roles', 'server', 'voice'];
+const LOG_CATEGORIES = ['messages', 'reactions', 'members', 'roles', 'server', 'voice', 'threads', 'emojis', 'bans', 'invites', 'stickers', 'automod', 'scheduled', 'stage', 'webhooks', 'integrations'];
 
 const CATEGORY_EMOJIS = {
     messages: '\uD83D\uDCE8',
@@ -9,6 +9,16 @@ const CATEGORY_EMOJIS = {
     roles: '\uD83C\uDFF7\uFE0F',
     server: '\uD83D\uDDA5\uFE0F',
     voice: '\uD83C\uDFA4',
+    threads: '\uD83E\uDD9C',
+    emojis: '\uD83D\uDE0E',
+    bans: '\uD83D\uDEAB',
+    invites: '\uD83D\uDD17',
+    stickers: '\uD83D\uDC02',
+    automod: '\uD83E\uDD16',
+    scheduled: '\uD83D\uDCC5',
+    stage: '\uD83C\uDF9F',
+    webhooks: '\uD83D\uDD17',
+    integrations: '\uD83D\uDD17',
 };
 
 // ──────────────────── WebSocket Status Map ────────────────────
