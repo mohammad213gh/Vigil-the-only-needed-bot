@@ -90,11 +90,14 @@ body::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hover)}
 .card-stat .info .v{font-size:17px;font-weight:700;color:#fff;margin-top:1px}
 .card-stat .info .s{font-size:10px;color:var(--text-muted);margin-top:1px}
 
+/* Branding */
+.brand-ft{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:59;font-size:10px;color:rgba(255,255,255,0.08);letter-spacing:0.4px;pointer-events:none;white-space:nowrap;transition:opacity 0.3s;font-family:'Inter',sans-serif;text-align:center}
+
 /* macOS Dock */
 .dock-wrap{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:60;display:none;align-items:center;justify-content:center;pointer-events:none}
 .dock-enabled .dock-wrap{display:flex}
-.dock{display:flex;align-items:flex-end;gap:12px;padding:10px 22px 8px;border-radius:24px;background:rgba(10,10,20,0.55);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,0.06);box-shadow:0 4px 32px rgba(0,0,0,0.3);pointer-events:auto;position:relative}
-.dock-item{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;background:rgba(255,255,255,0.03);border:none;color:var(--text-dim);font-family:inherit;flex-shrink:0;transform-origin:center bottom}
+.dock{display:flex;align-items:flex-end;gap:0;padding:10px 22px 8px;border-radius:24px;background:rgba(10,10,20,0.55);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,0.06);box-shadow:0 4px 32px rgba(0,0,0,0.3);pointer-events:auto;position:relative}
+.dock-item{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;background:rgba(255,255,255,0.03);border:none;color:var(--text-dim);font-family:inherit;flex-shrink:0;transform-origin:center bottom;margin:0 6px}
 .dock-item:hover{color:var(--text)}
 .dock-item.active{color:var(--accent);background:rgba(var(--accent-rgb),0.08)}
 .dock-item svg{width:24px;height:24px;pointer-events:none}
@@ -256,8 +259,8 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
 .dock-preview .dp-item.active{color:var(--accent);background:rgba(var(--accent-rgb),0.08)}
 
 /* Responsive */
-@media(max-width:768px){.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;border-radius:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.sidebar.hidden{transform:translateX(-100%)}.main{padding:16px}.dock-item{width:44px;height:44px}.dock-item svg{width:20px;height:20px}.dock{padding:8px 14px 6px;gap:8px;border-radius:20px}.grid-4{grid-template-columns:1fr 1fr}.grid-3,.grid-2{grid-template-columns:1fr}}
-@media(max-width:480px){.grid-4{grid-template-columns:1fr}.main{padding:12px}.dock-item{width:38px;height:38px}.dock-item svg{width:17px;height:17px}.dock{gap:6px;padding:6px 10px 4px}.dock-sep{height:22px}}
+@media(max-width:768px){.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;border-radius:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.sidebar.hidden{transform:translateX(-100%)}.main{padding:16px}.dock-item{width:44px;height:44px}.dock-item svg{width:20px;height:20px}.dock{padding:8px 14px 6px;gap:0;border-radius:20px}.dock-item{margin:0 4px}.grid-4{grid-template-columns:1fr 1fr}.grid-3,.grid-2{grid-template-columns:1fr}}
+@media(max-width:480px){.grid-4{grid-template-columns:1fr}.main{padding:12px}.dock-item{width:38px;height:38px;margin:0 3px}.dock-item svg{width:17px;height:17px}.dock{gap:0;padding:6px 10px 4px}.dock-sep{height:22px}}
 </style>
 </head>
 <body class="dock-enabled">
@@ -270,7 +273,7 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
   <aside class="sidebar hidden" id="sidebar">
     <div class="sb-hdr">
       <div class="sb-icon" id="sbAvatarWrap"><img id="sbAvatar" src="" style="width:34px;height:34px;border-radius:10px;display:none;object-fit:cover;" onerror="this.style.display='none';document.getElementById('sbIconDefault').style.display='flex'"><svg id="sbIconDefault" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px;max-width:16px;max-height:16px;"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M9 21V9"/></svg></div>
-      <div class="sb-info"><div class="sn" id="dashTitleSidebar">Dashboard</div><div class="sl"><span class="sl-dot off" id="sDot"></span><span id="sTxt">Offline</span></div></div>
+      <div class="sb-info"><div class="sn" id="dashTitleSidebar">Dashboard</div><div class="sl"><span class="sl-dot off" id="sDot"></span><span id="sTxt">Offline</span><span style="margin-left:auto;font-size:8px;color:var(--text-muted);" id="sbVersion"></span></div></div>
     </div>
     <button class="nav-item active" data-sec="overview" onclick="showSec('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview</button>
     <button class="nav-item" data-sec="analytics" onclick="showSec('analytics')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</button>
@@ -286,6 +289,9 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
     <button class="sb-pin" id="sbPin" onclick="togglePin()" title="Pin sidebar">&#x1F4CC;</button>
   </aside>
   <div class="sidebar-trigger" id="sbTrigger" onmouseenter="showSidebar()"></div>
+
+  <!-- Branding Footer -->
+  <div class="brand-ft" id="brandFt"></div>
 
   <!-- macOS Dock -->
   <div class="dock-wrap" id="dockWrap">
@@ -398,6 +404,19 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
         <div class="stg"><label>Animation Speed</label>
           <select id="dashAnimSpeed"><option value="0.5">0.5x Slow</option><option value="0.75">0.75x Relaxed</option><option value="1" selected>1x Normal</option><option value="1.25">1.25x Fast</option><option value="1.5">1.5x Turbo</option></select></div>
 
+        <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Bot Presence</label>
+          <div class="stg-inl" style="margin-bottom:6px;"><select id="botPresenceType" style="flex:0 0 120px;"><option value="playing">Playing</option><option value="watching">Watching</option><option value="listening">Listening to</option><option value="competing">Competing in</option></select><input type="text" id="botPresenceText" placeholder="e.g. with code..." style="flex:1;"></div>
+          <button class="btn btn-s" onclick="updateBotPresence()" style="padding:7px 16px;font-size:11px;">Update Presence</button>
+          <div class="stg-hint">Changes the bot's Discord activity status immediately.</div></div>
+        
+        <div class="stg"><label>Bot Username</label>
+          <div class="stg-inl"><input type="text" id="botNameInput" placeholder="New bot name..." maxlength="32" style="flex:1;"><button class="btn btn-s" onclick="updateBotName()" style="padding:7px 16px;font-size:11px;">Rename</button></div>
+          <div class="stg-hint">Discord limits username changes to 2 per hour.</div></div>
+        
+        <div class="stg"><label>Bot Avatar</label>
+          <div class="stg-inl"><input type="url" id="botAvatarInput" placeholder="https://cdn.discordapp.com/..." style="flex:1;"><button class="btn btn-s" onclick="updateBotAvatar()" style="padding:7px 16px;font-size:11px;">Set Avatar</button></div>
+          <div class="stg-hint">Paste a direct image URL (must end in .png/.jpg/.gif).</div></div>
+
         <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Dock Navigation</label>
           <div class="tg-wr" onclick="togW(this)"><div class="tg on" id="dockToggle"></div><div class="tg-lbl">Enable macOS Dock<small>Bottom navigation with icon magnification</small></div></div></div>
         <div class="stg"><label>Card Glow Effect</label>
@@ -450,8 +469,10 @@ function switchBg(style){bgStyle=style;startBg(style)}
 // ═══ DOCK MAGNIFICATION ═══
 let dockItems=[];
 function initDock(){dockItems=document.querySelectorAll('.dock-item');dockMagnify()}
-function dockMagnify(){const dock=document.getElementById('dock');if(!dock||!dockItems.length)return;const rect=dock.getBoundingClientRect();const mx=bgMouse.x;dockItems.forEach(item=>{const ir=item.getBoundingClientRect(),ic=ir.left+ir.width/2,dist=Math.abs(mx-ic),maxDist=200,scale=Math.max(1,1+(1-Math.min(dist/maxDist,1))*0.5);item.style.transform=`scale(${scale})`;if(scale>1.15)item.style.zIndex='10';else item.style.zIndex=''})}
-function dockReset(){dockItems.forEach(item=>{item.style.transform='scale(1)';item.style.zIndex=''})}
+function dockMagnify(){const dock=document.getElementById('dock');if(!dock||!dockItems.length)return;const rect=dock.getBoundingClientRect();const mx=bgMouse.x;const itemW=52;
+dockItems.forEach(item=>{const ir=item.getBoundingClientRect(),ic=ir.left+ir.width/2,dist=Math.abs(mx-ic),maxDist=200,scale=Math.max(1,1+(1-Math.min(dist/maxDist,1))*0.4);item.style.transform=`scale(${scale})`;if(scale>1.15)item.style.zIndex='10';else item.style.zIndex='';// Dynamic margin to prevent overlap
+const extraMargin=(itemW*(scale-1))/2;item.style.marginLeft=6+extraMargin+'px';item.style.marginRight=6+extraMargin+'px'})}
+function dockReset(){dockItems.forEach(item=>{item.style.transform='scale(1)';item.style.zIndex='';item.style.marginLeft='6px';item.style.marginRight='6px'})}
 document.addEventListener('mousemove',e=>{
   if(!dockItems.length)return;
   if(e.clientY>window.innerHeight-140)dockMagnify();
@@ -567,6 +588,7 @@ async function loadOv(){
     const s=await sr.json(),rm=await rr.json(),ag=await ar.json();
     if(s.online){
       document.getElementById('sDot').className='sl-dot on';document.getElementById('sTxt').textContent='Online';
+      if(s.version)document.getElementById('sbVersion').textContent='v'+s.version;
       // Set bot avatar from status if no custom avatar configured
       if(!cfg.botAvatarUrl&&s.avatar){const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');img.src=s.avatar;img.style.display='block';def.style.display='none'}
       const sv=s.servers||0,rmC=rm.length,ng=ag.netGrowth||0;
@@ -615,7 +637,8 @@ async function loadSrvChannels(id){try{const r=await fetch('/api/server/'+id+'/c
 async function toggleLogCat(serverId,category,enabled){
   try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,enabled})});showToast('Logging updated!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}
 }
-async function loadSrvLogging(id){try{const r=await fetch('/api/server/'+id),d=await r.json();const el=document.getElementById('mgmtLogging');if(!d.logging||!d.logging.perCategory)return el.innerHTML='<div class="empty"><p>No logging config available.</p></div>';el.innerHTML=Object.entries(d.logging.perCategory).map(([cat,info])=>'<div class="tg-wr" onclick="toggleLogCat(\''+id+'\',\''+cat+'\','+(!info.enabled)+')"><div class="tg '+(info.enabled?'on':'')+'"></div><div class="tg-lbl" style="text-transform:capitalize;">'+cat+'<small>'+(info.channel?'Logs to <code>#'+info.channel+'</code>':'No dedicated channel')+'</small></div></div>').join('')}catch{document.getElementById('mgmtLogging').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
+async function loadSrvLogging(id){try{const[r,d]=await Promise.all([fetch('/api/server/'+id+'/channels'),fetch('/api/server/'+id)]),channels=await r.json(),server=await d.json();const el=document.getElementById('mgmtLogging');if(!server.logging||!server.logging.perCategory)return el.innerHTML='<div class="empty"><p>No logging config available.</p></div>';el.innerHTML=Object.entries(server.logging.perCategory).map(([cat,info])=>{const chOpts='<option value="">Default (auto)</option>'+channels.filter(c=>c.typeId===0||c.typeId===5||c.typeId===15).map(c=>'<option value="'+c.id+'"'+(c.id===info.channel?' selected':'')+'>#'+c.name+'</option>').join('');return'<div class="tg-wr" style="cursor:default;display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:4px;"><div class="tg '+(info.enabled?'on':'')+'" onclick="toggleLogCat(\''+id+'\',\''+cat+'\','+(!info.enabled)+')" style="cursor:pointer;flex-shrink:0;"></div><div class="tg-lbl" style="text-transform:capitalize;flex:0 0 100px;font-size:12px;color:var(--text);">'+cat+'</div><select id="logCh-'+cat+'" style="flex:1;min-width:0;padding:5px 8px;font-size:11px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;cursor:pointer;">'+chOpts+'</select><button class="btn btn-s" onclick="setLogChannel(\''+id+'\',\''+cat+'\')" style="padding:5px 10px;font-size:10px;flex-shrink:0;">Set</button></div>'}).join('')}catch(e){document.getElementById('mgmtLogging').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
+async function setLogChannel(serverId,category){const chId=document.getElementById('logCh-'+category).value;try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,channelId:chId||null})});showToast('Channel set!')}catch{showToast('Failed',true)}}
 
 async function loadAct(){const el=document.getElementById('actFeed');try{const r=await fetch('/api/activity'),a=await r.json();if(!a.length||a.length<2)return el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>Activity will appear as people join.</p></div>';const items=a.slice(-20).filter(x=>x.type).reverse();el.innerHTML=items.map(x=>{const c=x.type==='join'?'#3ba55c':'#ed4245',b=x.type==='join'?'rgba(59,165,92,0.12)':'rgba(237,66,69,0.12)';return'<div class="act-item"><div class="a-ico" style="background:'+b+'"><svg viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg></div><div class="a-tx">Member '+(x.type==='join'?'joined':'left')+' <strong>'+x.guildName+'</strong></div><div class="a-tm">now</div></div>'}).join('')}catch{el.innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
 async function loadRm(){const el=document.getElementById('rmdList');try{const r=await fetch('/api/reminders'),rm=await r.json();if(!rm.length)return el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><p>No pending reminders.</p></div>';el.innerHTML=rm.map(r=>{const t=r.remindAt-Date.now(),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000);return'<div class="rmd"><span class="rmd-tm">'+(t>0?(m>0?m+'m ':'')+s+'s':'Due')+'</span><span class="rmd-tx">'+r.text+'</span></div>'}).join('')}catch{el.innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
@@ -624,11 +647,20 @@ let memLabel='System',memUsedDisplay=s.memoryUsed,memTotalDisplay=s.memoryTotal,
 if(parseFloat(s.memoryTotal)>64){memLabel='Process';memUsedDisplay=s.rss;memTotalDisplay='RSS';memUsageDisplay=Math.min(100,(parseFloat(s.rss)/Math.max(512,parseFloat(s.rss)*1.5))*100)}
 document.getElementById('sysMem').innerHTML='<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px;"><span style="color:var(--text-dim);">'+memLabel+'</span><span>'+memUsedDisplay+'/'+memTotalDisplay+(memTotalDisplay==='RSS'?' MB':' GB')+'</span></div><div class="prog"><div class="pf" style="width:'+memUsageDisplay+'%"></div></div></div>'+
       '<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px;"><span style="color:var(--text-dim);">RSS</span><span>'+s.rss+' MB</span></div><div class="prog"><div class="pf" style="width:'+Math.min(100,(s.rss/1024)*100)+'%;background:rgba(var(--accent-rgb),0.5);"></div></div></div><div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px;"><span style="color:var(--text-dim);">Heap</span><span>'+s.heapUsed+'/'+s.heapTotal+' MB</span></div><div class="prog"><div class="pf" style="width:'+Math.min(100,(parseFloat(s.heapUsed)/parseFloat(s.heapTotal))*100)+'%;background:rgba(59,165,92,0.5);"></div></div></div>'}catch{}}
+// ═══ BOT CUSTOMIZATION ═══
+async function updateBotPresence(){const type=document.getElementById('botPresenceType').value,text=document.getElementById('botPresenceText').value;if(!text)return showToast('Enter a presence text',true);try{const r=await fetch('/api/bot/presence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,text})}),d=await r.json();d.success?showToast('Presence updated!'):showToast(d.error||'Failed',true)}catch{showToast('Failed to update',true)}}
+async function updateBotName(){const name=document.getElementById('botNameInput').value;if(!name)return showToast('Enter a name',true);if(name.length>32)return showToast('Max 32 characters',true);try{const r=await fetch('/api/bot/name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}),d=await r.json();if(d.success){showToast('Username changed!');document.getElementById('botNameInput').value=''}else showToast(d.error||'Failed',true)}catch{showToast('Failed to rename',true)}}
+async function updateBotAvatar(){const url=document.getElementById('botAvatarInput').value;if(!url)return showToast('Enter an image URL',true);try{const r=await fetch('/api/bot/avatar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})}),d=await r.json();if(d.success){showToast('Avatar changed!');document.getElementById('botAvatarInput').value='';// Refresh sidebar avatar
+const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');img.src=d.avatar;img.style.display='block';def.style.display='none'}else showToast(d.error||'Failed',true)}catch{showToast('Failed to set avatar',true)}}
+
+// ═══ BRANDING ═══
+async function loadBrand(){try{const r=await fetch('/api/status');if(r.ok){const d=await r.json();if(d.brandName)document.getElementById('brandFt').textContent='Powered by '+d.brandName}}catch{}}
+
 function stRf(){if(rTimer)clearInterval(rTimer);rTimer=setInterval(()=>{loadOv();loadRm()},rInt*1000)}
 window.addEventListener('resize',()=>{rsBg();startBg(bgStyle)});
 window.addEventListener('beforeunload',()=>{if(bgAnimId)cancelAnimationFrame(bgAnimId)});
 
-checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');initDock();await loadOv();await loadAn();await loadServers();await loadAct();await loadRm();await loadSys();stRf()});
+checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');initDock();await loadOv();await loadAn();await loadServers();await loadAct();await loadRm();await loadSys();loadBrand();stRf()});
 </script>
 </body>
 </html>
