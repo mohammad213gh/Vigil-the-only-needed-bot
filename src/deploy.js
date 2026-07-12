@@ -682,17 +682,18 @@ async function deployCommands(clientUser) {
                 Routes.applicationGuildCommands(clientUser.id, process.env.GUILD_ID),
                 { body: commandDefs },
             );
-            console.log('Registered guild commands for ' + process.env.GUILD_ID);
+            console.log('\u2705 Registered ' + commandDefs.length + ' commands for guild ' + process.env.GUILD_ID);
         } else {
             await rest.put(
                 Routes.applicationCommands(clientUser.id),
                 { body: commandDefs },
             );
-            console.log('Registered global commands (may take ~1 hour to appear)');
+            console.log('\u26A0\uFE0F Registered ' + commandDefs.length + ' global commands. They may take ~1 hour to appear in Discord.');
+            console.log('\uD83D\uDC41\uFE0F Tip: Set GUILD_ID in your Railway env vars for INSTANT command registration!');
         }
         return true;
     } catch (err) {
-        console.error('Failed to register commands:', err.message);
+        console.error('\u274C Failed to register commands:', err.message);
         return false;
     }
 }
