@@ -15,7 +15,10 @@ let dashboardPassword = '';
 
 function setDashboardClient(c, password) {
     client = c;
-    dashboardPassword = password || 'admin';
+    if (!password) {
+        console.error('[Dashboard] DASHBOARD_PASSWORD is not set! Please set it in your .env file.');
+    }
+    dashboardPassword = password;
 }
 
 const DASHBOARD_CFG_KEY = '_dash';
@@ -122,7 +125,7 @@ function generateSession() {
 }
 
 // ──── File Upload Setup ────
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -245,7 +248,44 @@ function createDashboard() {
             cpuCores: os.cpus().length,
             cpuModel: os.cpus()[0]?.model || 'Unknown',
             hostname: os.hostname(),
+            version: require('../package.json').version || '1.0.0',
+            brandName: process.env.BRAND_NAME || null,
         });
+    });
+
+    // ── Bot Customization ──
+    app.post('/api/bot/name', requireAuth, (req, res) => {
+        if (!client || !client.user) return res.status(503).json({ error: 'Bot not ready' });
+        const { name } = req.body;
+        if (!name || name.length > 32) return res.status(400).json({ error: 'Name must be 1-32 characters' });
+        client.user.setUsername(name)
+            .then(() => res.json({ success: true, username: client.user.tag }))
+            .catch(err => res.status(400).json({ error: err.message }));
+    });
+
+    app.post('/api/bot/avatar', requireAuth, (req, res) => {
+        if (!client || !client.user) return res.status(503).json({ error: 'Bot not ready' });
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ error: 'Missing avatar URL' });
+        client.user.setAvatar(url)
+            .then(() => res.json({ success: true, avatar: client.user.displayAvatarURL({ size: 128 }) }))
+            .catch(err => res.status(400).json({ error: err.message }));
+    });
+
+    app.post('/api/bot/presence', requireAuth, (req, res) => {
+        if (!client || !client.user) return res.status(503).json({ error: 'Bot not ready' });
+        const { type, text } = req.body;
+        const activityTypes = { playing: 0, watching: 3, listening: 2, competing: 5 };
+        if (!type || !text) return res.status(400).json({ error: 'Missing type or text' });
+        try {
+            client.user.setPresence({
+                activities: [{ name: text, type: activityTypes[type] || 0 }],
+                status: 'online',
+            });
+            res.json({ success: true });
+        } catch (err) {
+            res.status(400).json({ error: err.message });
+        }
     });
 
     // ── Servers List ──
