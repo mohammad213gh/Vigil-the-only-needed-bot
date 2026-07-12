@@ -216,7 +216,9 @@ client.on('messageCreate', (message) => {
     if (message.channel.type === 1) return; // Skip DMs (prevents loops)
     const guildName = message.guild?.name || 'Unknown';
     const channelName = message.channel?.name || 'Unknown';
-    const diagMsg = '[BOT SENT] guild: ' + message.guildId + ' (' + guildName + ') | channel: ' + message.channelId + ' (' + channelName + ') | content: ' + (message.content?.slice(0, 100) || '(embed/sticker)');
+    const stack = new Error().stack.split('\n').slice(2, 10).join('\n').trim();
+    const diagMsg = '[BOT SENT] guild: ' + message.guildId + ' (' + guildName + ') | channel: ' + message.channelId + ' (' + channelName + ') | content: ' + (message.content?.slice(0, 100) || '(embed/sticker)')
+        + '\n--- STACK ---\n' + stack;
     console.log(diagMsg);
     const ownerId = process.env.OWNER_ID;
     if (ownerId) {
