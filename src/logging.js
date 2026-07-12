@@ -29,15 +29,12 @@ async function sendLog(embed, category, channelId, guildId) {
         if (!guildConfig.trackedChannels.includes(channelId)) return;
     }
 
-    // Resolve target channel: per-category > legacy logChannelId > env var
+    // Resolve target channel: per-category > legacy logChannelId
     let targetId = null;
     if (category && guildConfig.logChannels[category]) {
         targetId = guildConfig.logChannels[category];
     } else if (guildConfig.logChannelId) {
         targetId = guildConfig.logChannelId;
-    } else {
-        const envId = process.env.LOG_CHANNEL_ID || process.env.LOG_CHANNEL;
-        targetId = envId || null;
     }
     // Verify the channel belongs to this guild — prevents cross-server leaks
     if (targetId) {
