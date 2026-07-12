@@ -8,6 +8,24 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#07070d;overflow:hidden;position:relative}
+body.light-mode{background:#f5f5fa}
+body.light-mode .login-card{background:rgba(255,255,255,0.88);border-color:rgba(0,0,0,0.06);box-shadow:0 0 60px rgba(0,0,0,0.03)}
+body.light-mode .login-card::before{background:linear-gradient(90deg,transparent,rgba(0,0,0,0.04),transparent)}
+body.light-mode h1{color:#1a1a2e}
+body.light-mode .sub{color:rgba(0,0,0,0.35)}
+body.light-mode .tab-row{background:rgba(0,0,0,0.03)}
+body.light-mode .tab-btn{color:rgba(0,0,0,0.3)}
+body.light-mode .tab-btn:hover:not(.active){color:rgba(0,0,0,0.5)}
+body.light-mode .inp-grp label{color:rgba(0,0,0,0.4)}
+body.light-mode .inp-grp input{background:rgba(255,255,255,0.7);border-color:rgba(0,0,0,0.08);color:#1a1a2e}
+body.light-mode .inp-grp input::placeholder{color:rgba(0,0,0,0.15)}
+body.light-mode .inp-grp input:focus{background:rgba(88,101,242,0.04);border-color:#5865F2}
+body.light-mode .mode-hint{color:rgba(0,0,0,0.15)}
+body.light-mode .ft{color:rgba(0,0,0,0.05)}
+body.light-mode .err{background:rgba(237,66,69,0.06)}
+body.light-mode canvas#bgCanvas+div+div+div .brandEl,body.light-mode #loginBrand{color:rgba(0,0,0,0.06)!important}
+body.light-mode .bg-mesh{opacity:0.5}
+body.light-mode .float-el{background:rgba(88,101,242,0.04)}
 canvas#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
 .bg-mesh{position:fixed;inset:0;z-index:0;background:
   radial-gradient(ellipse 80% 60% at 0% 20%,rgba(88,101,242,0.15) 0%,transparent 50%),
@@ -78,11 +96,22 @@ h1{color:#fff;font-size:22px;font-weight:700;text-align:center;letter-spacing:-0
     <button type="submit" class="btn" id="loginBtn"><span class="btn-txt">Sign In</span><div class="spin"></div></button>
     <div class="err" id="errorMsg">Invalid credentials.</div>
   </form>    <p class="ft" id="loginBrand">Bot Management System</p>
+    <div style="position:absolute;top:12px;right:14px;z-index:2;">
+      <button onclick="toggleTheme()" id="loginThemeBtn" style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;color:rgba(255,255,255,0.25);font-family:inherit">
+        <svg id="loginThemeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
   </div>
 
   <script>
+// Theme toggle
+let loginDark=true;
+function applyLoginTheme(isDark){document.body.classList.toggle('light-mode',!isDark);loginDark=isDark;const ti=document.getElementById('loginThemeIcon'),btn=document.getElementById('loginThemeBtn');if(ti)ti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(btn){btn.style.borderColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)';btn.style.background=isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.03)';btn.style.color=isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)'}}
+function toggleTheme(){applyLoginTheme(!loginDark);localStorage.setItem('loginTheme',loginDark?'dark':'light')}
+const savedTheme=localStorage.getItem('loginTheme');if(savedTheme==='light')applyLoginTheme(false);
+
 // Show brand name if set
-const brandEl=document.createElement('div');brandEl.style.cssText='position:fixed;bottom:16px;left:0;right:0;text-align:center;z-index:1;font-size:10px;color:rgba(255,255,255,0.06);letter-spacing:0.3px;pointer-events:none;font-family:Inter,sans-serif';brandEl.textContent='';(async()=>{try{const r=await fetch('/api/status');if(r.ok){const d=await r.json();if(d.brandName){brandEl.textContent='Powered by '+d.brandName;document.getElementById('loginBrand').style.display='none'}}}catch{}})();document.body.appendChild(brandEl);
+const brandEl=document.createElement('div');brandEl.style.cssText='position:fixed;bottom:16px;left:0;right:0;text-align:center;z-index:1;font-size:10px;color:'+(document.body.classList.contains('light-mode')?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.06)')+';letter-spacing:0.3px;pointer-events:none;font-family:Inter,sans-serif';brandEl.textContent='';(async()=>{try{const r=await fetch('/api/status');if(r.ok){const d=await r.json();if(d.brandName){brandEl.textContent='Powered by '+d.brandName;document.getElementById('loginBrand').style.display='none'}}}catch{}})();document.body.appendChild(brandEl);document.getElementById('loginThemeBtn').addEventListener('mouseenter',()=>{const btn=document.getElementById('loginThemeBtn');btn.style.borderColor=loginDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.2)'});document.getElementById('loginThemeBtn').addEventListener('mouseleave',()=>{const btn=document.getElementById('loginThemeBtn');btn.style.borderColor=loginDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)'});
 
 // Floating particles
 const fc=document.getElementById('floatContainer');
@@ -115,6 +144,9 @@ window.addEventListener('pageshow',e=>{
 });
 document.getElementById('password').value='';
 document.getElementById('discordId').value='';
+
+// ═══ Bugs badge ═══
+const bugEl=document.createElement('div');bugEl.style.cssText='position:fixed;bottom:12px;right:14px;z-index:10;font-size:9px;color:rgba(255,255,255,0.06);font-family:Inter,sans-serif;letter-spacing:0.2px;pointer-events:none;transition:color 0.3s';bugEl.textContent='Bugs? DM .nlux.';(function(){const o=new MutationObserver(()=>{bugEl.style.color=document.body.classList.contains('light-mode')?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.06)'});o.observe(document.body,{attributes:true,attributeFilter:['class']})})();document.body.appendChild(bugEl);
 </script>
 </body>
 </html>
