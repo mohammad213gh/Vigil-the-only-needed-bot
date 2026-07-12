@@ -209,24 +209,24 @@ app.listen(PORT, () => {
     console.log('Dashboard running on port ' + PORT);
 });
 
-// ──────────────────── DIAGNOSTIC: Catch every message the bot sends ────────────────────
+// ──────────────────── DIAGNOSTIC: Intercept ALL channel.send() calls with stack trace ────────────────────
 
-client.on('messageCreate', (message) => {
-    if (message.author.id !== client.user.id) return; // Only bot's own messages
-    if (message.channel.type === 1) return; // Skip DMs (prevents loops)
-    const guildName = message.guild?.name || 'Unknown';
-    const channelName = message.channel?.name || 'Unknown';
-    const stack = new Error().stack.split('\n').slice(2, 10).join('\n').trim();
-    const diagMsg = '[BOT SENT] guild: ' + message.guildId + ' (' + guildName + ') | channel: ' + message.channelId + ' (' + channelName + ') | content: ' + (message.content?.slice(0, 100) || '(embed/sticker)')
-        + '\n--- STACK ---\n' + stack;
+const { TextChannel } = require('discord.js');
+const origTextChannelSend = TextChannel.prototype.send;
+TextChannel.prototype.send = function (...args) {
+    const stack = new Error().stack.split('\n').slice(2, 12).join('\n').trim();
+    const guildId = this.guildId || 'DM';
+    const channelName = this.name || 'Unknown';
+    const diagMsg = '[CHANNEL.SEND] guild: ' + guildId + ' | channel: ' + this.id + ' (' + channelName + ')\n--- STACK ---\n' + stack;
     console.log(diagMsg);
     const ownerId = process.env.OWNER_ID;
-    if (ownerId) {
+    if (ownerId && client?.user) {
         client.users.fetch(ownerId).then(owner => {
-            owner.send('```\n' + diagMsg + '\n```').catch(() => {});
+            owner.send('```\n' + diagMsg.slice(0, 1900) + '\n```').catch(() => {});
         }).catch(() => {});
     }
-});
+    return origTextChannelSend.apply(this, args);
+};
 
 // ──────────────────── Login ────────────────────
 
