@@ -36,7 +36,14 @@ async function sendLog(embed, category, channelId, guildId) {
     } else if (guildConfig.logChannelId) {
         targetId = guildConfig.logChannelId;
     } else {
+        // Fall through to env var, BUT only if the channel belongs to this guild
         targetId = process.env.LOG_CHANNEL_ID;
+        if (targetId) {
+            const ch = client.channels.cache.get(targetId);
+            if (ch && ch.guildId !== guildId) {
+                targetId = null; // Don't leak to another server's channel
+            }
+        }
     }
     if (!targetId) return;
 
