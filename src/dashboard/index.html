@@ -61,13 +61,13 @@ body::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hover)}
 .pg-sub{font-size:12px;color:var(--text-dim);margin-bottom:24px}
 
 /* Grid */
-.grid{display:grid;gap:14px;margin-bottom:24px}
+.grid{display:grid;gap:calc(14px * var(--layout-dense,1));margin-bottom:24px}
 .grid-4{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 .grid-3{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
 .grid-2{grid-template-columns:repeat(auto-fill,minmax(310px,1fr))}
 
 /* Cards */
-.card{background:rgba(255,255,255,0.02);border:var(--card-border-width)solid var(--border);border-radius:var(--radius);padding:18px 22px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden}
+.card{background:rgba(255,255,255,0.02);border:var(--card-border-width)solid var(--border);border-radius:var(--radius);padding:calc(18px * var(--layout-dense,1)) calc(22px * var(--layout-dense,1));transition:all 0.3s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden}
 .card-solid{background:rgba(10,10,18,0.88);backdrop-filter:none}
 .card::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:conic-gradient(from calc(var(--glow-ang)-45deg)at 50%50%,transparent 0deg,rgba(var(--accent-rgb),calc(var(--glow-int)*0.3))30deg,transparent 60deg,rgba(var(--accent-rgb),calc(var(--glow-int)*0.15))120deg,transparent 180deg,rgba(var(--accent-rgb),calc(var(--glow-int)*0.18))240deg,transparent 300deg,transparent 360deg);-webkit-mask:linear-gradient(#fff 0 0)content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:0;transition:opacity 0.4s}
 .card:hover::before{opacity:1}
@@ -79,7 +79,7 @@ body::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hover)}
 .card .ico-bg{position:absolute;top:12px;right:12px;width:32px;height:32px;opacity:0.05;transition:all 0.3s}
 .card .ico-bg svg{width:32px;height:32px}
 .card:hover .ico-bg{opacity:0.1;transform:scale(1.1)rotate(4deg)}
-.card-stat{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.02);border:var(--card-border-width)solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;transition:all 0.2s;cursor:default}
+.card-stat{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.02);border:var(--card-border-width)solid var(--border);border-radius:var(--radius-sm);padding:calc(12px * var(--layout-dense,1)) calc(16px * var(--layout-dense,1));transition:all 0.2s;cursor:default}
 .card-stat:hover{border-color:var(--border-hover);background:rgba(255,255,255,0.03);transform:translateX(3px)}
 .card-stat .ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform 0.25s}
 .card-stat:hover .ico{transform:scale(1.08)}
@@ -92,8 +92,14 @@ body::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hover)}
 /* macOS Dock */
 .dock-wrap{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:60;display:none;align-items:center;justify-content:center;pointer-events:none}
 .dock-enabled .dock-wrap{display:flex}
-.dock{display:flex;align-items:flex-end;gap:4px;padding:6px 10px 4px;border-radius:20px;background:rgba(10,10,20,0.8);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.06);box-shadow:0 4px 32px rgba(0,0,0,0.3);pointer-events:auto;position:relative}
-.dock-item{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;background:rgba(255,255,255,0.03);border:none;color:var(--text-dim);font-family:inherit;flex-shrink:0;transform-origin:center bottom}
+.dock{display:flex;align-items:flex-end;gap:8px;padding:6px 14px 4px;border-radius:20px;background:rgba(10,10,20,0.8);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,0.06);box-shadow:0 4px 32px rgba(0,0,0,0.3);pointer-events:auto;position:relative}
+.dock-item{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;position:relative;background:rgba(255,255,255,0.03);border:none;color:var(--text-dim);font-family:inherit;flex-shrink:0;transform-origin:center bottom}
+.dock-item:hover{color:var(--text)}
+.dock-item.active{color:var(--accent);background:rgba(var(--accent-rgb),0.08)}
+.dock-item svg{width:18px;height:18px;pointer-events:none}
+.dock-label{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);padding:3px 8px;border-radius:6px;background:rgba(10,10,20,0.9);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);color:#fff;font-size:10px;font-weight:500;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity 0.15s}
+.dock-item:hover .dock-label,.dock-item.active .dock-label{opacity:1}
+.dock-sep{width:1px;height:22px;background:rgba(255,255,255,0.06);flex-shrink:0;margin:0 4px}
 .dock-item:hover{color:var(--text)}
 .dock-item.active{color:var(--accent);background:rgba(var(--accent-rgb),0.08)}
 .dock-item svg{width:20px;height:20px;pointer-events:none}
@@ -221,7 +227,7 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
 .toast.err{background:#ed4245;box-shadow:0 6px 24px rgba(237,66,69,0.2)}
 
 /* Scroll reveal */
-.sr{opacity:0;transform:translateY(20px);transition:opacity 0.5s cubic-bezier(0.16,1,0.3,1),transform 0.5s cubic-bezier(0.16,1,0.3,1)}
+.sr{opacity:0;transform:translateY(20px);transition:opacity calc(0.5s * var(--anim-speed,1)) cubic-bezier(0.16,1,0.3,1),transform calc(0.5s * var(--anim-speed,1)) cubic-bezier(0.16,1,0.3,1)}
 .sr.in{opacity:1;transform:translateY(0)}
 
 /* Activity */
@@ -288,15 +294,15 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
   <!-- macOS Dock -->
   <div class="dock-wrap" id="dockWrap">
     <nav class="dock" id="dock" role="toolbar" aria-label="App dock">
-      <button class="dock-item active" data-sec="overview" title="Overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="dock-label">Overview</span></button>
-      <button class="dock-item" data-sec="analytics" title="Analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="dock-label">Analytics</span></button>
-      <button class="dock-item" data-sec="servers" title="Servers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><span class="dock-label">Servers</span></button>
+      <button class="dock-item active" data-sec="overview" onclick="showSec('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="dock-label">Overview</span></button>
+      <button class="dock-item" data-sec="analytics" onclick="showSec('analytics')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span class="dock-label">Analytics</span></button>
+      <button class="dock-item" data-sec="servers" onclick="showSec('servers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><span class="dock-label">Servers</span></button>
       <div class="dock-sep"></div>
-      <button class="dock-item" data-sec="activity" title="Activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="dock-label">Activity</span></button>
-      <button class="dock-item" data-sec="reminders" title="Reminders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><span class="dock-label">Reminders</span></button>
-      <button class="dock-item" data-sec="system" title="System"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span class="dock-label">System</span></button>
+      <button class="dock-item" data-sec="activity" onclick="showSec('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="dock-label">Activity</span></button>
+      <button class="dock-item" data-sec="reminders" onclick="showSec('reminders')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><span class="dock-label">Reminders</span></button>
+      <button class="dock-item" data-sec="system" onclick="showSec('system')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span class="dock-label">System</span></button>
       <div class="dock-sep"></div>
-      <button class="dock-item" data-sec="settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="dock-label">Customize</span></button>
+      <button class="dock-item" data-sec="settings" onclick="showSec('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="dock-label">Customize</span></button>
     </nav>
   </div>
 
@@ -445,13 +451,13 @@ function switchBg(style){bgStyle=style;startBg(style)}
 let dockItems=[];
 function initDock(){dockItems=document.querySelectorAll('.dock-item');dockMagnify()}
 function dockMagnify(){const dock=document.getElementById('dock');if(!dock||!dockItems.length)return;const rect=dock.getBoundingClientRect();const mx=bgMouse.x;dockItems.forEach(item=>{const ir=item.getBoundingClientRect(),ic=ir.left+ir.width/2,dist=Math.abs(mx-ic),maxDist=200,scale=Math.max(1,1+(1-Math.min(dist/maxDist,1))*0.5);item.style.transform=`scale(${scale})`;if(scale>1.15)item.style.zIndex='10';else item.style.zIndex=''})}
-document.addEventListener('mousemove',()=>{if(dockItems.length)dockMagnify()});
+document.addEventListener('mousemove',e=>{if(dockItems.length&&e.clientY>window.innerHeight-120)dockMagnify()});
 
 // ═══ AMBIENT + CARD GLOW ═══
 document.addEventListener('mousemove',e=>{
   document.documentElement.style.setProperty('--mx',e.clientX/window.innerWidth);
   document.documentElement.style.setProperty('--my',e.clientY/window.innerHeight);
-  document.querySelectorAll('.card').forEach(c=>{
+  if(cfg.cardGlow!==false)document.querySelectorAll('.card').forEach(c=>{
     const r=c.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,d=Math.sqrt(dx*dx+dy*dy),i=Math.max(0,1-d/250),a2=Math.atan2(dy,dx)*(180/Math.PI)+90;
     c.style.setProperty('--glow-int',i.toFixed(3));c.style.setProperty('--glow-ang',a2.toFixed(1)+'deg')
   })
@@ -514,16 +520,19 @@ function applyCfg(c){
   if(c.backgroundType){document.getElementById('bgType').value=c.backgroundType;const t=c.backgroundType;document.getElementById('bgUrlWrap').style.display=t==='url'?'':'none';document.getElementById('bgUploadWrap').style.display=t==='upload'?'':'none'}
   if(c.backgroundStyle){bgStyle=c.backgroundStyle;document.querySelectorAll('.bg-style-opt').forEach(e=>e.classList.toggle('active',e.dataset.bg===c.backgroundStyle));if(!document.getElementById('sec-settings').classList.contains('active'))switchBg(c.backgroundStyle)}
   // New settings
-  if(c.animationPreset)document.getElementById('dashAnimPreset').value=c.animationPreset;
+  if(c.animationPreset){document.getElementById('dashAnimPreset').value=c.animationPreset;const speeds={subtle:0.7,smooth:1,energetic:1.3};const dur=speeds[c.animationPreset]||1;document.documentElement.style.setProperty('--anim-speed',dur)}
   if(c.animationSpeed){document.getElementById('dashAnimSpeed').value=c.animationSpeed;document.documentElement.style.setProperty('--anim-speed',c.animationSpeed)}
   if(c.dockEnabled!==undefined){document.body.classList.toggle('dock-enabled',c.dockEnabled);const dt=document.getElementById('dockToggle');if(c.dockEnabled)dt.classList.add('on');else dt.classList.remove('on')}
+  if(c.layoutDensity){const d=c.layoutDensity==='compact'?0.7:c.layoutDensity==='comfortable'?1.2:1;document.documentElement.style.setProperty('--layout-dense',d);document.getElementById('dashDensity').value=c.layoutDensity}
+  if(c.cardGlow===false)document.querySelectorAll('.card').forEach(ca=>{ca.style.setProperty('--glow-int','0')});
+  if(c.ambientLight===false)document.getElementById('ambient').style.display='none';else document.getElementById('ambient').style.display=''
 }
 function previewColor(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);document.documentElement.style.setProperty('--accent',h);document.documentElement.style.setProperty('--accent-rgb',r+','+g+','+b);document.getElementById('dashColor').value=h;document.getElementById('colorVal').textContent=h}
 function previewTitle(v){document.getElementById('dashTitlePg').textContent=v||'Overview';document.getElementById('dashTitleSidebar').textContent=v||'Dashboard'}
 function applyPreset(idx){const t=THEMES[idx];previewColor(t.color);document.getElementById('themeGrid').querySelectorAll('.thm-pick').forEach((e,i)=>e.classList.toggle('active',i===idx))}
 function toggleBgType(){const t=document.getElementById('bgType').value;document.getElementById('bgUrlWrap').style.display=t==='url'?'':'none';document.getElementById('bgUploadWrap').style.display=t==='upload'?'':'none'}
 function previewBg(){const url=document.getElementById('dashBgUrl').value,blur=document.getElementById('dashBgBlur').value;if(url&&url.startsWith('http')){document.getElementById('bgPreview').style.backgroundImage='url('+url+')';document.getElementById('bgPreview').className='bg-pv loaded';const bg=document.getElementById('bgOverlay');bg.style.backgroundImage='url('+url+')';bg.className='bg-overlay active'+(blur&&blur!=='0'?' blur-'+blur:'')}else{document.getElementById('bgPreview').style.backgroundImage='';document.getElementById('bgPreview').className='bg-pv';document.getElementById('bgPreview').textContent='No background set.'}}
-async function uploadBgFile(inp){const file=inp.files[0];if(!file)return;const fd=new FormData();fd.append('background',file);try{const r=await fetch('/api/upload',{method:'POST',body:fd}),d=await r.json();if(d.success){document.getElementById('dashBgUrl').value=d.url;document.getElementById('bgPreview').style.backgroundImage='url('+d.url+')';document.getElementById('bgPreview').className='bg-pv loaded';showToast('Uploaded!')}else showToast('Upload failed',true)}catch{showToast('Upload failed',true)}}
+async function uploadBgFile(inp){const file=inp.files[0];if(!file)return;const fd=new FormData();fd.append('background',file);try{const r=await fetch('/api/upload',{method:'POST',body:fd}),d=await r.json();if(d.success){document.getElementById('dashBgUrl').value=d.url;document.getElementById('bgPreview').style.backgroundImage='url('+d.url+')';document.getElementById('bgPreview').className='bg-pv loaded';const bg=document.getElementById('bgOverlay');bg.style.backgroundImage='url('+d.url+')';bg.className='bg-overlay active'+(document.getElementById('dashBgBlur').value!=='0'?' blur-'+document.getElementById('dashBgBlur').value:'');document.getElementById('bgType').value='upload';showToast('Uploaded!')}else showToast('Upload failed',true)}catch{showToast('Upload failed',true)}}
 function togW(el){el.querySelector('.tg').classList.toggle('on')}
 function getShowWidgets(){const w={};document.querySelectorAll('.tg').forEach(t=>{if(t.dataset.w)w[t.dataset.w]=t.classList.contains('on')});return w}
 async function saveSettings(){
