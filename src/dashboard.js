@@ -4,7 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const { formatUptime, formatNumber } = require('./helpers');
 const { loadConfig, saveConfig, getBotConfig } = require('./config');
-const { getGuildStats } = require('./stats');
+const { getGuildStats, loadStats } = require('./stats');
 const { getReactionRoles } = require('./reactionRoles');
 const { getAllPermissions } = require('./permissions');
 const { LOG_CATEGORIES, WS_STATUS } = require('./constants');
@@ -19,6 +19,7 @@ function setDashboardClient(c, password) {
 }
 
 const DASHBOARD_CFG_KEY = '_dash';
+const DASH_USERS_KEY = '_dashUsers';
 
 function getDashboardConfig() {
     const config = loadConfig();
@@ -37,6 +38,7 @@ function getDashboardConfig() {
             layout: 'default',
             theme: 'dark',
             cardStyle: 'glass',
+            backgroundStyle: 'dots',
         };
         saveConfig(config);
     }
@@ -49,6 +51,41 @@ function updateDashboardConfig(partial) {
     Object.assign(config[DASHBOARD_CFG_KEY], partial);
     saveConfig(config);
     return config[DASHBOARD_CFG_KEY];
+}
+
+// ──── Dashboard Users (Discord ID auth) ────
+function getDashUsers() {
+    const config = loadConfig();
+    if (!config[DASH_USERS_KEY]) {
+        config[DASH_USERS_KEY] = {};
+        saveConfig(config);
+    }
+    return config[DASH_USERS_KEY];
+}
+
+function addDashUser(userId, addedBy) {
+    const config = loadConfig();
+    if (!config[DASH_USERS_KEY]) config[DASH_USERS_KEY] = {};
+    config[DASH_USERS_KEY][userId] = {
+        addedAt: Date.now(),
+        addedBy: addedBy || 'unknown',
+        active: true,
+    };
+    saveConfig(config);
+    return config[DASH_USERS_KEY];
+}
+
+function removeDashUser(userId) {
+    const config = loadConfig();
+    if (config[DASH_USERS_KEY]) {
+        delete config[DASH_USERS_KEY][userId];
+        saveConfig(config);
+    }
+}
+
+function isDashUser(userId) {
+    const users = getDashUsers();
+    return !!(userId && users[userId] && users[userId].active);
 }
 
 // ──── Sessions ────
@@ -92,16 +129,20 @@ function createDashboard() {
         next();
     });
 
-    // ── Auth ──
+    // ── Auth (password OR Discord ID) ──
     app.post('/api/login', (req, res) => {
-        const { password } = req.body;
-        if (password === dashboardPassword) {
+        const { password, discordId } = req.body;
+        if (password && password === dashboardPassword) {
             const token = generateSession();
             sessions.set(token, true);
-            res.json({ success: true, token });
-        } else {
-            res.status(401).json({ success: false, error: 'Invalid password' });
+            return res.json({ success: true, token });
         }
+        if (discordId && isDashUser(discordId)) {
+            const token = generateSession();
+            sessions.set(token, true);
+            return res.json({ success: true, token, method: 'discord' });
+        }
+        res.status(401).json({ success: false, error: 'Invalid credentials' });
     });
 
     app.post('/api/logout', (req, res) => {
@@ -114,6 +155,24 @@ function createDashboard() {
         if (!req.authenticated) return res.status(401).json({ error: 'Not authenticated' });
         next();
     }
+
+    // ── Dashboard Users API ──
+    app.get('/api/dash/users', requireAuth, (req, res) => {
+        res.json(getDashUsers());
+    });
+
+    app.post('/api/dash/users/add', requireAuth, (req, res) => {
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ error: 'Missing userId' });
+        addDashUser(userId, req.discordUserId || 'dashboard');
+        res.json({ success: true, users: getDashUsers() });
+    });
+
+    app.post('/api/dash/users/remove', requireAuth, (req, res) => {
+        const { userId } = req.body;
+        removeDashUser(userId);
+        res.json({ success: true, users: getDashUsers() });
+    });
 
     // ── File Upload ──
     app.post('/api/upload', requireAuth, upload.single('background'), (req, res) => {
@@ -233,24 +292,16 @@ function createDashboard() {
         } catch { res.json([]); }
     });
 
-    // ── Aggregate Stats (for analytics) ──
+    // ── Aggregate Stats ──
     app.get('/api/stats/aggregate', requireAuth, (req, res) => {
         if (!client) return res.json({});
-        const totalJoins = client.guilds.cache.reduce((a, g) => {
-            const s = getGuildStats(g.id);
-            return a + (s.totalJoins || 0);
-        }, 0);
-        const totalLeaves = client.guilds.cache.reduce((a, g) => {
-            const s = getGuildStats(g.id);
-            return a + (s.totalLeaves || 0);
-        }, 0);
-        // Collect all snapshots
+        const totalJoins = client.guilds.cache.reduce((a, g) => a + (getGuildStats(g.id).totalJoins || 0), 0);
+        const totalLeaves = client.guilds.cache.reduce((a, g) => a + (getGuildStats(g.id).totalLeaves || 0), 0);
         const allSnapshots = [];
         client.guilds.cache.forEach(g => {
             const s = getGuildStats(g.id);
             if (s.dailySnapshots) allSnapshots.push(...s.dailySnapshots);
         });
-        // Aggregate by date
         const byDate = {};
         allSnapshots.forEach(s => {
             if (!byDate[s.date]) byDate[s.date] = { joins: 0, leaves: 0 };
@@ -270,18 +321,33 @@ function createDashboard() {
         });
     });
 
-    // ── Activity Feed (recent server events) ──
+    // ── Export Stats (JSON download) ──
+    app.get('/api/stats/export', requireAuth, (req, res) => {
+        if (!client) return res.json({});
+        const exportData = {};
+        client.guilds.cache.forEach(g => {
+            const s = getGuildStats(g.id);
+            exportData[g.id] = {
+                name: g.name,
+                memberCount: g.memberCount,
+                totalJoins: s.totalJoins || 0,
+                totalLeaves: s.totalLeaves || 0,
+                dailySnapshots: (s.dailySnapshots || []).slice(-90),
+            };
+        });
+        res.json({
+            exportedAt: new Date().toISOString(),
+            botName: client.user?.tag || 'Unknown',
+            data: exportData,
+        });
+    });
+
+    // ── Activity Feed ──
     app.get('/api/activity', requireAuth, (req, res) => {
         if (!client) return res.json([]);
         const recent = [];
         client.guilds.cache.forEach(g => {
             const s = getGuildStats(g.id);
-            if (s.recentActivity) {
-                recent.push(...s.recentActivity.slice(-10).map(a => ({
-                    ...a, guildName: g.name, guildId: g.id,
-                })));
-            }
-            // Add guild joins
             if (s.totalJoins > 0) recent.push({
                 type: 'join', guildName: g.name, guildId: g.id,
                 count: s.totalJoins, time: Date.now(),
@@ -293,7 +359,6 @@ function createDashboard() {
     // ── System Info ──
     app.get('/api/system', requireAuth, (req, res) => {
         const mem = process.memoryUsage();
-        const cpuUsage = os.loadavg();
         const totalMem = os.totalmem();
         const freeMem = os.freemem();
         res.json({
@@ -302,7 +367,7 @@ function createDashboard() {
             hostname: os.hostname(),
             cpuModel: os.cpus()[0]?.model || 'Unknown',
             cpuCores: os.cpus().length,
-            cpuLoad: cpuUsage,
+            cpuLoad: os.loadavg(),
             memoryTotal: (totalMem / 1024 / 1024 / 1024).toFixed(2),
             memoryFree: (freeMem / 1024 / 1024 / 1024).toFixed(2),
             memoryUsed: ((totalMem - freeMem) / 1024 / 1024 / 1024).toFixed(2),
@@ -313,11 +378,6 @@ function createDashboard() {
             nodeVersion: process.version,
             uptime: formatUptime(process.uptime() * 1000),
         });
-    });
-
-    // ── Dashboard Logs (recent bot console logs) ──
-    app.get('/api/logs', requireAuth, (req, res) => {
-        res.json([]);
     });
 
     // ── Serve Frontend ──
@@ -336,4 +396,4 @@ function createDashboard() {
     return app;
 }
 
-module.exports = { createDashboard, setDashboardClient };
+module.exports = { createDashboard, setDashboardClient, addDashUser, removeDashUser, getDashUsers };
