@@ -35,10 +35,20 @@ function getDashboardConfig() {
                 analytics: true, activity: true, system: true,
             },
             refreshInterval: 5,
-            layout: 'default',
-            theme: 'dark',
             cardStyle: 'glass',
             backgroundStyle: 'dots',
+            layoutDensity: 'normal',
+            // New customization fields
+            animationPreset: 'smooth',
+            animationSpeed: 1,
+            dockEnabled: true,
+            dockPosition: 'bottom',
+            dockMagnification: 70,
+            cardGlow: true,
+            ambientLight: true,
+            headerStyle: 'minimal',
+            borderRadius: 'rounded',
+            showDockLabels: true,
         };
         saveConfig(config);
     }
@@ -160,14 +170,12 @@ function createDashboard() {
     app.get('/api/dash/users', requireAuth, (req, res) => {
         res.json(getDashUsers());
     });
-
     app.post('/api/dash/users/add', requireAuth, (req, res) => {
         const { userId } = req.body;
         if (!userId) return res.status(400).json({ error: 'Missing userId' });
         addDashUser(userId, req.discordUserId || 'dashboard');
         res.json({ success: true, users: getDashUsers() });
     });
-
     app.post('/api/dash/users/remove', requireAuth, (req, res) => {
         const { userId } = req.body;
         removeDashUser(userId);
@@ -179,14 +187,12 @@ function createDashboard() {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded or invalid type.' });
         res.json({ success: true, url: '/uploads/' + req.file.filename });
     });
-
     app.use('/uploads', express.static(uploadsDir));
 
     // ── Dashboard Config ──
     app.get('/api/dash/config', requireAuth, (req, res) => {
         res.json(getDashboardConfig());
     });
-
     app.post('/api/dash/config', requireAuth, (req, res) => {
         const updated = updateDashboardConfig(req.body);
         res.json({ success: true, config: updated });
@@ -224,8 +230,7 @@ function createDashboard() {
     app.get('/api/servers', requireAuth, (req, res) => {
         if (!client) return res.json([]);
         const servers = client.guilds.cache.map(g => ({
-            id: g.id,
-            name: g.name,
+            id: g.id, name: g.name,
             icon: g.iconURL({ size: 64 }) || '',
             memberCount: g.memberCount,
             boostTier: g.premiumTier,
@@ -247,8 +252,7 @@ function createDashboard() {
         const tracked = guildConfig.trackedChannels || [];
         const gStats = getGuildStats(guild.id);
         res.json({
-            id: guild.id,
-            name: guild.name,
+            id: guild.id, name: guild.name,
             icon: guild.iconURL({ size: 128 }) || '',
             memberCount: guild.memberCount,
             boostTier: guild.premiumTier,
@@ -321,17 +325,15 @@ function createDashboard() {
         });
     });
 
-    // ── Export Stats (JSON download) ──
+    // ── Export Stats ──
     app.get('/api/stats/export', requireAuth, (req, res) => {
         if (!client) return res.json({});
         const exportData = {};
         client.guilds.cache.forEach(g => {
             const s = getGuildStats(g.id);
             exportData[g.id] = {
-                name: g.name,
-                memberCount: g.memberCount,
-                totalJoins: s.totalJoins || 0,
-                totalLeaves: s.totalLeaves || 0,
+                name: g.name, memberCount: g.memberCount,
+                totalJoins: s.totalJoins || 0, totalLeaves: s.totalLeaves || 0,
                 dailySnapshots: (s.dailySnapshots || []).slice(-90),
             };
         });
@@ -362,11 +364,8 @@ function createDashboard() {
         const totalMem = os.totalmem();
         const freeMem = os.freemem();
         res.json({
-            platform: os.platform(),
-            release: os.release(),
-            hostname: os.hostname(),
-            cpuModel: os.cpus()[0]?.model || 'Unknown',
-            cpuCores: os.cpus().length,
+            platform: os.platform(), release: os.release(), hostname: os.hostname(),
+            cpuModel: os.cpus()[0]?.model || 'Unknown', cpuCores: os.cpus().length,
             cpuLoad: os.loadavg(),
             memoryTotal: (totalMem / 1024 / 1024 / 1024).toFixed(2),
             memoryFree: (freeMem / 1024 / 1024 / 1024).toFixed(2),
@@ -385,12 +384,10 @@ function createDashboard() {
         if (!req.authenticated) return res.redirect('/login');
         res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
     });
-
     app.get('/login', (req, res) => {
         if (req.authenticated) return res.redirect('/');
         res.sendFile(path.join(__dirname, 'dashboard', 'login.html'));
     });
-
     app.use('/static', express.static(path.join(__dirname, 'dashboard')));
 
     return app;
