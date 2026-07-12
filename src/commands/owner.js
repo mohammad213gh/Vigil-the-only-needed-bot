@@ -24,17 +24,23 @@ async function executeDashAccess(interaction) {
     if (sub === 'add') {
         const user = interaction.options.getUser('user');
         if (!user) return interaction.reply({ content: 'Please specify a user.', ephemeral: true });
-        addDashUser(user.id, interaction.user.tag);
+        const result = addDashUser(user.id, interaction.user.tag);
+        const token = result.accessToken;
+        // DM the user their access token
+        let dmSent = false;
+        try {
+            await user.send('**\u2705 Dashboard Access Granted**\n\nYou can now log into the bot dashboard using your Discord ID and this access token:\n\n**Access Token:** `' + token + '`\n\nGo to the dashboard URL \u2192 **Discord ID** tab \u2192 enter your ID and this token.\n\n\u26A0\uFE0F **Keep this token private.** Do not share it with anyone.');
+            dmSent = true;
+        } catch {}
         const embed = makeEmbed({
             color: 'Green',
             title: '\u2705 Dashboard Access Granted',
-            description: '<@' + user.id + '> can now log into the dashboard using their Discord ID.',
-            fields: [
-                { name: 'User', value: user.tag + ' (' + user.id + ')', inline: false },
-                { name: 'Login', value: 'Go to the dashboard URL \u2192 choose **"Discord ID"** \u2192 enter their ID.', inline: false },
+            description: '<@' + user.id + '> can now log into the dashboard.\n' + (dmSent ? '\u2709\uFE0F Token sent via DM.' : '\u26A0\uFE0F Could not DM the user. Token shown below.'),
+            fields: dmSent ? [] : [
+                { name: 'Access Token', value: '`' + token + '`\nShare this with them privately.', inline: false },
             ],
         });
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'remove') {
         const userId = interaction.options.getString('user_id');
         removeDashUser(userId);
