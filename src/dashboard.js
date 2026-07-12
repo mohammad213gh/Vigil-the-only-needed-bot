@@ -49,6 +49,7 @@ function getDashboardConfig() {
             headerStyle: 'minimal',
             borderRadius: 'rounded',
             showDockLabels: true,
+            botAvatarUrl: null,
         };
         saveConfig(config);
     }
