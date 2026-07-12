@@ -627,6 +627,28 @@ const commandDefs = [
         .setName('dashboard')
         .setDescription('Get the link to the web dashboard'),
 
+    // ── Dashboard Access (owner only) ──
+    new SlashCommandBuilder()
+        .setName('dashaccess')
+        .setDescription('Manage who can access the dashboard via Discord ID')
+        .addSubcommand(sub =>
+            sub.setName('add')
+                .setDescription('Grant a user dashboard access')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to grant access')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('remove')
+                .setDescription('Revoke dashboard access from a user')
+                .addStringOption(opt =>
+                    opt.setName('user_id')
+                        .setDescription('The Discord user ID to revoke')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List all users with dashboard access')),
+
     // ── Shutdown (owner only) ──
     new SlashCommandBuilder()
         .setName('shutdown')
