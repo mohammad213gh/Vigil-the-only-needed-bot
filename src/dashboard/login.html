@@ -67,12 +67,12 @@ h1{color:#fff;font-size:22px;font-weight:700;text-align:center;letter-spacing:-0
   </div>
   <div class="mode-hint" id="modeHint">Enter your password to sign in.</div>
 
-  <form id="loginForm">
+  <form id="loginForm" autocomplete="off">
     <div id="passwordFields">
-      <div class="inp-grp"><label>Password</label><input type="password" id="password" placeholder="Enter dashboard password..." autofocus></div>
+      <div class="inp-grp"><label>Password</label><input type="password" id="password" placeholder="Enter dashboard password..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')"></div>
     </div>
     <div id="discordFields" style="display:none;">
-      <div class="inp-grp"><label>Discord User ID</label><input type="text" id="discordId" placeholder="Paste your Discord user ID..."></div>
+      <div class="inp-grp"><label>Discord User ID</label><input type="text" id="discordId" placeholder="Paste your Discord user ID..." autocomplete="off"></div>
     </div>
     <button type="submit" class="btn" id="loginBtn"><span class="btn-txt">Sign In</span><div class="spin"></div></button>
     <div class="err" id="errorMsg">Invalid credentials.</div>
@@ -102,6 +102,16 @@ function switchMode(m){loginMode=m;document.querySelectorAll('.tab-btn').forEach
 document.getElementById('loginTabs').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(b)switchMode(b.dataset.mode)});
 document.getElementById('loginForm').addEventListener('submit',async e=>{e.preventDefault();const btn=document.getElementById('loginBtn'),err=document.getElementById('errorMsg');btn.classList.add('loading');err.classList.remove('show');try{const body=loginMode==='password'?{password:document.getElementById('password').value}:{discordId:document.getElementById('discordId').value};const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(d.success){document.cookie='session='+d.token+';path=/;max-age=86400;SameSite=Lax';window.location.href='/'}else{err.textContent='Invalid '+(loginMode==='password'?'password':'Discord ID')+'.';err.classList.add('show')}}catch{err.textContent='Connection error.';err.classList.add('show')}
 btn.classList.remove('loading')});
+
+// ═══ Clear form on load (security: prevent password persistence) ═══
+window.addEventListener('pageshow',e=>{
+  if(e.persisted){
+    document.getElementById('password').value='';
+    document.getElementById('discordId').value='';
+  }
+});
+document.getElementById('password').value='';
+document.getElementById('discordId').value='';
 </script>
 </body>
 </html>
