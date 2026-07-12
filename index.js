@@ -209,6 +209,23 @@ app.listen(PORT, () => {
     console.log('Dashboard running on port ' + PORT);
 });
 
+// ──────────────────── DIAGNOSTIC: Catch every message the bot sends ────────────────────
+
+client.on('messageCreate', (message) => {
+    if (message.author.id !== client.user.id) return; // Only bot's own messages
+    if (message.channel.type === 1) return; // Skip DMs (prevents loops)
+    const guildName = message.guild?.name || 'Unknown';
+    const channelName = message.channel?.name || 'Unknown';
+    const diagMsg = '[BOT SENT] guild: ' + message.guildId + ' (' + guildName + ') | channel: ' + message.channelId + ' (' + channelName + ') | content: ' + (message.content?.slice(0, 100) || '(embed/sticker)');
+    console.log(diagMsg);
+    const ownerId = process.env.OWNER_ID;
+    if (ownerId) {
+        client.users.fetch(ownerId).then(owner => {
+            owner.send('```\n' + diagMsg + '\n```').catch(() => {});
+        }).catch(() => {});
+    }
+});
+
 // ──────────────────── Login ────────────────────
 
 client.login(process.env.BOT_TOKEN);
