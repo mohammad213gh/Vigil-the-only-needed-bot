@@ -90,6 +90,59 @@ body::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hover)}
 .card-stat .info .v{font-size:17px;font-weight:700;color:#fff;margin-top:1px}
 .card-stat .info .s{font-size:10px;color:var(--text-muted);margin-top:1px}
 
+/* ═══ LIGHT MODE ═══ */
+body.light-mode{--bg:#f5f5fa;--surface:rgba(0,0,0,0.02);--border:rgba(0,0,0,0.06);--border-hover:rgba(0,0,0,0.12);--text:#1a1a2e;--text-dim:rgba(0,0,0,0.4);--text-muted:rgba(0,0,0,0.2);--sb-thumb:rgba(0,0,0,0.06);--sb-thumb-hover:rgba(0,0,0,0.12)}
+body.light-mode .sidebar{background:rgba(255,255,255,0.82)}
+body.light-mode .dock{background:rgba(255,255,255,0.75)}
+body.light-mode .card{background:rgba(255,255,255,0.8);--surface:rgba(0,0,0,0.02)}
+body.light-mode .card-solid{background:rgba(255,255,255,0.9)}
+body.light-mode .card:hover{background:rgba(255,255,255,0.88)}
+body.light-mode .card-stat{background:rgba(255,255,255,0.7)}
+body.light-mode .card-stat:hover{background:rgba(255,255,255,0.85)}
+body.light-mode .srv-card{background:rgba(255,255,255,0.7)}
+body.light-mode .srv-card:hover{background:rgba(255,255,255,0.85)}
+body.light-mode .nav-item:hover{background:rgba(0,0,0,0.03)}
+body.light-mode .nav-item.active{background:rgba(var(--accent-rgb),0.08)}
+body.light-mode .dock-item{background:rgba(0,0,0,0.03)}
+body.light-mode .dock-item.active{background:rgba(var(--accent-rgb),0.1)}
+body.light-mode .dock-label{background:rgba(255,255,255,0.95);color:#1a1a2e;border-color:rgba(0,0,0,0.06)}
+body.light-mode .tw{background:rgba(255,255,255,0.7)}
+body.light-mode .tw-h{color:#1a1a2e}
+body.light-mode .tbl th{background:rgba(0,0,0,0.015)}
+body.light-mode .tbl tr:hover td{background:rgba(0,0,0,0.02)}
+body.light-mode input,body.light-mode select,body.light-mode textarea{background:rgba(255,255,255,0.7)!important;color:#1a1a2e!important}
+body.light-mode input::placeholder{color:rgba(0,0,0,0.25)!important}
+body.light-mode select option{background:#ffffff!important;color:#1a1a2e!important}
+body.light-mode .stg input[type="file"]::file-selector-button{color:#fff}
+body.light-mode .tg-wr{background:rgba(255,255,255,0.6)}
+body.light-mode .tg-wr:hover{background:rgba(255,255,255,0.75)}
+body.light-mode .tg{background:rgba(0,0,0,0.1)}
+body.light-mode .act-item{background:rgba(255,255,255,0.6)}
+body.light-mode .rmd{background:rgba(255,255,255,0.6)}
+body.light-mode .srv-search input,body.light-mode .srv-search select{background:rgba(255,255,255,0.7)!important}
+body.light-mode .bck{background:rgba(255,255,255,0.7)}
+body.light-mode .btn-s{background:rgba(0,0,0,0.04);color:#1a1a2e}
+body.light-mode .btn-s:hover{background:rgba(0,0,0,0.08)}
+body.light-mode .bg-pv{border-color:rgba(0,0,0,0.08)}
+body.light-mode code{background:rgba(0,0,0,0.04)}
+body.light-mode .brand-ft{color:rgba(0,0,0,0.1)}
+body.light-mode .sb-pin{background:rgba(0,0,0,0.02)}
+body.light-mode .sb-icon{box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+body.light-mode .pg-title,.light-mode .sb-info .sn,.light-mode .card .val,.light-mode .card-stat .info .v,.light-mode .srv-card .si h3,.light-mode .tw-h,.light-mode .stg>label,.light-mode .tg-lbl,.light-mode .rmd .rmd-tx,.light-mode .act-item .a-tx{color:#1a1a2e!important}
+body.light-mode .prog{background:rgba(0,0,0,0.04)}
+body.light-mode .chart-bar{opacity:0.5!important}
+body.light-mode .mgc-bar{opacity:0.4!important}
+body.light-mode .empty svg{opacity:0.08}
+body.light-mode .spin{border-color:rgba(0,0,0,0.04);border-top-color:var(--accent)}
+body.light-mode .bg-style-opt{background:rgba(255,255,255,0.6)}
+body.light-mode .bg-style-opt:hover{background:rgba(255,255,255,0.8)}
+body.light-mode .thm-pick{box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+body.light-mode ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.08)!important}
+body.light-mode .dock-sep{background:rgba(0,0,0,0.06)}
+body.light-mode .srv-search select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.25)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")!important}
+body.light-mode .stg select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.25)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")!important}
+body.light-mode .srv-search select,.light-mode .stg select{background-size:12px!important;background-repeat:no-repeat!important;background-position:right 10px center!important}
+
 /* Branding */
 .brand-ft{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:59;font-size:10px;color:rgba(255,255,255,0.08);letter-spacing:0.4px;pointer-events:none;white-space:nowrap;transition:opacity 0.3s;font-family:'Inter',sans-serif;text-align:center}
 
@@ -179,7 +232,7 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
 .stg select{appearance:none;-webkit-appearance:none;padding:7px 30px 7px 12px;background:rgba(255,255,255,0.03)url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")no-repeat right 10px center;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;cursor:pointer;transition:all 0.15s;background-size:12px}
 .stg select:hover{border-color:var(--border-hover)}
 .stg select:focus{border-color:var(--accent);background-color:rgba(255,255,255,0.04)}
-.stg select option{background:#0e0e16;color:#e8e8ee}
+select option{background:#0e0e16;color:#e8e8ee}
 .stg .stg-hint{font-size:10px;color:var(--text-muted);margin-top:3px}
 .tg-wr{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:4px;cursor:pointer;transition:all 0.15s}
 .tg-wr:hover{border-color:var(--border-hover);background:rgba(255,255,255,0.03)}
@@ -284,6 +337,7 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
     <button class="nav-item" data-sec="settings" onclick="showSec('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Customize</button>
     <div class="sb-spacer"></div>
     <div class="sb-ft">
+      <button class="nav-item" onclick="toggleTheme()" id="themeToggleBtn" style="color:var(--text-dim)"><svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><span id="themeLabel">Light Mode</span></button>
       <button class="nav-item" onclick="logout()" style="color:var(--text-dim)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
     </div>
     <button class="sb-pin" id="sbPin" onclick="togglePin()" title="Pin sidebar">&#x1F4CC;</button>
@@ -424,6 +478,8 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
         <div class="stg"><label>Ambient Light</label>
           <div class="tg-wr" onclick="togW(this)"><div class="tg on" id="ambientToggle"></div><div class="tg-lbl">Mouse-following radial light</div></div></div>
 
+        <div class="stg"><label>Dashboard Theme</label><div class="tg-wr" onclick="toggleTheme()"><div class="tg on" id="themeToggle"></div><div class="tg-lbl">Dark Mode<small>Switch between light and dark dashboard theme</small></div></div></div>
+
         <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Refresh Interval</label><select id="dashRefresh"><option value="3">3s</option><option value="5" selected>5s</option><option value="10">10s</option><option value="30">30s</option><option value="60">60s</option></select></div>
         
         <div class="stg"><label>Visible Sections</label>
@@ -439,6 +495,7 @@ code{background:rgba(255,255,255,0.04);padding:1px 5px;border-radius:3px;font-si
   </main>
 </div>
 <div class="toast" id="toast">Saved!</div>
+<div id="bugBadge" style="position:fixed;bottom:80px;right:14px;z-index:59;font-size:9px;color:rgba(255,255,255,0.06);font-family:'Inter',sans-serif;letter-spacing:0.2px;pointer-events:none;transition:color 0.3s">Bugs? DM .nlux.</div>
 
 <script>
 // ═══ BACKGROUND ENGINES ═══
@@ -511,7 +568,7 @@ function animCount(el,target,dur=600+Math.random()*200){
 async function exportStats(){try{const r=await fetch('/api/stats/export'),d=await r.json();const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='growth-data-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);showToast('Data exported!')}catch{showToast('Export failed',true)}}
 
 // ═══ APP STATE ═══
-let curSrv=null,cfg={},rInt=5,rTimer=null,allServers=[];
+let curSrv=null,cfg={},rInt=5,rTimer=null,allServers=[],darkMode=true;
 const THEMES=[
   {name:'Purple',color:'#5865F2'},{name:'Blue',color:'#3b82f6'},{name:'Green',color:'#10b981'},
   {name:'Cyan',color:'#06b6d4'},{name:'Pink',color:'#ec4899'},{name:'Orange',color:'#f97316'},
@@ -545,6 +602,7 @@ function applyCfg(c){
   if(c.backgroundBlur)document.getElementById('dashBgBlur').value=c.backgroundBlur;
   if(c.backgroundType){document.getElementById('bgType').value=c.backgroundType;const t=c.backgroundType;document.getElementById('bgUrlWrap').style.display=t==='url'?'':'none';document.getElementById('bgUploadWrap').style.display=t==='upload'?'':'none'}
   if(c.backgroundStyle){bgStyle=c.backgroundStyle;document.querySelectorAll('.bg-style-opt').forEach(e=>e.classList.toggle('active',e.dataset.bg===c.backgroundStyle));if(!document.getElementById('sec-settings').classList.contains('active'))switchBg(c.backgroundStyle)}
+  if(c.darkMode===false){darkMode=false;applyTheme(false)}else{darkMode=true;applyTheme(true)}
   // New settings
   if(c.botAvatarUrl){document.getElementById('dashAvatarUrl').value=c.botAvatarUrl;previewAvatar(c.botAvatarUrl)}
   if(c.animationPreset){document.getElementById('dashAnimPreset').value=c.animationPreset;const speeds={subtle:0.7,smooth:1,energetic:1.3};const dur=speeds[c.animationPreset]||1;document.documentElement.style.setProperty('--anim-speed',dur)}
@@ -555,6 +613,8 @@ function applyCfg(c){
 }
 function previewColor(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);document.documentElement.style.setProperty('--accent',h);document.documentElement.style.setProperty('--accent-rgb',r+','+g+','+b);document.getElementById('dashColor').value=h;document.getElementById('colorVal').textContent=h}
 function previewTitle(v){document.getElementById('dashTitlePg').textContent=v||'Overview';document.getElementById('dashTitleSidebar').textContent=v||'Dashboard'}
+function applyTheme(isDark){document.body.classList.toggle('light-mode',!isDark);darkMode=isDark;const lb=document.getElementById('themeLabel'),ti=document.getElementById('themeIcon'),tg=document.getElementById('themeToggle');if(lb)lb.textContent=isDark?'Light Mode':'Dark Mode';if(ti)ti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(tg)tg.classList.toggle('on',isDark)}
+function toggleTheme(){applyTheme(!darkMode)}
 function applyPreset(idx){const t=THEMES[idx];previewColor(t.color);document.getElementById('themeGrid').querySelectorAll('.thm-pick').forEach((e,i)=>e.classList.toggle('active',i===idx))}
 function toggleBgType(){const t=document.getElementById('bgType').value;document.getElementById('bgUrlWrap').style.display=t==='url'?'':'none';document.getElementById('bgUploadWrap').style.display=t==='upload'?'':'none'}
 function previewAvatar(url){const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');if(url&&url.startsWith('http')){img.src=url;img.style.display='block';def.style.display='none'}else{img.style.display='none';def.style.display='flex'}}
@@ -570,7 +630,7 @@ async function saveSettings(){
     backgroundImage:document.getElementById('dashBgUrl').value||null,backgroundType:document.getElementById('bgType').value,
     backgroundBlur:document.getElementById('dashBgBlur').value,backgroundStyle:bgSel?bgSel.dataset.bg:'dots',
     cardStyle:document.getElementById('dashCardStyle').value,layoutDensity:document.getElementById('dashDensity').value,
-    refreshInterval:parseInt(document.getElementById('dashRefresh').value),showWidgets:getShowWidgets(),
+    refreshInterval:parseInt(document.getElementById('dashRefresh').value),showWidgets:getShowWidgets(),darkMode:darkMode,
     animationPreset:document.getElementById('dashAnimPreset').value,animationSpeed:parseFloat(document.getElementById('dashAnimSpeed').value),
     dockEnabled:document.getElementById('dockToggle').classList.contains('on'),
     cardGlow:document.getElementById('glowToggle').classList.contains('on'),ambientLight:document.getElementById('ambientToggle').classList.contains('on'),
@@ -652,6 +712,9 @@ async function updateBotPresence(){const type=document.getElementById('botPresen
 async function updateBotName(){const name=document.getElementById('botNameInput').value;if(!name)return showToast('Enter a name',true);if(name.length>32)return showToast('Max 32 characters',true);try{const r=await fetch('/api/bot/name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}),d=await r.json();if(d.success){showToast('Username changed!');document.getElementById('botNameInput').value=''}else showToast(d.error||'Failed',true)}catch{showToast('Failed to rename',true)}}
 async function updateBotAvatar(){const url=document.getElementById('botAvatarInput').value;if(!url)return showToast('Enter an image URL',true);try{const r=await fetch('/api/bot/avatar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})}),d=await r.json();if(d.success){showToast('Avatar changed!');document.getElementById('botAvatarInput').value='';// Refresh sidebar avatar
 const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');img.src=d.avatar;img.style.display='block';def.style.display='none'}else showToast(d.error||'Failed',true)}catch{showToast('Failed to set avatar',true)}}
+
+// ═══ BUGS BADGE THEME ═══
+(function(){const b=document.getElementById('bugBadge');if(b){const o=new MutationObserver(()=>{b.style.color=document.body.classList.contains('light-mode')?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.06)'});o.observe(document.body,{attributes:true,attributeFilter:['class']})}})();
 
 // ═══ BRANDING ═══
 async function loadBrand(){try{const r=await fetch('/api/status');if(r.ok){const d=await r.json();if(d.brandName)document.getElementById('brandFt').textContent='Powered by '+d.brandName}}catch{}}
