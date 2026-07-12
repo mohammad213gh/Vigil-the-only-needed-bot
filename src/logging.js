@@ -64,12 +64,10 @@ async function sendLog(embed, category, channelId, guildId) {
             diag += '\n✅ SENT to channel ' + targetId + ' (in guild: ' + channel.guildId + ' - ' + guildName + ')';
             // Add unique trace ID to compare messages across servers
             const traceId = Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 4);
-            try {
-                if (embed.setFooter) {
-                    const oldFooter = embed.data?.footer || {};
-                    embed.setFooter({ text: (oldFooter.text || '') + ' [ID: ' + traceId + ']', iconURL: oldFooter.iconURL });
-                }
-            } catch {}
+            if (embed.setFooter) {
+                const oldFooter = embed.data?.footer || {};
+                embed.setFooter({ text: (oldFooter.text || '') + ' [ID: ' + traceId + ']', iconURL: oldFooter.iconURL });
+            }
             sendDiag(diag);
             await channel.send({ embeds: [embed] });
         } else {
