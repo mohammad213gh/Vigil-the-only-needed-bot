@@ -31,18 +31,26 @@ async function sendLog(embed, category, channelId, guildId) {
 
     // Resolve target channel: per-category > legacy logChannelId
     let targetId = null;
+    let source = 'none';
     if (category && guildConfig.logChannels[category]) {
         targetId = guildConfig.logChannels[category];
+        source = 'category:' + category;
     } else if (guildConfig.logChannelId) {
         targetId = guildConfig.logChannelId;
+        source = 'logChannelId';
     }
     // Verify the channel belongs to this guild — prevents cross-server leaks
     if (targetId) {
         let ch = client.channels.cache.get(targetId);
         if (!ch) try { ch = await client.channels.fetch(targetId); } catch {}
         if (ch && ch.guildId && ch.guildId !== guildId) {
+            console.log('[sendLog] BLOCKED cross-server: guild=' + guildId + ' targetChannelGuild=' + ch.guildId + ' source=' + source);
             targetId = null;
+        } else if (!ch) {
+            console.log('[sendLog] TARGET NOT RESOLVED: guild=' + guildId + ' targetId=' + targetId + ' source=' + source + ' (channel not in cache/fetch failed)');
         }
+    } else {
+        console.log('[sendLog] NO TARGET: guild=' + guildId + ' category=' + category + ' source=' + source);
     }
     if (!targetId) return;
 
