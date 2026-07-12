@@ -95,6 +95,28 @@ function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// ──────────────────── Audit Log Helper ────────────────────
+
+async function fetchAuditLogExecutor(guild, actionType, targetId) {
+    // Attempt to find who made a change via audit logs
+    // Returns the executor (User) or null
+    if (!guild || !guild.fetchAuditLogs) return null;
+    try {
+        const audit = await guild.fetchAuditLogs({ type: actionType, limit: 5 });
+        if (!audit || !audit.entries) return null;
+        // Find the entry that matches our target
+        if (targetId) {
+            const entry = audit.entries.find(e => e.target?.id === targetId || e.targetId === targetId);
+            return entry?.executor || null;
+        }
+        // Return the most recent entry's executor
+        const first = audit.entries.first();
+        return first?.executor || null;
+    } catch {
+        return null;
+    }
+}
+
 module.exports = {
     truncate,
     reverseText,
@@ -108,4 +130,5 @@ module.exports = {
     getFlag,
     randomItem,
     randomInt,
+    fetchAuditLogExecutor,
 };
