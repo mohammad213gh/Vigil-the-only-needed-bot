@@ -542,6 +542,12 @@ function createDashboard() {
         });
     });
 
+    // ── Debug endpoint: shows ALL channel.send() calls (no rate limits) ──
+    app.get('/api/debug/logs', requireAuth, (req, res) => {
+        const logs = global.__sendLogs || [];
+        res.json({ count: logs.length, logs: logs.slice(-100) });
+    });
+
     // ── Serve Frontend ──
     app.get('/', (req, res) => {
         if (!req.authenticated) return res.redirect('/login');

@@ -209,22 +209,25 @@ app.listen(PORT, () => {
     console.log('Dashboard running on port ' + PORT);
 });
 
-// ──────────────────── DIAGNOSTIC: Intercept ALL channel.send() calls with stack trace ────────────────────
+// ──────────────────── DIAGNOSTIC: Capture ALL sends to in-memory array (no rate limits) ────────────────────
+
+global.__sendLogs = [];
 
 function interceptSend(channelProto, name) {
     const orig = channelProto.send;
     channelProto.send = function (...args) {
         const stack = new Error().stack.split('\n').slice(2, 12).join('\n').trim();
-        const guildId = this.guildId || 'DM';
-        const channelName = this.name || 'Unknown';
-        const diagMsg = '[SEND-' + name + '] guild: ' + guildId + ' | channel: ' + this.id + ' (' + channelName + ')\n--- STACK ---\n' + stack;
-        console.log(diagMsg);
-        const ownerId = process.env.OWNER_ID;
-        if (ownerId && client?.user) {
-            client.users.fetch(ownerId).then(owner => {
-                owner.send('```\n' + diagMsg.slice(0, 1900) + '\n```').catch(() => {});
-            }).catch(() => {});
-        }
+        const entry = {
+            t: Date.now(),
+            type: name,
+            guildId: this.guildId || 'DM',
+            channelId: this.id,
+            channelName: this.name || 'Unknown',
+            stack: stack,
+        };
+        global.__sendLogs.push(entry);
+        if (global.__sendLogs.length > 200) global.__sendLogs.shift();
+        console.log('[SEND-' + name + '] guild: ' + entry.guildId + ' | channel: ' + entry.channelId);
         return orig.apply(this, args);
     };
 }
