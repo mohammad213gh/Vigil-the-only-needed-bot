@@ -7,7 +7,7 @@ const {
 // ─── Utilities & Data Layers ───
 const { loadConfig } = require('./src/config');
 const { recordJoin, recordLeave } = require('./src/stats');
-const { truncate, formatUptime, emojiToString } = require('./src/helpers');
+const { truncate, formatUptime, emojiToString, fetchAuditLogExecutor } = require('./src/helpers');
 const { deployCommands } = require('./src/deploy');
 const { setLoggerClient, sendLog } = require('./src/logging');
 const { findReactionRole } = require('./src/reactionRoles');
@@ -67,6 +67,7 @@ const eventDeps = {
     recordJoin,
     recordLeave,
     rrFind: findReactionRole,
+    fetchAuditLogExecutor,
 };
 
 // ──────────────────── Register Events ────────────────────
