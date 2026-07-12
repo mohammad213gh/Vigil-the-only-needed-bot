@@ -77,11 +77,13 @@ h1{color:#fff;font-size:22px;font-weight:700;text-align:center;letter-spacing:-0
     </div>
     <button type="submit" class="btn" id="loginBtn"><span class="btn-txt">Sign In</span><div class="spin"></div></button>
     <div class="err" id="errorMsg">Invalid credentials.</div>
-  </form>
-  <p class="ft">Bot Management System</p>
-</div>
+  </form>    <p class="ft" id="loginBrand">Bot Management System</p>
+  </div>
 
-<script>
+  <script>
+// Show brand name if set
+const brandEl=document.createElement('div');brandEl.style.cssText='position:fixed;bottom:16px;left:0;right:0;text-align:center;z-index:1;font-size:10px;color:rgba(255,255,255,0.06);letter-spacing:0.3px;pointer-events:none;font-family:Inter,sans-serif';brandEl.textContent='';(async()=>{try{const r=await fetch('/api/status');if(r.ok){const d=await r.json();if(d.brandName){brandEl.textContent='Powered by '+d.brandName;document.getElementById('loginBrand').style.display='none'}}}catch{}})();document.body.appendChild(brandEl);
+
 // Floating particles
 const fc=document.getElementById('floatContainer');
 for(let i=0;i<40;i++){const p=document.createElement('div');p.className='float-el';p.style.left=Math.random()*100+'%';p.style.width=p.style.height=(2+Math.random()*5)+'px';p.style.animationDuration=(10+Math.random()*20)+'s';p.style.animationDelay=(Math.random()*20)+'s';fc.appendChild(p)}
