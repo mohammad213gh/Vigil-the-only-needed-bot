@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0f;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Mesh Gradient Background */
+        .bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 0% 20%, rgba(88,101,242,0.15) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 50% at 100% 80%, rgba(88,101,242,0.1) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 40% at 50% 50%, rgba(120,80,200,0.08) 0%, transparent 50%);
+            animation: bgShift 15s ease-in-out infinite alternate;
+        }
+        @keyframes bgShift {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed; inset: 0; z-index: 0;
+            overflow: hidden;
+        }
+        .particle {
+            position: absolute;
+            width: 4px; height: 4px;
+            background: rgba(88,101,242,0.3);
+            border-radius: 50%;
+            animation: float linear infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+        }
+
+        .login-card {
+            position: relative;
+            z-index: 1;
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 32px;
+            padding: 56px 48px;
+            width: 420px;
+            max-width: 90vw;
+            box-shadow:
+                0 0 80px rgba(88,101,242,0.1),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+            animation: fadeUp 0.6s ease-out;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-wrap {
+            width: 72px; height: 72px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #5865F2, #7850c8);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px;
+            margin: 0 auto 24px;
+            box-shadow: 0 8px 32px rgba(88,101,242,0.3);
+        }
+
+        .login-card h1 {
+            color: #fff;
+            font-size: 26px;
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
+        .login-card .subtitle {
+            color: rgba(255,255,255,0.4);
+            text-align: center;
+            margin-bottom: 36px;
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            color: rgba(255,255,255,0.5);
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 16px 18px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 14px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .input-group input:focus {
+            border-color: #5865F2;
+            background: rgba(88,101,242,0.05);
+            box-shadow: 0 0 20px rgba(88,101,242,0.1);
+        }
+        .input-group input::placeholder { color: rgba(255,255,255,0.2); }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #5865F2, #7850c8);
+            border: none;
+            border-radius: 14px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            font-family: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(88,101,242,0.3);
+        }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        .btn .spinner-btn {
+            display: none;
+            width: 20px; height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin: 0 auto;
+        }
+        .btn.loading .spinner-btn { display: block; }
+        .btn.loading .btn-text { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-msg {
+            color: #ed4245;
+            font-size: 13px;
+            text-align: center;
+            margin-top: 16px;
+            display: none;
+            padding: 10px;
+            background: rgba(237,66,69,0.1);
+            border-radius: 10px;
+        }
+        .error-msg.show { display: block; }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 24px;
+            color: rgba(255,255,255,0.2);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg"></div>
+    <div class="particles" id="particles"></div>
+
+    <div class="login-card">
+        <div class="logo-wrap">🤖</div>
+        <h1>Bot Dashboard</h1>
+        <p class="subtitle">Enter your password to access the control panel</p>
+
+        <form id="loginForm">
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="Enter dashboard password..." autofocus>
+            </div>
+            <button type="submit" class="btn" id="loginBtn">
+                <span class="btn-text">Sign In</span>
+                <div class="spinner-btn"></div>
+            </button>
+            <div class="error-msg" id="errorMsg">Invalid password. Please try again.</div>
+        </form>
+        <p class="footer-text">Bot Management System v2.0</p>
+    </div>
+
+    <script>
+        // Generate floating particles
+        const particles = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
+            p.style.animationDuration = (10 + Math.random() * 20) + 's';
+            p.style.animationDelay = (Math.random() * 20) + 's';
+            particles.appendChild(p);
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const errorEl = document.getElementById('errorMsg');
+
+            btn.classList.add('loading');
+            errorEl.classList.remove('show');
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.cookie = 'session=' + data.token + ';path=/;max-age=86400;SameSite=Lax';
+                    window.location.href = '/';
+                } else {
+                    errorEl.textContent = 'Invalid password. Please try again.';
+                    errorEl.classList.add('show');
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+            } catch {
+                errorEl.textContent = 'Connection error. Is the bot online?';
+                errorEl.classList.add('show');
+            }
+            btn.classList.remove('loading');
+        });
+    </script>
+</body>
+</html>
