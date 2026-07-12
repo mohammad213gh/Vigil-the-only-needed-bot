@@ -30,7 +30,7 @@ async function sendLog(embed, category, channelId, guildId) {
     if (targetId) {
         let ch = client.channels.cache.get(targetId);
         if (!ch) try { ch = await client.channels.fetch(targetId); } catch {}
-        if (ch && ch.guildId && ch.guildId !== guildId) {
+        if (!ch || (ch.guildId && ch.guildId !== guildId)) {
             targetId = null;
         }
     }
