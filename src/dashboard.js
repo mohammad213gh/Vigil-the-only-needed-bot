@@ -262,6 +262,68 @@ function createDashboard() {
         res.json(servers);
     });
 
+    // ── Server Management: Roles ──
+    app.get('/api/server/:id/roles', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const roles = guild.roles.cache
+            .filter(r => r.name !== '@everyone')
+            .sort((a, b) => b.position - a.position)
+            .map(r => ({
+                id: r.id,
+                name: r.name,
+                color: r.hexColor === '#000000' ? null : r.hexColor,
+                position: r.position,
+                memberCount: r.members.size,
+                managed: r.managed,
+                permissions: r.permissions.toArray().slice(0, 10),
+            }));
+        res.json(roles);
+    });
+
+    // ── Server Management: Channels ──
+    app.get('/api/server/:id/channels', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const typeNames = { 0: 'Text', 2: 'Voice', 4: 'Category', 5: 'Announcement', 15: 'Forum' };
+        const channels = guild.channels.cache
+            .filter(c => c.type !== 4) // exclude categories from flat list
+            .sort((a, b) => a.position - b.position)
+            .map(c => ({
+                id: c.id,
+                name: c.name,
+                type: typeNames[c.type] || 'Unknown',
+                typeId: c.type,
+                parentId: c.parentId,
+                position: c.position,
+                topic: c.topic ? c.topic.slice(0, 80) : null,
+                nsfw: c.nsfw || false,
+                memberCount: c.type === 2 ? (c.members?.size || 0) : null,
+                bitrate: c.type === 2 ? c.bitrate : null,
+            }));
+        res.json(channels);
+    });
+
+    // ── Server Management: Update logging config ──
+    app.post('/api/server/:id/log/config', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const config = loadConfig();
+        if (!config[guild.id]) config[guild.id] = {};
+        const { category, channelId, enabled } = req.body;
+        if (!config[guild.id].logChannels) config[guild.id].logChannels = {};
+        if (!config[guild.id].logCategories) config[guild.id].logCategories = {};
+        if (category) {
+            if (channelId !== undefined) config[guild.id].logChannels[category] = channelId || null;
+            if (enabled !== undefined) config[guild.id].logCategories[category] = enabled;
+        }
+        saveConfig(config);
+        res.json({ success: true });
+    });
+
     // ── Server Detail ──
     app.get('/api/server/:id', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
