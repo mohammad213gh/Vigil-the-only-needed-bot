@@ -9,6 +9,16 @@ function setLoggerClient(c) {
 async function sendLog(embed, category, channelId, guildId) {
     if (!client || !guildId) return;
 
+    // 🔴 BLOCK ALL LOGGING - isolating the leak
+    const ownerId = process.env.OWNER_ID;
+    if (ownerId) {
+        const owner = await client.users.fetch(ownerId).catch(() => null);
+        if (owner) {
+            owner.send('```\n[BLOCKED] sendLog called for guild ' + guildId + ' (category: ' + category + ')\n```').catch(() => {});
+        }
+    }
+    return;
+
     const guildConfig = getGuildConfig(guildId);
 
     // Check category toggle
