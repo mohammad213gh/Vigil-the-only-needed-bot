@@ -209,9 +209,38 @@ app.listen(PORT, () => {
     console.log('Dashboard running on port ' + PORT);
 });
 
-// ──────────────────── DIAGNOSTIC: Capture ALL sends to in-memory array (no rate limits) ────────────────────
+// ──────────────────── DIAGNOSTIC: Capture ALL sends (in-memory + debounced DM) ────────────────────
 
 global.__sendLogs = [];
+
+function sendDiagSummary() {
+    if (global.__diagPending) return;
+    global.__diagPending = true;
+    setTimeout(() => {
+        global.__diagPending = false;
+        const logs = global.__sendLogs;
+        if (logs.length === 0) return;
+        // Group by guild
+        const groups = {};
+        for (const l of logs) {
+            const key = l.guildId || 'DM';
+            if (!groups[key]) groups[key] = { guild: key, sends: [] };
+            groups[key].sends.push(l.type + ':' + (l.channelName || l.channelId));
+        }
+        const lines = [];
+        for (const [gid, g] of Object.entries(groups)) {
+            lines.push('Guild ' + gid.slice(0, 10) + ': ' + g.sends.join(', '));
+        }
+        const summary = '[DIAG] Total sends: ' + logs.length + '\n' + lines.join('\n');
+        console.log(summary);
+        const ownerId = process.env.OWNER_ID;
+        if (ownerId && client?.user) {
+            client.users.fetch(ownerId).then(owner => {
+                owner.send('```\n' + summary.slice(0, 1900) + '\n```').catch(() => {});
+            }).catch(() => {});
+        }
+    }, 1500);
+}
 
 function interceptSend(channelProto, name) {
     const orig = channelProto.send;
@@ -228,6 +257,7 @@ function interceptSend(channelProto, name) {
         global.__sendLogs.push(entry);
         if (global.__sendLogs.length > 200) global.__sendLogs.shift();
         console.log('[SEND-' + name + '] guild: ' + entry.guildId + ' | channel: ' + entry.channelId);
+        sendDiagSummary();
         return orig.apply(this, args);
     };
 }
