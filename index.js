@@ -21,7 +21,7 @@ const { executeWorldCup, execute8Ball, executeCoinflip, executeDice, executeRPS,
 const { executeLog, executeEmbedConfig, executePresence, executeBotAvatar, executeBotName } = require('./src/commands/config');
 const { executePerm } = require('./src/commands/permissions');
 const { executeReactionRole } = require('./src/commands/reactionRoles');
-const { executeDashboard, executeShutdown } = require('./src/commands/owner');
+const { executeDashboard, executeDashAccess, executeShutdown } = require('./src/commands/owner');
 const { ownerGuard } = require('./src/commands/_guard');
 
 // ─── Event Handlers ───
@@ -173,6 +173,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
             // ── Dashboard ──
             case 'dashboard': await executeDashboard(interaction); break;
+
+            // ── Dashboard Access ──
+            case 'dashaccess': await executeDashAccess(interaction); break;
 
             // ── Shutdown ──
             case 'shutdown': await executeShutdown(interaction); break;
