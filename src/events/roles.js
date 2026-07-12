@@ -1,5 +1,57 @@
 const { EmbedBuilder } = require('discord.js');
 
+// ─── Permission Name Lookup (friendly display) ───
+const PERM_NAMES = {
+    'Administrator': 'Administrator',
+    'ManageGuild': 'Manage Server',
+    'ManageRoles': 'Manage Roles',
+    'ManageChannels': 'Manage Channels',
+    'ManageMessages': 'Manage Messages',
+    'ManageNicknames': 'Manage Nicknames',
+    'ManageWebhooks': 'Manage Webhooks',
+    'ManageThreads': 'Manage Threads',
+    'ManageEvents': 'Manage Events',
+    'KickMembers': 'Kick Members',
+    'BanMembers': 'Ban Members',
+    'ModerateMembers': 'Timeout Members',
+    'MentionEveryone': 'Mention @everyone',
+    'ViewChannel': 'View Channels',
+    'SendMessages': 'Send Messages',
+    'SendTTSMessages': 'Send TTS Messages',
+    'SendMessagesInThreads': 'Send Thread Messages',
+    'CreatePrivateThreads': 'Create Private Threads',
+    'CreatePublicThreads': 'Create Public Threads',
+    'ReadMessageHistory': 'Read History',
+    'AttachFiles': 'Attach Files',
+    'AddReactions': 'Add Reactions',
+    'EmbedLinks': 'Embed Links',
+    'UseExternalEmojis': 'Use External Emojis',
+    'UseExternalStickers': 'Use External Stickers',
+    'UseExternalSounds': 'Use External Sounds',
+    'UseApplicationCommands': 'Use Commands',
+    'Connect': 'Connect (Voice)',
+    'Speak': 'Speak (Voice)',
+    'MuteMembers': 'Mute Members',
+    'DeafenMembers': 'Deafen Members',
+    'MoveMembers': 'Move Members',
+    'UseVAD': 'Use Voice Activity',
+    'PrioritySpeaker': 'Priority Speaker',
+    'Stream': 'Stream',
+    'CreateInstantInvite': 'Create Invite',
+    'ChangeNickname': 'Change Nickname',
+    'ViewAuditLog': 'View Audit Log',
+    'ViewGuildInsights': 'View Insights',
+    'RequestToSpeak': 'Request to Speak',
+    'CreateEvents': 'Create Events',
+};
+
+function formatPerms(permissions) {
+    const perms = permissions.toArray ? permissions.toArray() : permissions;
+    const names = perms.slice(0, 8).map(p => PERM_NAMES[p] || p);
+    const extra = perms.length > 8 ? ' (+' + (perms.length - 8) + ' more)' : '';
+    return names.join(', ') + extra || 'None';
+}
+
 module.exports = [
     {
         name: 'guildMemberUpdate',
@@ -56,6 +108,137 @@ module.exports = [
                     deps.sendLog(embed, 'roles', null, newMember.guild.id);
                 }
             }
+        },
+    },
+    {
+        name: 'roleCreate',
+        once: false,
+        execute: (deps) => async (role) => {
+            if (!role.guild) return;
+
+            const permCount = role.permissions.toArray().length;
+            const colorHex = role.hexColor === '#000000' ? 'None' : role.hexColor;
+            // Fetch who created the role
+            const executor = await deps.fetchAuditLogExecutor(role.guild, 30, role.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
+
+            const embed = new EmbedBuilder()
+                .setColor(role.color || 0x2ECC71)
+                .setTitle('\uD83C\uDFF7\uFE0F Role Created')
+                .setDescription('A new role **' + role.name + '** was created' + byUser)
+                .addFields(
+                    { name: 'Name', value: role.name, inline: true },
+                    { name: 'Color', value: colorHex, inline: true },
+                    { name: 'Position', value: String(role.rawPosition), inline: true },
+                    { name: 'ID', value: role.id, inline: true },
+                    { name: 'Hoisted', value: role.hoist ? 'Yes' : 'No', inline: true },
+                    { name: 'Mentionable', value: role.mentionable ? 'Yes' : 'No', inline: true },
+                    { name: 'Permissions', value: formatPerms(role.permissions), inline: false },
+                )
+                .setFooter({ text: role.guild.name, iconURL: role.guild.iconURL() })
+                .setTimestamp();
+
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
+
+            deps.sendLog(embed, 'roles', null, role.guild.id);
+        },
+    },
+    {
+        name: 'roleDelete',
+        once: false,
+        execute: (deps) => async (role) => {
+            if (!role.guild) return;
+
+            const colorHex = role.hexColor === '#000000' ? 'None' : role.hexColor;
+            // Fetch who deleted the role
+            const executor = await deps.fetchAuditLogExecutor(role.guild, 32, role.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
+
+            const embed = new EmbedBuilder()
+                .setColor(0xE74C3C)
+                .setTitle('\uD83C\uDFF7\uFE0F Role Deleted')
+                .setDescription('The role **' + role.name + '** was deleted' + byUser)
+                .addFields(
+                    { name: 'Name', value: role.name, inline: true },
+                    { name: 'Color', value: colorHex, inline: true },
+                    { name: 'Position', value: String(role.rawPosition), inline: true },
+                    { name: 'ID', value: role.id, inline: true },
+                    { name: 'Managed', value: role.managed ? 'Yes (bot/integration)' : 'No', inline: true },
+                )
+                .setFooter({ text: role.guild.name, iconURL: role.guild.iconURL() })
+                .setTimestamp();
+
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
+
+            deps.sendLog(embed, 'roles', null, role.guild.id);
+        },
+    },
+    {
+        name: 'roleUpdate',
+        once: false,
+        execute: (deps) => async (oldRole, newRole) => {
+            if (!newRole.guild) return;
+
+            const changes = [];
+
+            // Name change
+            if (oldRole.name !== newRole.name) {
+                changes.push({ name: 'Name', old: oldRole.name, new: newRole.name });
+            }
+
+            // Color change
+            if (oldRole.hexColor !== newRole.hexColor) {
+                changes.push({ name: 'Color', old: oldRole.hexColor === '#000000' ? 'None' : oldRole.hexColor, new: newRole.hexColor === '#000000' ? 'None' : newRole.hexColor });
+            }
+
+            // Hoist change
+            if (oldRole.hoist !== newRole.hoist) {
+                changes.push({ name: 'Hoisted', old: oldRole.hoist ? 'Yes' : 'No', new: newRole.hoist ? 'Yes' : 'No' });
+            }
+
+            // Mentionable change
+            if (oldRole.mentionable !== newRole.mentionable) {
+                changes.push({ name: 'Mentionable', old: oldRole.mentionable ? 'Yes' : 'No', new: newRole.mentionable ? 'Yes' : 'No' });
+            }
+
+            // Permission changes — compare bitfields to detect any change
+            if (oldRole.permissions.bitfield !== newRole.permissions.bitfield) {
+                const addedPerms = newRole.permissions.toArray().filter(p => !oldRole.permissions.has(p));
+                const removedPerms = oldRole.permissions.toArray().filter(p => !newRole.permissions.has(p));
+                const parts = [];
+                if (addedPerms.length > 0) {
+                    parts.push('\u2705 Added: ' + addedPerms.slice(0, 5).map(p => PERM_NAMES[p] || p).join(', ') + (addedPerms.length > 5 ? ' (+' + (addedPerms.length - 5) + ')' : ''));
+                }
+                if (removedPerms.length > 0) {
+                    parts.push('\u274C Removed: ' + removedPerms.slice(0, 5).map(p => PERM_NAMES[p] || p).join(', ') + (removedPerms.length > 5 ? ' (+' + (removedPerms.length - 5) + ')' : ''));
+                }
+                changes.push({ name: 'Permissions', old: parts.join(' | ') || 'Changed', new: formatPerms(newRole.permissions) });
+            }
+
+            if (changes.length === 0) return;
+
+            // Fetch who updated the role
+            const executor = await deps.fetchAuditLogExecutor(newRole.guild, 31, newRole.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
+
+            const embed = new EmbedBuilder()
+                .setColor(0xF1C40F)
+                .setTitle('\uD83C\uDFF7\uFE0F Role Updated')
+                .setDescription('The role **' + newRole.name + '** was modified' + byUser)
+                .setTimestamp();
+
+            for (const change of changes) {
+                embed.addFields({
+                    name: change.name,
+                    value: '**Before:** ' + deps.truncate(String(change.old), 900) + '\n**After:** ' + deps.truncate(String(change.new), 900),
+                    inline: false,
+                });
+            }
+
+            embed.setFooter({ text: newRole.guild.name, iconURL: newRole.guild.iconURL() });
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
+
+            deps.sendLog(embed, 'roles', null, newRole.guild.id);
         },
     },
 ];
