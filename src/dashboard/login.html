@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#07070d;overflow:hidden;position:relative}
+body.light-mode{background:#f5f5fa}
+body.light-mode .login-card{background:rgba(255,255,255,0.88);border-color:rgba(0,0,0,0.06);box-shadow:0 0 60px rgba(0,0,0,0.03)}
+body.light-mode .login-card::before{background:linear-gradient(90deg,transparent,rgba(0,0,0,0.04),transparent)}
+body.light-mode h1{color:#1a1a2e}
+body.light-mode .sub{color:rgba(0,0,0,0.35)}
+body.light-mode .tab-row{background:rgba(0,0,0,0.03)}
+body.light-mode .tab-btn{color:rgba(0,0,0,0.3)}
+body.light-mode .tab-btn:hover:not(.active){color:rgba(0,0,0,0.5)}
+body.light-mode .inp-grp label{color:rgba(0,0,0,0.4)}
+body.light-mode .inp-grp input{background:rgba(255,255,255,0.7);border-color:rgba(0,0,0,0.08);color:#1a1a2e}
+body.light-mode .inp-grp input::placeholder{color:rgba(0,0,0,0.15)}
+body.light-mode .inp-grp input:focus{background:rgba(88,101,242,0.04);border-color:#5865F2}
+body.light-mode .mode-hint{color:rgba(0,0,0,0.15)}
+body.light-mode .ft{color:rgba(0,0,0,0.05)}
+body.light-mode .err{background:rgba(237,66,69,0.06)}
+body.light-mode canvas#bgCanvas+div+div+div .brandEl,body.light-mode #loginBrand{color:rgba(0,0,0,0.06)!important}
+body.light-mode .bg-mesh{opacity:0.5}
+body.light-mode .float-el{background:rgba(88,101,242,0.04)}
+canvas#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg-mesh{position:fixed;inset:0;z-index:0;background:
+  radial-gradient(ellipse 80% 60% at 0% 20%,rgba(88,101,242,0.15) 0%,transparent 50%),
+  radial-gradient(ellipse 60% 50% at 100% 80%,rgba(88,101,242,0.12) 0%,transparent 50%),
+  radial-gradient(ellipse 50% 40% at 50% 50%,rgba(120,80,200,0.08) 0%,transparent 50%);
+animation:bgShift 12s ease-in-out infinite alternate}
+@keyframes bgShift{0%{transform:scale(1) rotate(0deg)}100%{transform:scale(1.08) rotate(2deg)}}
+.float-el{position:absolute;border-radius:50%;background:rgba(88,101,242,0.08);pointer-events:none;animation:floatEl linear infinite}
+@keyframes floatEl{0%{transform:translateY(100vh) scale(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) scale(1.5);opacity:0}}
+.login-card{position:relative;z-index:1;width:420px;max-width:90vw;padding:48px 40px;border-radius:20px;background:rgba(12,12,20,0.75);border:1px solid rgba(255,255,255,0.06);box-shadow:0 0 80px rgba(88,101,242,0.06);animation:fadeUp 0.5s ease-out;position:relative;overflow:hidden}
+.login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.icon-wrap{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,#5865F2,#7850c8);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.icon-wrap svg{width:26px;height:26px;color:#fff}
+h1{color:#fff;font-size:22px;font-weight:700;text-align:center;letter-spacing:-0.3px}
+.sub{color:rgba(255,255,255,0.3);text-align:center;margin-bottom:28px;font-size:13px}
+.tab-row{display:flex;gap:2px;margin-bottom:20px;background:rgba(255,255,255,0.03);border-radius:10px;padding:3px}
+.tab-btn{flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit}
+.tab-btn.active{background:rgba(88,101,242,0.15);color:#fff}
+.tab-btn:hover:not(.active){color:rgba(255,255,255,0.5)}
+.inp-grp{margin-bottom:14px}
+.inp-grp label{display:block;color:rgba(255,255,255,0.35);font-size:10px;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.8px}
+.inp-grp input{width:100%;padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;color:#fff;font-size:14px;outline:none;transition:all 0.2s;font-family:inherit}
+.inp-grp input:focus{border-color:#5865F2;background:rgba(88,101,242,0.05);box-shadow:0 0 16px rgba(88,101,242,0.06)}
+.inp-grp input::placeholder{color:rgba(255,255,255,0.12)}
+.btn{width:100%;padding:12px;background:linear-gradient(135deg,#5865F2,#7850c8);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:linear-gradient(transparent,rgba(255,255,255,0.1));opacity:0;transition:opacity 0.3s}
+.btn:hover::after{opacity:1}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(88,101,242,0.25)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn .spin{display:none;width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:sp 0.6s linear infinite;margin:0 auto}
+.btn.loading .spin{display:block}
+.btn.loading .btn-txt{display:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{color:#ed4245;font-size:12px;text-align:center;margin-top:12px;display:none;padding:8px 12px;background:rgba(237,66,69,0.08);border-radius:8px;border:1px solid rgba(237,66,69,0.1)}
+.err.show{display:block}
+.mode-hint{text-align:center;font-size:11px;color:rgba(255,255,255,0.15);margin-bottom:16px;min-height:16px}
+.ft{text-align:center;margin-top:20px;color:rgba(255,255,255,0.06);font-size:11px;letter-spacing:0.5px}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="bg-mesh"></div>
+<div id="floatContainer" style="position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none"></div>
+
+<div class="login-card">
+  <div class="icon-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+  </div>
+  <h1>Dashboard</h1>
+  <p class="sub">Access the control panel</p>
+
+  <div class="tab-row" id="loginTabs">
+    <button class="tab-btn active" data-mode="password">Password</button>
+    <button class="tab-btn" data-mode="discord">Discord ID</button>
+  </div>
+  <div class="mode-hint" id="modeHint">Enter your password to sign in.</div>
+
+  <form id="loginForm" autocomplete="off">
+    <div id="passwordFields">
+      <div class="inp-grp"><label>Password</label><input type="password" id="password" placeholder="Enter dashboard password..." autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')"></div>
+    </div>
+    <div id="discordFields" style="display:none;">
+      <div class="inp-grp"><label>Discord User ID</label><input type="text" id="discordId" placeholder="Paste your Discord user ID..." autocomplete="off"></div>
+      <div class="inp-grp"><label>Access Token</label><input type="password" id="accessToken" placeholder="Paste the access token from the bot..." autocomplete="new-password"></div>
+    </div>
+    <button type="submit" class="btn" id="loginBtn"><span class="btn-txt">Sign In</span><div class="spin"></div></button>
+    <div class="err" id="errorMsg">Invalid credentials.</div>
+  </form>    <p class="ft" id="loginBrand">Bot Management System</p>
+    <div style="position:absolute;top:12px;right:14px;z-index:2;">
+      <button onclick="toggleTheme()" id="loginThemeBtn" style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;color:rgba(255,255,255,0.25);font-family:inherit">
+        <svg id="loginThemeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <script>
+// Theme toggle
+let loginDark=true;
+function applyLoginTheme(isDark){document.body.classList.toggle('light-mode',!isDark);loginDark=isDark;const ti=document.getElementById('loginThemeIcon'),btn=document.getElementById('loginThemeBtn');if(ti)ti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(btn){btn.style.borderColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)';btn.style.background=isDark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.03)';btn.style.color=isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.25)'}}
+function toggleTheme(){applyLoginTheme(!loginDark);localStorage.setItem('loginTheme',loginDark?'dark':'light')}
+const savedTheme=localStorage.getItem('loginTheme');if(savedTheme==='light')applyLoginTheme(false);
+
+// Show brand name if set
+const brandEl=document.createElement('div');brandEl.style.cssText='position:fixed;bottom:16px;left:0;right:0;text-align:center;z-index:1;font-size:10px;color:'+(document.body.classList.contains('light-mode')?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.06)')+';letter-spacing:0.3px;pointer-events:none;font-family:Inter,sans-serif';brandEl.textContent='';(async()=>{try{const r=await fetch('/api/status');if(r.ok){const d=await r.json();if(d.brandName){brandEl.textContent='Powered by '+d.brandName;document.getElementById('loginBrand').style.display='none'}}}catch{}})();document.body.appendChild(brandEl);document.getElementById('loginThemeBtn').addEventListener('mouseenter',()=>{const btn=document.getElementById('loginThemeBtn');btn.style.borderColor=loginDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.2)'});document.getElementById('loginThemeBtn').addEventListener('mouseleave',()=>{const btn=document.getElementById('loginThemeBtn');btn.style.borderColor=loginDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.08)'});
+
+// Floating particles
+const fc=document.getElementById('floatContainer');
+for(let i=0;i<40;i++){const p=document.createElement('div');p.className='float-el';p.style.left=Math.random()*100+'%';p.style.width=p.style.height=(2+Math.random()*5)+'px';p.style.animationDuration=(10+Math.random()*20)+'s';p.style.animationDelay=(Math.random()*20)+'s';fc.appendChild(p)}
+
+// Background canvas animation
+const c=document.getElementById('bgCanvas'),ctx=c.getContext('2d');
+let w,h,dots=[];
+function resize(){w=window.innerWidth;h=window.innerHeight;c.width=w*(devicePixelRatio||1);c.height=h*(devicePixelRatio||1);c.style.width=w+'px';c.style.height=h+'px';ctx.setTransform(devicePixelRatio||1,0,0,devicePixelRatio||1,0,1);buildDots()}
+function buildDots(){dots=[];for(let y=0;y<h;y+=32)for(let x=0;x<w;x+=32)dots.push({x,y,ox:x,oy:y})}
+let mx=-9999,my=-9999;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+document.addEventListener('mouseleave',()=>{mx=-9999;my=-9999});
+function anim(){ctx.clearRect(0,0,w,h);for(const d of dots){const dx=mx-d.ox,dy=my-d.oy,di=Math.sqrt(dx*dx+dy*dy);let ox=0,oy=0;if(di<100){const f=(1-di/100)*12,ang=Math.atan2(dy,dx);ox=-Math.cos(ang)*f;oy=-Math.sin(ang)*f}d.x+=(d.ox+ox-d.x)*0.08;d.y+=(d.oy+oy-d.y)*0.08;ctx.beginPath();ctx.arc(d.x,d.y,0.6,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${0.06+0.12*(1-Math.min(di/200,1))})`;ctx.fill()}requestAnimationFrame(anim)}
+resize();window.addEventListener('resize',resize);anim();
+
+// Login logic
+let loginMode='password';
+function switchMode(m){loginMode=m;document.querySelectorAll('.tab-btn').forEach(t=>t.classList.toggle('active',t.dataset.mode===m));document.getElementById('passwordFields').style.display=m==='password'?'':'none';document.getElementById('discordFields').style.display=m==='discord'?'':'none';document.getElementById('modeHint').textContent=m==='password'?'Enter your password to sign in.':'Enter your Discord user ID. Only granted users can use this.';(m==='password'?document.getElementById('password'):document.getElementById('discordId')).focus()}
+document.getElementById('loginTabs').addEventListener('click',e=>{const b=e.target.closest('.tab-btn');if(b)switchMode(b.dataset.mode)});
+document.getElementById('loginForm').addEventListener('submit',async e=>{e.preventDefault();const btn=document.getElementById('loginBtn'),err=document.getElementById('errorMsg');btn.classList.add('loading');err.classList.remove('show');try{      const body=loginMode==='password'?{password:document.getElementById('password').value}:{discordId:document.getElementById('discordId').value,accessToken:document.getElementById('accessToken').value};const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(d.success){document.cookie='session='+d.token+';path=/;max-age=86400;SameSite=Lax';window.location.href='/'}else{              err.textContent='Invalid '+(loginMode==='password'?'password':'credentials')+'.';err.classList.add('show')}}catch{err.textContent='Connection error.';err.classList.add('show')}
+btn.classList.remove('loading')});
+
+// ═══ Clear form on load (security: prevent password persistence) ═══
+window.addEventListener('pageshow',e=>{
+  if(e.persisted){
+    document.getElementById('password').value='';
+    document.getElementById('discordId').value='';
+  }
+});
+document.getElementById('password').value='';
+document.getElementById('discordId').value='';
+
+// ═══ Bugs badge ═══
+const bugEl=document.createElement('div');bugEl.style.cssText='position:fixed;bottom:12px;right:14px;z-index:10;font-size:9px;color:rgba(255,255,255,0.06);font-family:Inter,sans-serif;letter-spacing:0.2px;pointer-events:none;transition:color 0.3s';bugEl.textContent='Bugs? DM .nlux.';(function(){const o=new MutationObserver(()=>{bugEl.style.color=document.body.classList.contains('light-mode')?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.06)'});o.observe(document.body,{attributes:true,attributeFilter:['class']})})();document.body.appendChild(bugEl);
+</script>
+</body>
+</html>

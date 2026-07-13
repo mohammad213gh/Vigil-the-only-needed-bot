@@ -1,0 +1,30 @@
+# ─── Environment ───
+.env
+.env.local
+.env.production
+
+# ─── Runtime Data ───
+config.json
+reminders.json
+
+# ─── Uploads ───
+uploads/
+uploads/*
+
+# ─── Dependencies ───
+node_modules/
+
+# ─── OS files ───
+.DS_Store
+Thumbs.db
+
+# ─── Logs ───
+*.log
+npm-debug.log*
+
+# ─── IDE ───
+.vscode/
+.idea/
+*.swp
+*.swo
+nul
