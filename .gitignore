@@ -28,3 +28,4 @@ npm-debug.log*
 *.swp
 *.swo
 nul
+repo_check/
