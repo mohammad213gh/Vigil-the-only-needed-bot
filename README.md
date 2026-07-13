@@ -266,6 +266,7 @@ This project is licensed under the **GNU General Public License v3.0**. See the 
 
 <div align="center">
 Made with ❤️ for the Discord community
+  -# dm me in discord if you find any bugs .nlux.
 if theres any issues found dm me in discord
 .nlux.
 </div>
