@@ -32,6 +32,7 @@ const memberEvents = require('./src/events/members');
 const roleEvents = require('./src/events/roles');
 const serverEvents = require('./src/events/server');
 const voiceEvents = require('./src/events/voice');
+const extraEvents = require('./src/events/extras');
 
 // ──────────────────── Bot Setup ────────────────────
 
@@ -43,6 +44,9 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildScheduledEvents,
+        GatewayIntentBits.GuildModeration,
+        GatewayIntentBits.GuildExpressions,
     ],
     partials: [
         Partials.Message,
@@ -80,6 +84,7 @@ const allEvents = [
     ...roleEvents,
     ...serverEvents,
     ...voiceEvents,
+    ...extraEvents,
 ];
 
 for (const event of allEvents) {
@@ -208,66 +213,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('Dashboard running on port ' + PORT);
 });
-
-// ──────────────────── DIAGNOSTIC: Capture ALL sends (in-memory + debounced DM) ────────────────────
-
-global.__sendLogs = [];
-
-function sendDiagSummary() {
-    if (global.__diagPending) return;
-    global.__diagPending = true;
-    setTimeout(() => {
-        global.__diagPending = false;
-        const logs = global.__sendLogs;
-        if (logs.length === 0) return;
-        // Group by guild
-        const groups = {};
-        for (const l of logs) {
-            const key = l.guildId || 'DM';
-            if (!groups[key]) groups[key] = { guild: key, sends: [] };
-            groups[key].sends.push(l.type + ':' + (l.channelName || l.channelId));
-        }
-        const lines = [];
-        for (const [gid, g] of Object.entries(groups)) {
-            lines.push('Guild ' + gid.slice(0, 10) + ': ' + g.sends.join(', '));
-        }
-        const summary = '[DIAG] Total sends: ' + logs.length + '\n' + lines.join('\n');
-        console.log(summary);
-        const ownerId = process.env.OWNER_ID;
-        if (ownerId && client?.user) {
-            client.users.fetch(ownerId).then(owner => {
-                owner.send('```\n' + summary.slice(0, 1900) + '\n```').catch(() => {});
-            }).catch(() => {});
-        }
-    }, 1500);
-}
-
-function interceptSend(channelProto, name) {
-    const orig = channelProto.send;
-    channelProto.send = function (...args) {
-        const stack = new Error().stack.split('\n').slice(2, 12).join('\n').trim();
-        const entry = {
-            t: Date.now(),
-            type: name,
-            guildId: this.guildId || 'DM',
-            channelId: this.id,
-            channelName: this.name || 'Unknown',
-            stack: stack,
-        };
-        global.__sendLogs.push(entry);
-        if (global.__sendLogs.length > 200) global.__sendLogs.shift();
-        console.log('[SEND-' + name + '] guild: ' + entry.guildId + ' | channel: ' + entry.channelId);
-        sendDiagSummary();
-        return orig.apply(this, args);
-    };
-}
-
-const { TextChannel, NewsChannel, VoiceChannel, StageChannel, ThreadChannel } = require('discord.js');
-interceptSend(TextChannel.prototype, 'Text');
-interceptSend(NewsChannel.prototype, 'News');
-interceptSend(VoiceChannel.prototype, 'Voice');
-interceptSend(StageChannel.prototype, 'Stage');
-interceptSend(ThreadChannel.prototype, 'Thread');
 
 // ──────────────────── Login ────────────────────
 
