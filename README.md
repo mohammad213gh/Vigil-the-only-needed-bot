@@ -1,87 +1,27 @@
 <div align="center">
 
-# 🤖 Discord Bot
+# Discord Bot
 
-**A server management bot with comprehensive logging, moderation, web dashboard, and data persistence**
-
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org)
-[![Discord.js](https://img.shields.io/badge/discord.js-v14-5865F2.svg)](https://discord.js.org)
+**A server management bot with logging, moderation, web dashboard, and more**
 
 </div>
 
 ---
 
-## ✨ Features
+## What it does
 
-### 📊 Web Dashboard
-- **Real-time monitoring** — Live bot status, server metrics, and system resources
-- **macOS-style Dock** — Intuitive bottom navigation with icon magnification
-- **Server Management** — Browse servers, manage roles, channels, and logging config
-- **Customizable UI** — 12 themes, accent colors, 5 background engines, card styles, animation presets
-- **Access Control** — Password + Discord ID + token authentication with rate limiting
-- **Export Data** — Download growth analytics as JSON
-
-### 📝 Advanced Logging
-- **16 categories** — Messages, Reactions, Members, Roles, Server, Voice, Threads, Emojis, Bans, Invites, Stickers, AutoMod, Scheduled Events, Stage, Webhooks, Integrations
-- **Per-category channels** — Route different log types to different channels
-- **Toggle system** — Enable/disable categories on the fly
-- **Channel tracking** — Filter logs to specific channels only
-- **Rich embed format** — Beautiful, color-coded event messages with audit log attribution
-
-### 🛡️ Moderation Suite
-- **Kick / Ban / Unban** — Full member removal toolkit
-- **Timeout / Untimeout** — Temporary and permanent mute
-- **Warn System** — Track warnings with reason and history (persistent with SQLite)
-- **Lock / Unlock** — Prevent or allow messages in a channel
-- **Purge** — Bulk delete up to 100 messages
-- **Slowmode** — Per-channel rate limiting
-
-### 👥 Role & Permission Management
-- **Role** — Add, remove, and list roles
-- **Permission System** — Grant/revoke command access to trusted users
-- **Reaction Roles** — Self-assignable roles via emoji reactions
-
-### 🎮 Fun Commands
-- **World Cup Predictor** — Simulate match scores between any two countries
-- **8-Ball / Coinflip / Dice / RPS** — Classic games
-- **Jokes / Facts / Advice / Quotes** — Fresh content daily
-- **Reverse / Mock / Random** — Utility fun
-
-### ⏰ Reminders
-- **Set reminders** via DM with natural durations (30s, 5m, 2h, 1d)
-- **Automatic DM delivery** when time's up
-- **List and cancel** from Discord or dashboard
-
-### 🛠️ Server Tools
-- **Nickname** — Change member nicknames
-- **Say / Embed** — Send messages as the bot
-- **Poll** — Create multi-option polls
-- **Announce** — Formatted announcements with pings
-- **Stats** — Server growth tracking with daily snapshots
+This is a Discord bot I built for my own server because I got tired of premium bots locking features behind paywalls. It does logging, moderation, reaction roles, reminders, fun commands, and has a web dashboard where you can manage everything.
 
 ---
 
-## 📋 Table of Contents
+## Quick Start
 
-- [Quick Start](#-quick-start)
-- [Environment Variables](#-environment-variables)
-- [Data Persistence](#-data-persistence)
-- [Commands](#-commands)
-- [Dashboard Features](#-dashboard-features)
-- [Deployment](#-deployment)
-- [License](#-license)
+### You'll need
+- **Node.js 20+**
+- A **Discord bot token** from the [Developer Portal](https://discord.com/developers/applications)
+- Somewhere to host it (I recommend Railway, it's free and easy)
 
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- **Node.js 20+** installed
-- A **Discord Application** with a bot token ([Discord Developer Portal](https://discord.com/developers/applications))
-- A hosting service (Railway, Fly.io, Discloud, or your own VPS)
-
-### 1. Setup
+### Setup
 
 ```bash
 git clone <your-repo-url>
@@ -90,194 +30,101 @@ npm install
 cp .env.example .env
 ```
 
-### 2. Configure `.env`
-
-Open `.env` and fill in your values (see [Environment Variables](#-environment-variables) below).
-
-### 3. Start the Bot
+Open `.env` and fill in your token, user ID, and dashboard password. Then:
 
 ```bash
 npm start
 ```
 
-The bot will:
-1. Log in to Discord
-2. Register all slash commands (instantly if `GUILD_ID` is set)
-3. Start the web dashboard on the configured port
-
-### 4. Access the Dashboard
-
-Open `http://localhost:3000` (or your `DASHBOARD_URL`) and sign in with your `DASHBOARD_PASSWORD`.
+That's it. The bot comes online, registers all commands (instantly if you set `GUILD_ID`), and starts the dashboard on port 3000.
 
 ---
 
-## 🔐 Environment Variables
+## Features
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `BOT_TOKEN` | ✅ | — | Your Discord bot token from the Developer Portal |
-| `OWNER_ID` | ✅ | — | Your Discord user ID (grants full command access + dashboard) |
-| `DASHBOARD_PASSWORD` | ✅ | — | Password for the web dashboard login |
-| `DATA_DIR` | ⚠️ | `./data/` | **Persistent data directory** — stores all bot data in SQLite. Set to `/data` on Railway with a volume mount to prevent data loss on redeploy |
-| `GUILD_ID` | ❌ | — | Server ID for **instant** slash command registration. Without this, commands register globally (takes ~1 hour) |
-| `DASHBOARD_URL` | ❌ | — | Public URL of your dashboard (displayed by `/dashboard` command) |
-| `PORT` | ❌ | `3000` | Port for the web dashboard |
-| `BRAND_NAME` | ❌ | — | Custom brand name shown in dashboard footer |
-| `UPLOADS_DIR` | ❌ | `./uploads` | Directory for dashboard background image uploads |
+### 📊 Web Dashboard
+- See live bot status, uptime, memory usage
+- Browse your servers, view roles and channels
+- Toggle log categories on/off per server
+- Check audit logs without leaving your browser
+- Fully customizable — themes, accent colors, background effects, card styles, animation speed
+- Rate-limited login so nobody can brute force your password
 
----
+### 📝 Logging
+Tracks about 40 different Discord events across 16 categories: messages, reactions, members, roles, server changes, voice, threads, emojis, bans, invites, stickers, automod, scheduled events, stage, webhooks, integrations. Each category can go to a different channel, and you can toggle them on/off whenever you want.
 
-## 💾 Data Persistence
+### 🛡️ Moderation
+Kick, ban, unban, timeout, untimeout, warn, clear warnings, lock, unlock, purge messages, set slowmode, change nicknames. Pretty much everything you'd reach for as a mod.
 
-All bot data is stored in a **single SQLite database** (`bot.db`) inside `DATA_DIR`:
+### 👥 Reaction Roles
+Set up self-assignable roles so members can pick what they want. Works with custom emojis too.
 
-| Data | Storage |
-|------|---------|
-| Guild configs (log channels, categories) | SQLite |
-| User permissions per command | SQLite |
-| Reaction role configurations | SQLite |
-| Warnings history | SQLite |
-| Pending reminders | SQLite |
-| Member join/leave stats + daily snapshots | SQLite |
-| Dashboard theme customization | SQLite |
-| Dashboard users + access tokens | SQLite |
+### ⏰ Reminders
+Users can set reminders with `/remindme 30s do the thing` and the bot will DM them when time's up.
 
-### Preventing Data Loss
+### 🎮 Fun Commands
+8ball, coinflip, dice, rock-paper-scissors, jokes, facts, advice, quotes, reverse text, mock text, random numbers, and a World Cup match predictor.
 
-Set `DATA_DIR` to a **persistent path** outside your project directory:
-
-- **Railway:** Create a volume mounted at `/data` → set `DATA_DIR=/data`
-- **Docker:** `docker run -v /host/path:/data -e DATA_DIR=/data ...`
-- **VPS:** Set `DATA_DIR=/var/lib/discord-bot`
-
-> On first boot, the bot automatically migrates any existing JSON data files into SQLite. Old files are backed up with a `.bak` extension and renamed to `.migrated`.
+### 🛠️ Other Stuff
+- Permission system so you can grant specific commands to trusted users without making them owner
+- Bot customization — change name, avatar, and presence from Discord or the dashboard
+- Server growth stats with daily snapshots
+- Graceful shutdown so data doesn't corrupt when the bot stops
 
 ---
 
-## 📜 Commands
+## Hosting
 
-### Public Commands (anyone can use)
-
-| Command | Description |
-|---------|-------------|
-| `/ping` | Check bot latency |
-| `/status` | View bot status and resources |
-| `/botinfo` | Bot information |
-| `/userinfo [user]` | Get user details |
-| `/avatar [user]` | View a user's avatar |
-| `/stats server` | Server statistics |
-| `/stats growth` | Member growth over time |
-| `/worldcup <team1> <team2>` | Predict a match score |
-| `/8ball <question>` | Ask the magic 8-ball |
-| `/coinflip` | Flip a coin |
-| `/dice [sides]` | Roll dice |
-| `/rps <choice>` | Rock-paper-scissors |
-| `/joke` | Random joke |
-| `/fact` | Random fact |
-| `/advice` | Random advice |
-| `/quote` | Inspirational quote |
-| `/reverse <text>` | Reverse text |
-| `/mock <text>` | Spongebob-case text |
-| `/random <min> <max>` | Random number |
-| `/remindme <time> <text>` | Set a reminder |
-| `/reminders list` | List your reminders |
-| `/reminders cancel <id>` | Cancel a reminder |
-
-### Owner Commands (only you or granted users)
-
-| Category | Commands |
-|----------|----------|
-| **Logging** | `/log channel`, `/log toggle`, `/log list` |
-| **Config** | `/embedconfig`, `/presence`, `/botavatar`, `/botname` |
-| **Moderation** | `/kick`, `/ban`, `/unban`, `/timeout`, `/untimeout`, `/warn`, `/warnings`, `/clearwarnings`, `/lock`, `/unlock` |
-| **Admin** | `/role`, `/purge`, `/slowmode`, `/nickname`, `/say`, `/embed`, `/deploy`, `/track`, `/poll`, `/announce` |
-| **Permissions** | `/perm grant`, `/perm revoke`, `/perm list`, `/perm user` |
-| **Reaction Roles** | `/reactionrole add`, `/reactionrole remove`, `/reactionrole list` |
-| **Dashboard** | `/dashboard` — Get the dashboard link |
-| **Access** | `/dashaccess add`, `/dashaccess remove`, `/dashaccess list` |
-| **System** | `/shutdown` — Graceful bot shutdown |
-
-Use `/perm grant @user <command>` to give trusted users access to specific commands without making them the owner.
-
----
-
-## 🖥️ Dashboard Features
-
-The web dashboard is a full interface for monitoring and managing your bot:
-
-| Section | Features |
-|---------|----------|
-| **Overview** | Live status cards, uptime, memory, server count, net growth mini-chart |
-| **Analytics** | 30-day growth chart with SVG line graph, total joins/leaves/net, export as JSON |
-| **Servers** | Searchable server list with sort (members/name/boosts) |
-| **Server Detail** | Per-server stats, growth bar chart |
-| | **Roles** tab — view all roles with colors and member counts |
-| | **Channels** tab — view all channels with types and settings |
-| | **Logging** tab — toggle categories on/off, set per-category channels, channel filter |
-| | **Audit Log** tab — recent Discord audit log entries |
-| **Activity** | Recent join/leave events across all servers |
-| **Reminders** | All pending reminders with countdown timers |
-| **System** | Host info, platform, Node version, CPU, memory (RSS + heap), uptime |
-| **Customize** | 12 theme presets, accent color, dashboard title, bot avatar |
-| | 5 interactive background engines (Dots, Shapes, Glitch, Liquid, Grid) |
-| | Custom background (URL or upload) with blur control |
-| | Card styles (Glass/Solid/Border), layout density (Compact/Normal/Comfortable) |
-| | Animation presets (Subtle/Smooth/Energetic) + speed control |
-| | macOS Dock toggle, card glow effect, ambient light effect |
-| | Bot presence, username, and avatar management |
-| | Refresh interval, visible section toggles |
-
-> The dashboard saves all customization settings to SQLite — they survive redeploys.
-
----
-
-## 🚢 Deployment
-
-### Railway (Recommended)
-
-1. Push this repo to GitHub and connect it to Railway
-2. Go to **Volumes** tab → **Add Volume** → mount at `/data`
-3. Go to **Variables** tab and add:
-   - `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `DATA_DIR=/data`
-4. Go to **Settings** → **Networking** → **Generate Domain** for public dashboard access
-5. Railway auto-sets `RAILWAY_PUBLIC_DOMAIN` — the `/dashboard` command will detect it automatically
-
-### Fly.io
-
-1. Install the Fly CLI and run `fly launch`
-2. Set environment variables with `fly secrets set`
-3. Set `DASHBOARD_URL` manually to your Fly domain
-
-### Discloud
-
-1. Edit `discloud.config` with your bot name and RAM
-2. Set `DASHBOARD_URL` to your Discloud domain
-3. Upload via the Discloud dashboard
+### Railway (what I use)
+1. Push to GitHub and connect the repo on Railway
+2. Go to **Volumes** → **Add Volume** → mount at `/data`
+3. Set your env vars: `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `DATA_DIR=/data`
+4. Go to **Settings** → **Networking** → **Generate Domain** for the dashboard
+5. Done
 
 ### Docker
-
 ```bash
 docker build -t discord-bot .
 docker run -p 3000:3000 --env-file .env -v /host/data:/data discord-bot
 ```
 
+### Fly.io or Discloud
+Should work fine. Just set the env vars and make sure `DATA_DIR` points to persistent storage.
+
 ---
 
-## 📄 License
+## Data Persistence
 
-This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
+Everything saves to a single SQLite database (`bot.db`) inside your `DATA_DIR`. That means warnings, configs, stats, reminders, dashboard settings — they all survive redeploys as long as `DATA_DIR` is set to a persistent path.
 
-**What this means:**
-- ✅ You can use this bot for personal or commercial purposes
-- ✅ You can modify the code for your own use
-- ✅ You can redistribute it — but you must share the source code under the same license
-- ❌ You cannot distribute closed-source versions
-- ❌ You cannot claim it as your own original work
+On Railway this means setting up a volume. It takes 2 minutes and you never lose data again.
+
+---
+
+## Commands
+
+### Anyone can use these
+`/ping` `/status` `/botinfo` `/userinfo` `/avatar` `/stats server` `/stats growth` `/worldcup` `/8ball` `/coinflip` `/dice` `/rps` `/joke` `/fact` `/advice` `/quote` `/reverse` `/mock` `/random` `/remindme` `/reminders list` `/reminders cancel`
+
+### Owner-only (unless you grant permissions)
+**Logging:** `/log channel` `/log toggle` `/log list`
+**Config:** `/embedconfig` `/presence` `/botavatar` `/botname`
+**Moderation:** `/kick` `/ban` `/unban` `/timeout` `/untimeout` `/warn` `/warnings` `/clearwarnings` `/lock` `/unlock`
+**Admin:** `/role` `/purge` `/slowmode` `/nickname` `/say` `/embed` `/deploy` `/track` `/poll` `/announce`
+**Permissions:** `/perm grant` `/perm revoke` `/perm list` `/perm user`
+**Reaction Roles:** `/reactionrole add` `/reactionrole remove` `/reactionrole list`
+**Other:** `/dashboard` `/dashaccess` `/shutdown`
+
+Use `/perm grant @user command` to let trusted people use specific commands without making them full owners.
+
+---
+
+## Found a bug?
+
+DM me on Discord: **.nlux.** (ID: 1200828694088917114)
 
 ---
 
 <div align="center">
-Made with ❤️ for the Discord community
-
-Found a bug? DM **.nlux.** on Discord.
+Built for personal use, sharing in case it helps someone else.
 </div>
