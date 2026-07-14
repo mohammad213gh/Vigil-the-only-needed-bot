@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🤖 Premium Discord Bot
+# 🤖 Discord Bot
 
-**A feature-rich Discord bot with web dashboard, logging, moderation, and server management**
+**A server management bot with comprehensive logging, moderation, web dashboard, and data persistence**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org)
@@ -18,21 +18,21 @@
 - **Real-time monitoring** — Live bot status, server metrics, and system resources
 - **macOS-style Dock** — Intuitive bottom navigation with icon magnification
 - **Server Management** — Browse servers, manage roles, channels, and logging config
-- **Customizable UI** — Themes, accent colors, background effects, card styles, animation presets
-- **Access Control** — Secure password + Discord ID + access token authentication
+- **Customizable UI** — 12 themes, accent colors, 5 background engines, card styles, animation presets
+- **Access Control** — Password + Discord ID + token authentication with rate limiting
 - **Export Data** — Download growth analytics as JSON
 
 ### 📝 Advanced Logging
-- **6 categories** — Messages, Reactions, Members, Roles, Server, Voice
+- **16 categories** — Messages, Reactions, Members, Roles, Server, Voice, Threads, Emojis, Bans, Invites, Stickers, AutoMod, Scheduled Events, Stage, Webhooks, Integrations
 - **Per-category channels** — Route different log types to different channels
 - **Toggle system** — Enable/disable categories on the fly
 - **Channel tracking** — Filter logs to specific channels only
-- **Rich embed format** — Beautiful, color-coded event messages
+- **Rich embed format** — Beautiful, color-coded event messages with audit log attribution
 
 ### 🛡️ Moderation Suite
 - **Kick / Ban / Unban** — Full member removal toolkit
 - **Timeout / Untimeout** — Temporary and permanent mute
-- **Warn System** — Track warnings with reason and history
+- **Warn System** — Track warnings with reason and history (persistent with SQLite)
 - **Lock / Unlock** — Prevent or allow messages in a channel
 - **Purge** — Bulk delete up to 100 messages
 - **Slowmode** — Per-channel rate limiting
@@ -66,6 +66,7 @@
 
 - [Quick Start](#-quick-start)
 - [Environment Variables](#-environment-variables)
+- [Data Persistence](#-data-persistence)
 - [Commands](#-commands)
 - [Dashboard Features](#-dashboard-features)
 - [Deployment](#-deployment)
@@ -83,32 +84,15 @@
 ### 1. Setup
 
 ```bash
-# Clone or download the bot
 git clone <your-repo-url>
 cd discord-bot
-
-# Install dependencies
 npm install
-
-# Create your environment file
 cp .env.example .env
 ```
 
 ### 2. Configure `.env`
 
-Open `.env` and fill in your values:
-
-```env
-# ── Required ───
-BOT_TOKEN=your_discord_bot_token_here
-OWNER_ID=your_discord_user_id_here
-DASHBOARD_PASSWORD=choose_a_strong_password
-
-# ── Optional ───
-DASHBOARD_URL=https://your-bot-dashboard.com
-PORT=3000
-GUILD_ID=your_test_server_id
-```
+Open `.env` and fill in your values (see [Environment Variables](#-environment-variables) below).
 
 ### 3. Start the Bot
 
@@ -132,15 +116,41 @@ Open `http://localhost:3000` (or your `DASHBOARD_URL`) and sign in with your `DA
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `BOT_TOKEN` | ✅ | — | Your Discord bot token from the Developer Portal |
-| `OWNER_ID` | ✅ | — | Your Discord user ID (grants full command access) |
-| `DASHBOARD_PASSWORD` | ✅ | — | Password for the web dashboard |
-| `DASHBOARD_URL` | ❌ | — | Public URL of your dashboard (shown in `/dashboard` command) |
+| `OWNER_ID` | ✅ | — | Your Discord user ID (grants full command access + dashboard) |
+| `DASHBOARD_PASSWORD` | ✅ | — | Password for the web dashboard login |
+| `DATA_DIR` | ⚠️ | `./data/` | **Persistent data directory** — stores all bot data in SQLite. Set to `/data` on Railway with a volume mount to prevent data loss on redeploy |
+| `GUILD_ID` | ❌ | — | Server ID for **instant** slash command registration. Without this, commands register globally (takes ~1 hour) |
+| `DASHBOARD_URL` | ❌ | — | Public URL of your dashboard (displayed by `/dashboard` command) |
 | `PORT` | ❌ | `3000` | Port for the web dashboard |
-| `GUILD_ID` | ❌ | — | Server ID for instant command registration |
-| `CONFIG_PATH` | ❌ | `./config.json` | Path to the config file |
-| `REMINDERS_PATH` | ❌ | `./reminders.json` | Path to the reminders file |
-| `UPLOADS_DIR` | ❌ | `./uploads` | Directory for dashboard file uploads |
-| `LOG_CHANNEL_ID` | ❌ | — | Default channel for logging (fallback) |
+| `BRAND_NAME` | ❌ | — | Custom brand name shown in dashboard footer |
+| `UPLOADS_DIR` | ❌ | `./uploads` | Directory for dashboard background image uploads |
+
+---
+
+## 💾 Data Persistence
+
+All bot data is stored in a **single SQLite database** (`bot.db`) inside `DATA_DIR`:
+
+| Data | Storage |
+|------|---------|
+| Guild configs (log channels, categories) | SQLite |
+| User permissions per command | SQLite |
+| Reaction role configurations | SQLite |
+| Warnings history | SQLite |
+| Pending reminders | SQLite |
+| Member join/leave stats + daily snapshots | SQLite |
+| Dashboard theme customization | SQLite |
+| Dashboard users + access tokens | SQLite |
+
+### Preventing Data Loss
+
+Set `DATA_DIR` to a **persistent path** outside your project directory:
+
+- **Railway:** Create a volume mounted at `/data` → set `DATA_DIR=/data`
+- **Docker:** `docker run -v /host/path:/data -e DATA_DIR=/data ...`
+- **VPS:** Set `DATA_DIR=/var/lib/discord-bot`
+
+> On first boot, the bot automatically migrates any existing JSON data files into SQLite. Old files are backed up with a `.bak` extension and renamed to `.migrated`.
 
 ---
 
@@ -197,27 +207,27 @@ The web dashboard is a full interface for monitoring and managing your bot:
 
 | Section | Features |
 |---------|----------|
-| **Overview** | Live status cards, uptime, memory, server count, net growth chart |
-| **Analytics** | 30-day growth chart, total joins/leaves, export data as JSON |
-| **Servers** | Searchable server list, per-server detail view with growth charts |
-| **Server Mgmt** | **Roles** tab — view all roles with colors and member counts |
+| **Overview** | Live status cards, uptime, memory, server count, net growth mini-chart |
+| **Analytics** | 30-day growth chart with SVG line graph, total joins/leaves/net, export as JSON |
+| **Servers** | Searchable server list with sort (members/name/boosts) |
+| **Server Detail** | Per-server stats, growth bar chart |
+| | **Roles** tab — view all roles with colors and member counts |
 | | **Channels** tab — view all channels with types and settings |
-| | **Logging** tab — toggle log categories on/off per server |
+| | **Logging** tab — toggle categories on/off, set per-category channels, channel filter |
+| | **Audit Log** tab — recent Discord audit log entries |
 | **Activity** | Recent join/leave events across all servers |
 | **Reminders** | All pending reminders with countdown timers |
-| **System** | Host info, CPU, memory usage (RSS + heap), uptime |
-| **Customize** | Themes, accent color, background effects, card styles, animation presets, dock navigation |
+| **System** | Host info, platform, Node version, CPU, memory (RSS + heap), uptime |
+| **Customize** | 12 theme presets, accent color, dashboard title, bot avatar |
+| | 5 interactive background engines (Dots, Shapes, Glitch, Liquid, Grid) |
+| | Custom background (URL or upload) with blur control |
+| | Card styles (Glass/Solid/Border), layout density (Compact/Normal/Comfortable) |
+| | Animation presets (Subtle/Smooth/Energetic) + speed control |
+| | macOS Dock toggle, card glow effect, ambient light effect |
+| | Bot presence, username, and avatar management |
+| | Refresh interval, visible section toggles |
 
-### Customization Options
-- **12 preset themes** — Purple, Blue, Green, Cyan, Pink, Orange, Red, White, Amber, Lime, Teal, Rose
-- **5 background engines** — Dots, Shapes, Glitch, Liquid, Grid (all interactive)
-- **Custom background** — URL or upload with blur control
-- **3 card styles** — Glass, Solid, Border Only
-- **3 layout densities** — Compact, Normal, Comfortable
-- **3 animation presets** — Subtle, Smooth, Energetic
-- **Dock navigation** — Enable/disable, macOS-style magnification
-- **Card glow** — Mouse-tracking border glow effect
-- **Ambient light** — Mouse-following radial highlight
+> The dashboard saves all customization settings to SQLite — they survive redeploys.
 
 ---
 
@@ -225,10 +235,12 @@ The web dashboard is a full interface for monitoring and managing your bot:
 
 ### Railway (Recommended)
 
-1. Push to a GitHub repo and connect to Railway
-2. Add your environment variables in Railway Dashboard → Variables
-3. Railway auto-sets `RAILWAY_PUBLIC_DOMAIN` — the `/dashboard` command will work automatically
-4. Go to Settings → Networking → Generate Domain for public access
+1. Push this repo to GitHub and connect it to Railway
+2. Go to **Volumes** tab → **Add Volume** → mount at `/data`
+3. Go to **Variables** tab and add:
+   - `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `DATA_DIR=/data`
+4. Go to **Settings** → **Networking** → **Generate Domain** for public dashboard access
+5. Railway auto-sets `RAILWAY_PUBLIC_DOMAIN` — the `/dashboard` command will detect it automatically
 
 ### Fly.io
 
@@ -246,7 +258,7 @@ The web dashboard is a full interface for monitoring and managing your bot:
 
 ```bash
 docker build -t discord-bot .
-docker run -p 3000:3000 --env-file .env discord-bot
+docker run -p 3000:3000 --env-file .env -v /host/data:/data discord-bot
 ```
 
 ---
@@ -266,7 +278,6 @@ This project is licensed under the **GNU General Public License v3.0**. See the 
 
 <div align="center">
 Made with ❤️ for the Discord community
-  -# dm me in discord if you find any bugs .nlux.
-if theres any issues found dm me in discord
-.nlux.
+
+Found a bug? DM **.nlux.** on Discord.
 </div>
