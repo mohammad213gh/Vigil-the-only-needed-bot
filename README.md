@@ -12,6 +12,20 @@
 
 This is a Discord bot I built for my own server because I got tired of premium bots locking features behind paywalls. It does logging, moderation, reaction roles, reminders, fun commands, and has a web dashboard where you can manage everything.
 
+**Built with:** [Node.js](https://nodejs.org) + [Discord.js v14](https://discord.js.org) + [Express](https://expressjs.com) + [SQLite](https://sqlite.org) — all free.
+
+---
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Hosting](#hosting)
+- [Data Persistence](#data-persistence)
+- [Commands](#commands)
+- [License](#license)
+- [Found a bug?](#found-a-bug)
+
 ---
 
 ## Quick Start
@@ -131,6 +145,16 @@ Use `/perm grant @user command` to let trusted people use specific commands with
 ## Found a bug?
 
 DM me on Discord: **.nlux.** (ID: 1200828694088917114)
+
+---
+
+---
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
+
+Basically: you can use, modify, and share it, but you have to keep the same license and give credit. No closed-source versions.
 
 ---
 
