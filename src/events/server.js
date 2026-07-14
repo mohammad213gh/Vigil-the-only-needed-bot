@@ -112,7 +112,7 @@ module.exports = [
 
             if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
 
-            deps.sendLog(embed, 'webhooks', null, channel.guild.id);
+            deps.sendLog(embed, 'server', null, channel.guild.id);
         },
     },
     {
@@ -138,7 +138,7 @@ module.exports = [
 
             if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
 
-            deps.sendLog(embed, 'webhooks', null, channel.guild.id);
+            deps.sendLog(embed, 'server', null, channel.guild.id);
         },
     },
     {
