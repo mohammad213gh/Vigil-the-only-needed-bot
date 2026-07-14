@@ -111,7 +111,7 @@ Users can set reminders with `/remindme 30s do the thing` and the bot will DM th
 ### Docker
 ```bash
 docker build -t discord-bot .
-docker run -p 3000:3000 --env-file .env -v /host/data:/data discord-bot
+docker run -p 3000:3000 --env-file .env -v /host/data:/data -e DATA_DIR=/data discord-bot
 ```
 
 ### Fly.io or Discloud
