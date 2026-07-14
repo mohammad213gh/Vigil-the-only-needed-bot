@@ -754,7 +754,7 @@ handlers.perm = async (message) => {
 
     if (sub === 'grant') {
         const user = message.mentions.users.first();
-        const command = message.args[1];
+        const command = message.args[2];
         if (!user || !command) return message.reply('⚠️ Usage: `' + message.prefix + 'perm grant @user <command|all>`');
         if (isOwner(user.id)) return message.reply('⚠️ The owner already has access to everything.');
         const ownerOnly = ['deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'shutdown', 'perm'];
@@ -773,7 +773,7 @@ handlers.perm = async (message) => {
         await message.reply({ embeds: [embed] });
     } else if (sub === 'revoke') {
         const user = message.mentions.users.first();
-        const command = message.args[1];
+        const command = message.args[2];
         if (!user || !command) return message.reply('⚠️ Usage: `' + message.prefix + 'perm revoke @user <command|all>`');
         const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth'];
         if (command === 'all') {
