@@ -551,6 +551,7 @@ const commandDefs = [
                         .setDescription('The command to grant access to')
                         .setRequired(true)
                         .addChoices(
+                            { name: 'all', value: 'all' },
                             { name: 'role', value: 'role' },
                             { name: 'purge', value: 'purge' },
                             { name: 'slowmode', value: 'slowmode' },
@@ -587,6 +588,7 @@ const commandDefs = [
                         .setDescription('The command to revoke access from')
                         .setRequired(true)
                         .addChoices(
+                            { name: 'all', value: 'all' },
                             { name: 'role', value: 'role' },
                             { name: 'purge', value: 'purge' },
                             { name: 'slowmode', value: 'slowmode' },

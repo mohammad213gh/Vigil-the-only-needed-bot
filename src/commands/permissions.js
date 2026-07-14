@@ -21,6 +21,23 @@ async function executePerm(interaction) {
             return interaction.reply({ content: '\u26A0\uFE0F The bot owner already has access to all commands.', ephemeral: true });
         }
 
+        // All grantable commands (non-owner-only)
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix'];
+
+        if (command === 'all') {
+            for (const cmd of grantableCmds) {
+                grantPermission(guild.id, cmd, user.id);
+            }
+            const embed = new EmbedBuilder()
+                .setColor('Green')
+                .setTitle('\uD83D\uDD11 All Permissions Granted')
+                .setDescription(user + ' can now use **all** grantable commands.')
+                .addFields({ name: 'Commands (' + grantableCmds.length + ')', value: grantableCmds.map(c => '`/' + c + '`').join(' ') })
+                .setFooter({ text: 'Granted by ' + interaction.user.tag })
+                .setTimestamp();
+            return interaction.reply({ embeds: [embed] });
+        }
+
         grantPermission(guild.id, command, user.id);
 
         const embed = new EmbedBuilder()
@@ -34,6 +51,21 @@ async function executePerm(interaction) {
     } else if (sub === 'revoke') {
         const user = interaction.options.getUser('user');
         const command = interaction.options.getString('command');
+
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix'];
+
+        if (command === 'all') {
+            for (const cmd of grantableCmds) {
+                revokePermission(guild.id, cmd, user.id);
+            }
+            const embed = new EmbedBuilder()
+                .setColor('Red')
+                .setTitle('\uD83D\uDD11 All Permissions Revoked')
+                .setDescription(user + ' can no longer use any granted commands.')
+                .setFooter({ text: 'Revoked by ' + interaction.user.tag })
+                .setTimestamp();
+            return interaction.reply({ embeds: [embed] });
+        }
 
         revokePermission(guild.id, command, user.id);
 

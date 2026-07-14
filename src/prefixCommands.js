@@ -4,12 +4,14 @@
 
 const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { addWarning, getWarnings, clearWarnings } = require('./warnings');
-const { addReminder } = require('./reminders');
+const { addReminder, removeReminder, getUserReminders } = require('./reminders');
 const { updateGuildConfig } = require('./config');
 const { getGuildStats } = require('./stats');
 const { isOwner, truncate, parseDuration, formatDuration, formatNumber, randomItem, randomInt, reverseText, mockText } = require('./helpers');
 const { hasPermission } = require('./permissions');
-const { getFlag } = require('./helpers');
+const { getFlag, formatUptime } = require('./helpers');
+const os = require('os');
+const { WS_STATUS } = require('./constants');
 const {
     BALL_RESPONSES, JOKES, FACTS, ADVICE, QUOTES,
     RPS_CHOICES, RPS_EMOJIS, RPS_WINNERS, WC_OUTCOMES,
@@ -591,14 +593,163 @@ handlers.prefix = async (message) => {
     await message.reply({ embeds: [embed] });
 };
 
+handlers.status = async (message) => {
+    const client = message.client;
+    const guild = message.guild;
+    const mem = process.memoryUsage();
+    const uptime = formatUptime(client.uptime);
+    const guildCount = client.guilds.cache.size;
+    const userCount = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
+    const embed = new EmbedBuilder()
+        .setColor(0x5865F2).setTitle('📊 Bot Status').setThumbnail(client.user.displayAvatarURL())
+        .addFields(
+            { name: 'Connection', value: WS_STATUS[client.ws.status] || 'Unknown', inline: true },
+            { name: 'Ping', value: client.ws.ping + 'ms', inline: true },
+            { name: 'Uptime', value: uptime, inline: true },
+            { name: 'Servers', value: String(guildCount), inline: true },
+            { name: 'Users', value: formatNumber(userCount), inline: true },
+            { name: 'Memory (RSS)', value: (mem.rss / 1024 / 1024).toFixed(1) + ' MB', inline: true },
+            { name: 'Platform', value: os.platform(), inline: true },
+            { name: 'Node.js', value: process.version, inline: true },
+        )
+        .setFooter({ text: guild.name, iconURL: guild.iconURL() }).setTimestamp();
+    await message.reply({ embeds: [embed] });
+};
+
+handlers.nickname = async (message) => {
+    // Permission already checked by dispatcher
+    const userId = parseUserMention(message.args[0]);
+    if (!userId) return message.reply('⚠️ Usage: `' + message.prefix + 'nickname @user <name>` or `' + message.prefix + 'nickname @user reset`');
+    const nickname = message.restArgs.slice(1).join(' ');
+    if (!nickname) return message.reply('⚠️ Provide a name or "reset" to clear.');
+    const guild = message.guild;
+    if (!guild.members.me.permissions.has(PermissionFlagsBits.ManageNicknames)) return message.reply('⚠️ I need **Manage Nicknames** permission.');
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return message.reply('⚠️ User not found.');
+    try {
+        const newNick = nickname.toLowerCase() === 'reset' ? null : nickname;
+        await member.setNickname(newNick);
+        const embed = new EmbedBuilder()
+            .setColor('Green').setTitle('📝 Nickname Changed')
+            .setDescription('<@' + userId + '>\'s nickname is now **' + (newNick || '*none*') + '**')
+            .setFooter({ text: 'By ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    } catch (err) {
+        message.reply('⚠️ Failed: ' + err.message);
+    }
+};
+
+handlers.embed = async (message) => {
+    // Permission already checked by dispatcher
+    const channel = message.mentions.channels.first();
+    if (!channel) return message.reply('⚠️ Usage: `' + message.prefix + 'embed #channel <title> | <description> | #color`');
+    const parts = message.restArgs.slice(1).join(' ').split('|').map(s => s.trim());
+    const title = parts[0] || 'No title';
+    const description = parts[1] || '';
+    let color = 0x5865F2;
+    if (parts[2]) {
+        try { color = parseInt(parts[2].replace('#', ''), 16); } catch {}
+    }
+    try {
+        const embed = new EmbedBuilder()
+            .setColor(color).setTitle(title).setDescription(description)
+            .setFooter({ text: 'Sent by ' + message.author.tag }).setTimestamp();
+        await channel.send({ embeds: [embed] });
+        message.reply('✅ Embed sent to ' + channel);
+    } catch (err) {
+        message.reply('⚠️ Failed: ' + err.message);
+    }
+};
+
+handlers.announce = async (message) => {
+    // Permission already checked by dispatcher
+    const channel = message.mentions.channels.first();
+    if (!channel) return message.reply('⚠️ Usage: `' + message.prefix + 'announce #channel <title> | <message> | #color`');
+    const parts = message.restArgs.slice(1).join(' ').split('|').map(s => s.trim());
+    const title = parts[0] || 'Announcement';
+    const msg = parts[1] || '';
+    let color = 0x5865F2;
+    if (parts[2]) {
+        try { color = parseInt(parts[2].replace('#', ''), 16); } catch {}
+    }
+    try {
+        const embed = new EmbedBuilder()
+            .setColor(color).setTitle(title).setDescription(msg)
+            .setAuthor({ name: message.guild.name, iconURL: message.guild.iconURL() })
+            .setFooter({ text: 'Announcement by ' + message.author.tag }).setTimestamp();
+        await channel.send({ embeds: [embed] });
+        message.reply('✅ Announcement sent to ' + channel);
+    } catch (err) {
+        message.reply('⚠️ Failed: ' + err.message);
+    }
+};
+
+handlers.poll = async (message) => {
+    // Permission already checked by dispatcher
+    const args = message.restArgs;
+    const question = args[0];
+    const opts = args.slice(1);
+    if (!question || opts.length < 2) return message.reply('⚠️ Usage: `' + message.prefix + 'poll <question> | <opt1> | <opt2> [| opt3] [| opt4]`');
+    const options = opts.map(o => o.trim());
+    const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+    const fields = options.slice(0, 10).map((opt, i) => ({
+        name: emojis[i] + ' ' + opt,
+        value: 'Vote with ' + emojis[i],
+        inline: true,
+    }));
+    const embed = new EmbedBuilder()
+        .setColor(0x5865F2).setTitle('🗳️ Poll: ' + question).addFields(fields)
+        .setFooter({ text: 'Poll by ' + message.author.tag }).setTimestamp();
+    try {
+        const pollMessage = await message.reply({ embeds: [embed], fetchReply: true });
+        for (let i = 0; i < options.length && i < 10; i++) {
+            await pollMessage.react(emojis[i]).catch(() => {});
+        }
+    } catch (err) {
+        message.reply('⚠️ Failed: ' + err.message);
+    }
+};
+
+handlers.reminders = async (message) => {
+    const sub = message.args[0];
+    if (sub === 'list') {
+        const userReminders = getUserReminders(message.author.id);
+        if (!userReminders.length) return message.reply('⏰ You have no pending reminders.');
+        const list = userReminders.map(r => {
+            const t = r.remindAt - Date.now();
+            const m = Math.floor(t / 60000);
+            const s = Math.floor((t % 60000) / 1000);
+            return '`' + r.id.slice(0, 8) + '` \u2014 ' + r.text + ' (due ' + (t > 0 ? (m > 0 ? m + 'm ' : '') + s + 's' : 'now') + ')';
+        }).join('\n');
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('⏰ Your Reminders (' + userReminders.length + ')')
+            .setDescription(list)
+            .setFooter({ text: message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    } else if (sub === 'cancel') {
+        const id = message.args[1];
+        if (!id) return message.reply('⚠️ Usage: `' + message.prefix + 'reminders cancel <id>`');
+        const fullId = getUserReminders(message.author.id).find(r => r.id.startsWith(id))?.id;
+        if (!fullId) return message.reply('⚠️ Reminder not found. Use `' + message.prefix + 'reminders list` to find the ID.');
+        if (removeReminder(fullId, message.author.id)) {
+            message.reply('✅ Reminder cancelled.');
+        } else {
+            message.reply('⚠️ Could not cancel that reminder.');
+        }
+    } else {
+        message.reply('⚠️ Usage: `' + message.prefix + 'reminders list` or `' + message.prefix + 'reminders cancel <id>`');
+    }
+};
+
 handlers.help = async (message) => {
     const prefix = message.prefix;
     const categories = [
-        { name: '🛡️ Moderation', cmds: ['kick @user [reason]', 'ban @user [reason]', 'unban <id>', 'timeout @user <time> [reason]', 'untimeout @user', 'warn @user [reason]', 'warnings @user', 'clearwarnings @user', 'lock [#channel]', 'unlock [#channel]', 'purge <amount>', 'slowmode <seconds> [#channel]', 'say #channel <text>'] },
+        { name: '🛡️ Moderation', cmds: ['kick @user [reason]', 'ban @user [reason]', 'unban <id>', 'timeout @user <time> [reason]', 'untimeout @user', 'warn @user [reason]', 'warnings @user', 'clearwarnings @user', 'lock [#channel]', 'unlock [#channel]', 'purge <amount>', 'slowmode <seconds> [#channel]', 'say #channel <text>', 'nickname @user <name>'] },
+        { name: '📝 Utility', cmds: ['embed #channel <title> | <desc> | #color', 'announce #channel <title> | <msg> | #color', 'poll <q> | <opt1> | <opt2> [| opt3]'] },
         { name: '👥 Role', cmds: ['role add/remove @user @role', 'role list [@user]'] },
-        { name: '📰 Info', cmds: ['ping', 'botinfo', 'userinfo [@user]', 'avatar [@user]', 'server', 'growth'] },
+        { name: '📰 Info', cmds: ['ping', 'status', 'botinfo', 'userinfo [@user]', 'avatar [@user]', 'server', 'growth'] },
         { name: '🎲 Fun', cmds: ['8ball <question>', 'coinflip', 'dice [sides]', 'rps <choice>', 'joke', 'fact', 'advice', 'quote', 'reverse <text>', 'mock <text>', 'random <min> <max>', 'worldcup <t1> <t2>'] },
-        { name: '⏰ Utility', cmds: ['remindme <time> <text>', 'prefix [newprefix]', 'help'] },
+        { name: '⏰ Utilities', cmds: ['remindme <time> <text>', 'reminders list', 'reminders cancel <id>', 'prefix [newprefix]', 'help'] },
     ];
     const lines = categories.map(c => '**' + c.name + '**\n' + c.cmds.map(cmd => '`' + prefix + cmd + '`').join(' ')).join('\n\n');
     const embed = new EmbedBuilder()
@@ -629,7 +780,7 @@ async function handlePrefixMessage(message, prefix) {
     message.restArgs = parts.slice(1);
 
     // Check permission for owner-only prefix commands
-    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix'];
+    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll'];
     if (ownerOnlyCmds.includes(cmdName)) {
         if (!checkOwnerOrPerm(message, cmdName)) return true;
     }
