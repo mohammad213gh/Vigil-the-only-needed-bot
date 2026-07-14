@@ -3,9 +3,18 @@
 .env.local
 .env.production
 
-# ─── Runtime Data ───
+# ─── Runtime Data (these are created at runtime, don't commit them) ───
 config.json
+permissions.json
+reactionRoles.json
+stats.json
+dashboardConfig.json
+dashUsers.json
+warnings.json
 reminders.json
+
+# ─── Uploads ───
+uploads/
 
 # ─── Uploads ───
 uploads/
