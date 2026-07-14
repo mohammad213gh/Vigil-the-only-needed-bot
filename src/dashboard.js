@@ -139,6 +139,12 @@ function addDashUser(userId, addedBy) {
 function removeDashUser(userId) {
     const db = getDb();
     db.prepare('DELETE FROM dash_users WHERE user_id = ?').run(userId);
+    // Invalidate all active sessions for this user
+    for (const [token, session] of sessions.entries()) {
+        if (session.method === 'discord' && session.userId === userId) {
+            sessions.delete(token);
+        }
+    }
 }
 
 function isDashUser(userId, accessToken) {
@@ -152,7 +158,7 @@ function isDashUser(userId, accessToken) {
 }
 
 // ──── Sessions ────
-const sessions = new Map();
+const sessions = new Map(); // token → { method: 'password'|'discord', userId?: string }
 function generateSession() {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let s = '';
@@ -188,7 +194,20 @@ function createDashboard() {
 
     app.use((req, res, next) => {
         const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
-        req.authenticated = !!(token && sessions.has(token));
+        if (token && sessions.has(token)) {
+            const session = sessions.get(token);
+            // Re-verify Discord-logged-in users against the dash_users table
+            if (session.method === 'discord' && session.userId) {
+                if (!isDashUser(session.userId, session.accessToken)) {
+                    sessions.delete(token);
+                    req.authenticated = false;
+                    return next();
+                }
+            }
+            req.authenticated = true;
+        } else {
+            req.authenticated = false;
+        }
         next();
     });
 
@@ -204,7 +223,7 @@ function createDashboard() {
         const { password, discordId, accessToken } = req.body;
         if (password && password === dashboardPassword) {
             const token = generateSession();
-            sessions.set(token, true);
+            sessions.set(token, { method: 'password' });
             return res.json({ success: true, token });
         }
         if (discordId && accessToken) {
@@ -216,7 +235,7 @@ function createDashboard() {
             }
             if (isDashUser(discordId, accessToken)) {
                 const token = generateSession();
-                sessions.set(token, true);
+                sessions.set(token, { method: 'discord', userId: discordId, accessToken });
                 return res.json({ success: true, token, method: 'discord' });
             }
         }
