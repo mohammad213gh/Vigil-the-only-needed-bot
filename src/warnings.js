@@ -1,6 +1,7 @@
 const fs = require('fs');
+const { getDataPath } = require('./data');
 
-const WARNINGS_PATH = './warnings.json';
+const WARNINGS_PATH = getDataPath('warnings.json');
 
 function loadWarnings() {
     try {
