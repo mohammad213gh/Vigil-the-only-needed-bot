@@ -1,7 +1,12 @@
 const fs = require('fs');
 const { LOG_CATEGORIES } = require('./constants');
+const { getDataPath } = require('./data');
 
-const CONFIG_PATH = process.env.CONFIG_PATH || './config.json';
+// Use existing config.json at project root if it exists (backward compatibility),
+// otherwise use DATA_DIR location
+const CONFIG_PATH = process.env.CONFIG_PATH || (
+    fs.existsSync('./config.json') ? './config.json' : getDataPath('config.json')
+);
 
 // ──────────────────── Load / Save ────────────────────
 
