@@ -75,7 +75,7 @@ module.exports = [
                 .setTitle('\uD83E\uDD9C Thread Updated')
                 .setDescription('Thread **' + newThread.name + '** was modified' + byUser)
                 .setTimestamp();
-            for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
+            for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
             embed.setFooter({ text: newThread.guild.name, iconURL: newThread.guild.iconURL() });
             if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'server', null, newThread.guild.id);
@@ -105,7 +105,7 @@ module.exports = [
                 .setTitle('\uD83D\uDDA5\uFE0F Server Updated')
                 .setDescription('Server settings were modified' + byUser)
                 .setTimestamp();
-            for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
+            for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
             embed.setFooter({ text: newGuild.name, iconURL: newGuild.iconURL() });
             if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'server', null, newGuild.id);
@@ -195,7 +195,7 @@ module.exports = [
             const embed = new EmbedBuilder()
                 .setColor(0xE74C3C)
                 .setTitle('\uD83D\uDEAB Member Banned')
-                .setDescription(ban.user + ' was banned from the server' + (ban.reason ? '\\nReason: ' + ban.reason : '') + byUser)
+                .setDescription(ban.user + ' was banned from the server' + (ban.reason ? '\nReason: ' + ban.reason : '') + byUser)
                 .addFields(
                     { name: 'User', value: String(ban.user), inline: true },
                     { name: 'Tag', value: ban.user.tag, inline: true },
@@ -393,7 +393,7 @@ module.exports = [
                 .setTitle('\uD83D\uDCC5 Event Updated')
                 .setDescription('The event **' + newEvent.name + '** was modified')
                 .setTimestamp();
-            for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
+            for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
             embed.setFooter({ text: newEvent.guild.name, iconURL: newEvent.guild.iconURL() });
             deps.sendLog(embed, 'scheduled', null, newEvent.guild.id);
         },
@@ -551,7 +551,7 @@ module.exports = [
                 .setTitle('\uD83E\uDD16 Auto Mod Rule Updated')
                 .setDescription('Auto-mod rule **' + newRule.name + '** was modified' + byUser)
                 .setTimestamp();
-            for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
+            for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
             embed.setFooter({ text: newRule.guild.name, iconURL: newRule.guild.iconURL() });
             if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'automod', null, newRule.guild.id);
