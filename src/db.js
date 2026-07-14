@@ -329,9 +329,14 @@ function migrateFromJson() {
 
 function initDb() {
     const db2 = getDb();
-    const count = db2.prepare('SELECT COUNT(*) as c FROM guild_config').get().c;
-    if (count === 0) {
+    // Run migration once. Each sub-migration inside checks if its source
+    // JSON file exists, so it's safe to call multiple times.
+    // We track completion with a simple flag to avoid rebuilding the
+    // nested config object from SQLite on every boot.
+    const migrated = db2.prepare('SELECT value FROM bot_config WHERE key = ?').get('_migrated');
+    if (!migrated) {
         migrateFromJson();
+        db2.prepare('INSERT OR REPLACE INTO bot_config (key, value) VALUES (?, ?)').run('_migrated', 'true');
     }
     return db2;
 }
