@@ -654,6 +654,15 @@ const commandDefs = [
         .setName('shutdown')
         .setDescription('Turn off the bot gracefully (owner only)'),
 
+    // ── Prefix ──
+    new SlashCommandBuilder()
+        .setName('prefix')
+        .setDescription('View or change the command prefix for this server')
+        .addStringOption(opt =>
+            opt.setName('new_prefix')
+                .setDescription('New prefix (leave empty to see current)')
+                .setRequired(false)),
+
     // ── Reaction Roles (owner only) ──
     new SlashCommandBuilder()
         .setName('reactionrole')

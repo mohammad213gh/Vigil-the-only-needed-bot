@@ -1,6 +1,25 @@
 const { EmbedBuilder } = require('discord.js');
+const { getGuildConfig } = require('../config');
+const { handlePrefixMessage } = require('../prefixCommands');
 
 module.exports = [
+    {
+        name: 'messageCreate',
+        once: false,
+        execute: (deps) => async (message) => {
+            if (message.author?.bot) return;
+            if (!message.guild) return;
+
+            // Fast-path: check common prefixes first (; / ! .) before hitting DB
+            const content = message.content;
+            if (!content || (content[0] !== ';' && content[0] !== '/' && content[0] !== '!' && content[0] !== '.')) return;
+
+            const guildConfig = getGuildConfig(message.guild.id);
+            const prefix = guildConfig.prefix || ';';
+
+            await handlePrefixMessage(message, prefix);
+        },
+    },
     {
         name: 'messageDelete',
         once: false,

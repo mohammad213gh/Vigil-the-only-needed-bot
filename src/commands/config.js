@@ -244,10 +244,44 @@ async function executeBotName(interaction) {
     }
 }
 
+async function executePrefix(interaction) {
+    const guild = interaction.guild;
+    const newPrefix = interaction.options.getString('new_prefix');
+    const guildConfig = getGuildConfig(guild.id);
+
+    if (!newPrefix) {
+        const embed = makeEmbed({
+            color: 0x5865F2,
+            title: '\uD83D\uDCDD Current Prefix',
+            description: 'The command prefix for this server is: `' + guildConfig.prefix + '`\n\nTo change it, use: `/prefix new_prefix`\n\nPrefix commands work the same as slash commands. Example: `' + guildConfig.prefix + 'ping`',
+            footer: { text: guild.name, iconURL: guild.iconURL() },
+            timestamp: true,
+        });
+        return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    if (newPrefix.length > 5) {
+        return interaction.reply({ content: '\u26A0\uFE0F Prefix must be 5 characters or less.', ephemeral: true });
+    }
+
+    updateGuildConfig(guild.id, (cfg) => { cfg.prefix = newPrefix; return cfg; });
+
+    const embed = makeEmbed({
+        color: 'Green',
+        title: '\u2705 Prefix Updated',
+        description: 'Command prefix changed from `' + guildConfig.prefix + '` to `' + newPrefix + '`\n\nUsers can now use `' + newPrefix + 'ping`, `' + newPrefix + 'kick @user`, etc.',
+        footer: { text: 'Changed by ' + interaction.user.tag },
+        timestamp: true,
+    });
+
+    await interaction.reply({ embeds: [embed] });
+}
+
 module.exports = {
     executeLog,
     executeEmbedConfig,
     executePresence,
     executeBotAvatar,
     executeBotName,
+    executePrefix,
 };

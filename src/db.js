@@ -103,6 +103,11 @@ function initSchema() {
             access_token TEXT
         );
     `);
+
+    // Add prefix column if not exists (safe on every boot)
+    try {
+        db.exec('ALTER TABLE guild_config ADD COLUMN prefix TEXT NOT NULL DEFAULT \';\'');
+    } catch {}
 }
 
 // ──────────────────── Migration from JSON Files ────────────────────

@@ -3,7 +3,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { formatUptime, formatNumber } = require('./helpers');
-const { loadConfig, saveConfig, getBotConfig } = require('./config');
+const { loadConfig, saveConfig, getBotConfig, updateGuildConfig } = require('./config');
 const { getDb } = require('./db');
 const { getGuildStats } = require('./stats');
 const { getReactionRoles } = require('./reactionRoles');
@@ -475,6 +475,17 @@ function createDashboard() {
         res.json({ success: true });
     });
 
+    // ── Update prefix ──
+    app.post('/api/server/:id/prefix', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { prefix } = req.body;
+        if (!prefix || prefix.length > 5) return res.status(400).json({ error: 'Prefix must be 1-5 characters' });
+        updateGuildConfig(guild.id, (cfg) => { cfg.prefix = prefix; return cfg; });
+        res.json({ success: true, prefix });
+    });
+
     // ── Server Detail ──
     app.get('/api/server/:id', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
@@ -500,6 +511,7 @@ function createDashboard() {
                 categories: guild.channels.cache.filter(c => c.type === 4).size,
                 forums: guild.channels.cache.filter(c => c.type === 15).size,
             },
+            prefix: guildConfig.prefix || ';',
             logging: {
                 defaultChannel: guildConfig.logChannelId || null,
                 perCategory: Object.fromEntries(LOG_CATEGORIES.map(c => [c, {

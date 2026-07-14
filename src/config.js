@@ -15,6 +15,7 @@ function createDefaultConfig() {
         logChannels: channels,
         trackedChannels: [],
         logCategories: cats,
+        prefix: ';',
     };
 }
 
@@ -25,6 +26,7 @@ function parseGuildRow(row) {
         logChannels: JSON.parse(row.log_channels || '{}'),
         logCategories: JSON.parse(row.log_categories || '{}'),
         trackedChannels: JSON.parse(row.tracked_channels || '[]'),
+        prefix: row.prefix || ';',
     };
 }
 
@@ -56,9 +58,9 @@ function getGuildConfig(guildId) {
     // Create default
     const def = createDefaultConfig();
     db.prepare(`
-        INSERT INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories)
-        VALUES (?, ?, ?, ?, ?)
-    `).run(guildId, null, '[]', JSON.stringify(def.logChannels), JSON.stringify(def.logCategories));
+        INSERT INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories, prefix)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `).run(guildId, null, '[]', JSON.stringify(def.logChannels), JSON.stringify(def.logCategories), ';');
     return def;
 }
 
@@ -69,13 +71,15 @@ function updateGuildConfigRaw(guildId, g) {
             default_channel = ?,
             tracked_channels = ?,
             log_channels = ?,
-            log_categories = ?
+            log_categories = ?,
+            prefix = ?
         WHERE guild_id = ?
     `).run(
         g.logChannelId || null,
         JSON.stringify(g.trackedChannels || []),
         JSON.stringify(g.logChannels || {}),
         JSON.stringify(g.logCategories || {}),
+        g.prefix || ';',
         guildId
     );
 }
@@ -101,6 +105,7 @@ function loadConfig() {
             logChannels: g.logChannels,
             trackedChannels: g.trackedChannels,
             logCategories: g.logCategories,
+            prefix: g.prefix,
         };
     }
     // Add bot config under _bot key
@@ -113,8 +118,8 @@ function saveConfig(config) {
     // Save from the old nested format back into SQLite
     const db = getDb();
     const upsert = db.prepare(`
-        INSERT OR REPLACE INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories, prefix)
+        VALUES (?, ?, ?, ?, ?, ?)
     `);
     const tx = db.transaction(() => {
         for (const [key, val] of Object.entries(config)) {
@@ -130,7 +135,8 @@ function saveConfig(config) {
                     val.logChannelId || null,
                     JSON.stringify(val.trackedChannels || []),
                     JSON.stringify(val.logChannels || {}),
-                    JSON.stringify(val.logCategories || {})
+                    JSON.stringify(val.logCategories || {}),
+                    val.prefix || ';'
                 );
             }
         }

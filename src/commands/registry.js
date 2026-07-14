@@ -18,7 +18,7 @@ const { executeRole, executePurge, executeSlowmode, executeNickname, executeSay,
 const { executeKick, executeBan, executeUnban, executeTimeout, executeUntimeout, executeWarn, executeWarnings, executeClearWarnings, executeLock, executeUnlock } = require('./moderation');
 
 // ── Config ──
-const { executeLog, executeEmbedConfig, executePresence, executeBotAvatar, executeBotName } = require('./config');
+const { executeLog, executeEmbedConfig, executePresence, executeBotAvatar, executeBotName, executePrefix } = require('./config');
 
 // ── Permissions ──
 const { executePerm } = require('./permissions');
@@ -88,6 +88,7 @@ const commandRegistry = {
     presence: executePresence,
     botavatar: executeBotAvatar,
     botname: executeBotName,
+    prefix: executePrefix,
 
     // Permissions
     perm: executePerm,
