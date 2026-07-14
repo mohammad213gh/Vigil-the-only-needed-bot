@@ -1,20 +1,45 @@
-const { loadConfig, saveConfig } = require('./config');
+const fs = require('fs');
+const { getDataPath } = require('./data');
 
-const STATS_KEY = '_stats';
+const STATS_PATH = getDataPath('stats.json');
+
+// ─── Migration from old config.json ───
+function findConfigPath() {
+    if (process.env.CONFIG_PATH) return process.env.CONFIG_PATH;
+    if (fs.existsSync('./config.json')) return './config.json';
+    const dataPath = getDataPath('config.json');
+    if (fs.existsSync(dataPath)) return dataPath;
+    return './config.json';
+}
+
+function migrateFromConfig() {
+    try {
+        const configPath = findConfigPath();
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (config._stats && Object.keys(config._stats).length > 0) {
+            fs.writeFileSync(STATS_PATH, JSON.stringify(config._stats, null, 4));
+            delete config._stats;
+            fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
+            console.log('[Migration] Moved stats data to data/stats.json');
+        }
+    } catch { /* no migration needed */ }
+}
 
 function loadStats() {
-    const config = loadConfig();
-    if (!config[STATS_KEY]) {
-        config[STATS_KEY] = {};
-        saveConfig(config);
+    try {
+        return JSON.parse(fs.readFileSync(STATS_PATH, 'utf8'));
+    } catch {
+        migrateFromConfig();
+        return {};
     }
-    return config[STATS_KEY];
 }
 
 function saveStats(stats) {
-    const config = loadConfig();
-    config[STATS_KEY] = stats;
-    saveConfig(config);
+    try {
+        fs.writeFileSync(STATS_PATH, JSON.stringify(stats, null, 4));
+    } catch (err) {
+        console.error('[Stats] Failed to save:', err.message);
+    }
 }
 
 function ensureGuild(guildId) {
