@@ -12,7 +12,7 @@
 
 This is a Discord bot I built for my own server because I got tired of premium bots locking features behind paywalls. It does logging, moderation, reaction roles, reminders, fun commands, and has a web dashboard where you can manage everything.
 
-**Built with:** [Node.js](https://nodejs.org) + [Discord.js v14](https://discord.js.org) + [Express](https://expressjs.com) + [SQLite](https://sqlite.org) — all free.
+**Built with:** [JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript) running on [Node.js](https://nodejs.org) with [Discord.js v14](https://discord.js.org) for the bot, [Express](https://expressjs.com) for the web dashboard, [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) for data storage, [dotenv](https://github.com/motdotla/dotenv) for configuration, and [Multer](https://github.com/expressjs/multer) for file uploads — all free.
 
 ---
 
