@@ -15,7 +15,7 @@ function ownerGuard(interaction) {
     interaction.reply({
         content: '\u274C You don\'t have permission to use this command. Only the bot owner or users granted access via `/perm` can use it.',
         ephemeral: true,
-    }).catch(() => {});
+    }).catch(err => console.error('[Guard] Reply failed:', err.message));
     return false;
 }
 

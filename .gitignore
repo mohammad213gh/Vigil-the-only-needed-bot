@@ -16,12 +16,18 @@ reminders.json
 # ─── Uploads ───
 uploads/
 
-# ─── Uploads ───
-uploads/
-uploads/*
-
 # ─── Dependencies ───
 node_modules/
+
+# ─── SQLite database ───
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# ─── Migrated data ───
+*.migrated
+*.bak
 
 # ─── OS files ───
 .DS_Store

@@ -33,7 +33,7 @@ async function executeKick(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to kick user: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to kick user: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
     }
 }
 
@@ -75,7 +75,7 @@ async function executeBan(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to ban user: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to ban user: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
     }
 }
 
@@ -98,7 +98,7 @@ async function executeUnban(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to unban user: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to unban user: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
     }
 }
 
@@ -150,7 +150,7 @@ async function executeTimeout(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to timeout user: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to timeout user: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
     }
 }
 
@@ -180,7 +180,7 @@ async function executeUntimeout(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to remove timeout: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to remove timeout: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
     }
 }
 
@@ -282,7 +282,7 @@ async function executeLock(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to lock channel: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to lock channel: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
     }
 }
 
@@ -307,7 +307,7 @@ async function executeUnlock(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to unlock channel: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to unlock channel: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
     }
 }
 

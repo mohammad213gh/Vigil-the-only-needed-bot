@@ -1,33 +1,5 @@
-const fs = require('fs');
 const { LOG_CATEGORIES } = require('./constants');
-const { getDataPath } = require('./data');
-
-// Use existing config.json at project root if it exists (backward compatibility),
-// otherwise use DATA_DIR location
-const CONFIG_PATH = process.env.CONFIG_PATH || (
-    fs.existsSync('./config.json') ? './config.json' : getDataPath('config.json')
-);
-
-// ──────────────────── Load / Save ────────────────────
-
-function loadConfig() {
-    try {
-        return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    } catch {
-        return {};
-    }
-}
-
-function saveConfig(config) {
-    try {
-        fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 4));
-        return true;
-    } catch (err) {
-        console.error('[Config] Failed to save config.json:', err.message);
-        console.error('[Config] Current config has', Object.keys(config).length, 'top-level keys');
-        return false;
-    }
-}
+const { getDb } = require('./db');
 
 // ──────────────────── Default Config ────────────────────
 
@@ -46,105 +18,156 @@ function createDefaultConfig() {
     };
 }
 
+function parseGuildRow(row) {
+    if (!row) return null;
+    return {
+        logChannelId: row.default_channel,
+        logChannels: JSON.parse(row.log_channels || '{}'),
+        logCategories: JSON.parse(row.log_categories || '{}'),
+        trackedChannels: JSON.parse(row.tracked_channels || '[]'),
+    };
+}
+
 // ──────────────────── Guild Config ────────────────────
 
 function getGuildConfig(guildId) {
-    const config = loadConfig();
-    if (!config[guildId]) {
-        config[guildId] = createDefaultConfig();
-        saveConfig(config);
-        return config[guildId];
-    }
-    const g = config[guildId];
-
-    // Auto-migrate from old single-channel format — only saves if changes were made
-    let migrated = false;
-    if (!g.logChannels) {
-        g.logChannels = {};
-        for (const c of LOG_CATEGORIES) g.logChannels[c] = null;
-        migrated = true;
-    }
-    if (!g.logCategories) {
-        g.logCategories = {};
-        for (const c of LOG_CATEGORIES) g.logCategories[c] = true;
-        migrated = true;
-    } else {
-        for (const c of LOG_CATEGORIES) {
-            if (g.logCategories[c] === undefined) {
-                g.logCategories[c] = true;
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM guild_config WHERE guild_id = ?').get(guildId);
+    if (row) {
+        const g = parseGuildRow(row);
+        // Auto-migrate missing fields
+        let migrated = false;
+        const defaults = createDefaultConfig();
+        for (const cat of LOG_CATEGORIES) {
+            if (g.logCategories[cat] === undefined) {
+                g.logCategories[cat] = true;
                 migrated = true;
             }
-            if (g.logChannels[c] === undefined) {
-                g.logChannels[c] = null;
+            if (g.logChannels[cat] === undefined) {
+                g.logChannels[cat] = null;
                 migrated = true;
             }
         }
+        if (migrated) {
+            updateGuildConfigRaw(guildId, g);
+        }
+        return g;
     }
-    if (!g.trackedChannels) {
-        g.trackedChannels = [];
-        migrated = true;
-    }
-    
-    // Only save to disk if we actually migrated something
-    if (migrated) {
-        saveConfig(config);
-    }
-    return g;
+    // Create default
+    const def = createDefaultConfig();
+    db.prepare(`
+        INSERT INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories)
+        VALUES (?, ?, ?, ?, ?)
+    `).run(guildId, null, '[]', JSON.stringify(def.logChannels), JSON.stringify(def.logCategories));
+    return def;
+}
+
+function updateGuildConfigRaw(guildId, g) {
+    const db = getDb();
+    db.prepare(`
+        UPDATE guild_config SET
+            default_channel = ?,
+            tracked_channels = ?,
+            log_channels = ?,
+            log_categories = ?
+        WHERE guild_id = ?
+    `).run(
+        g.logChannelId || null,
+        JSON.stringify(g.trackedChannels || []),
+        JSON.stringify(g.logChannels || {}),
+        JSON.stringify(g.logCategories || {}),
+        guildId
+    );
 }
 
 function updateGuildConfig(guildId, updater) {
-    const config = loadConfig();
-    // Ensure the guild has a default config if it doesn't exist yet
-    if (!config[guildId]) {
-        config[guildId] = createDefaultConfig();
+    const g = getGuildConfig(guildId);
+    const updated = updater(g);
+    updateGuildConfigRaw(guildId, updated);
+    return updated;
+}
+
+// ──────────────────── Load / Save (kept for backward compat with dashboard) ────────────────────
+
+function loadConfig() {
+    // Returns the old nested format for compatibility with dashboard
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM guild_config').all();
+    const config = {};
+    for (const row of rows) {
+        const g = parseGuildRow(row);
+        config[row.guild_id] = {
+            logChannelId: g.logChannelId,
+            logChannels: g.logChannels,
+            trackedChannels: g.trackedChannels,
+            logCategories: g.logCategories,
+        };
     }
-    const guildConfig = config[guildId];
-    
-    // Ensure logChannels and logCategories exist (migration)
-    if (!guildConfig.logChannels) {
-        guildConfig.logChannels = {};
-        for (const c of LOG_CATEGORIES) guildConfig.logChannels[c] = null;
-    }
-    if (!guildConfig.logCategories) {
-        guildConfig.logCategories = {};
-        for (const c of LOG_CATEGORIES) guildConfig.logCategories[c] = true;
-    } else {
-        for (const c of LOG_CATEGORIES) {
-            if (guildConfig.logCategories[c] === undefined) guildConfig.logCategories[c] = true;
-            if (guildConfig.logChannels[c] === undefined) guildConfig.logChannels[c] = null;
+    // Add bot config under _bot key
+    const botCfg = getBotConfig();
+    config._bot = botCfg;
+    return config;
+}
+
+function saveConfig(config) {
+    // Save from the old nested format back into SQLite
+    const db = getDb();
+    const upsert = db.prepare(`
+        INSERT OR REPLACE INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories)
+        VALUES (?, ?, ?, ?, ?)
+    `);
+    const tx = db.transaction(() => {
+        for (const [key, val] of Object.entries(config)) {
+            if (key.startsWith('_')) {
+                if (key === '_bot' && typeof val === 'object') {
+                    saveBotConfig(val);
+                }
+                continue;
+            }
+            if (typeof val === 'object' && val !== null) {
+                upsert.run(
+                    key,
+                    val.logChannelId || null,
+                    JSON.stringify(val.trackedChannels || []),
+                    JSON.stringify(val.logChannels || {}),
+                    JSON.stringify(val.logCategories || {})
+                );
+            }
         }
-    }
-    if (!guildConfig.trackedChannels) guildConfig.trackedChannels = [];
-    
-    // Apply the updater
-    config[guildId] = updater(guildConfig);
-    saveConfig(config);
-    return config[guildId];
+    });
+    tx();
+    return true;
 }
 
 // ──────────────────── Bot Config ────────────────────
 
-const BOT_CONFIG_KEY = '_bot';
+const BOT_DEFAULTS = {
+    embedFooterText: null,
+    embedFooterIcon: null,
+    embedColor: null,
+};
 
 function getBotConfig() {
-    const config = loadConfig();
-    if (!config[BOT_CONFIG_KEY]) {
-        config[BOT_CONFIG_KEY] = {
-            embedFooterText: null,
-            embedFooterIcon: null,
-            embedColor: null,
-        };
-        saveConfig(config);
+    const db = getDb();
+    const rows = db.prepare('SELECT key, value FROM bot_config').all();
+    const cfg = { ...BOT_DEFAULTS };
+    for (const row of rows) {
+        const key = row.key.replace(/^bot_/, '');
+        try { cfg[key] = JSON.parse(row.value); } catch { cfg[key] = row.value; }
     }
-    return config[BOT_CONFIG_KEY];
+    return cfg;
 }
 
 function saveBotConfig(partial) {
-    const config = loadConfig();
-    if (!config[BOT_CONFIG_KEY]) config[BOT_CONFIG_KEY] = {};
-    Object.assign(config[BOT_CONFIG_KEY], partial);
-    saveConfig(config);
-    return config[BOT_CONFIG_KEY];
+    const db = getDb();
+    const upsert = db.prepare('INSERT OR REPLACE INTO bot_config (key, value) VALUES (?, ?)');
+    const tx = db.transaction(() => {
+        for (const [key, val] of Object.entries(partial)) {
+            upsert.run('bot_' + key, JSON.stringify(val));
+        }
+    });
+    tx();
+    return { ...getBotConfig(), ...partial };
 }
 
 module.exports = {

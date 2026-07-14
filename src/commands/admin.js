@@ -140,7 +140,7 @@ async function executeSlowmode(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to set slowmode: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to set slowmode: ' + err.message, ephemeral: true }).catch(err => console.error('[ReplyFallback]', err.message));
     }
 }
 
@@ -227,9 +227,9 @@ async function executeEmbed(interaction) {
         await interaction.reply({
             content: '\u2705 Embed sent to ' + channel,
             ephemeral: true,
-        }).catch(() => {});
+        }).catch(err => console.error('[ReplyFallback]', err.message));
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to send embed: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to send embed: ' + err.message, ephemeral: true }).catch(err => console.error('[ReplyFallback]', err.message));
     }
 }
 
@@ -333,7 +333,7 @@ async function executePoll(interaction) {
     const pollMessage = await interaction.reply({ embeds: [embed], fetchReply: true });
 
     for (let i = 0; i < options.length; i++) {
-        await pollMessage.react(emojis[i]).catch(() => {});
+        await pollMessage.react(emojis[i]).catch(err => console.error('[PollReaction]', err.message));
     }
 }
 
@@ -365,9 +365,9 @@ async function executeAnnounce(interaction) {
 
     try {
         await channel.send({ content, embeds: [embed] });
-        await interaction.reply({ content: '\u2705 Announcement sent to ' + channel, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u2705 Announcement sent to ' + channel, ephemeral: true }).catch(err => console.error('[ReplyFallback]', err.message));
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to send announcement: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to send announcement: ' + err.message, ephemeral: true }).catch(err => console.error('[ReplyFallback]', err.message));
     }
 }
 

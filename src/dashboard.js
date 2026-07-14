@@ -4,8 +4,8 @@ const os = require('os');
 const fs = require('fs');
 const { formatUptime, formatNumber } = require('./helpers');
 const { loadConfig, saveConfig, getBotConfig } = require('./config');
-const { getDataPath } = require('./data');
-const { getGuildStats, loadStats } = require('./stats');
+const { getDb } = require('./db');
+const { getGuildStats } = require('./stats');
 const { getReactionRoles } = require('./reactionRoles');
 const { getAllPermissions } = require('./permissions');
 const { LOG_CATEGORIES, WS_STATUS } = require('./constants');
@@ -22,33 +22,7 @@ function setDashboardClient(c, password) {
     dashboardPassword = password;
 }
 
-const DASHBOARD_CFG_PATH = getDataPath('dashboardConfig.json');
-const DASH_USERS_PATH = getDataPath('dashUsers.json');
-
-// ─── Migration from old config.json ───
-function migrateFromConfig() {
-    try {
-        const config = loadConfig();
-        let changed = false;
-        if (config._dash && Object.keys(config._dash).length > 0) {
-            fs.writeFileSync(DASHBOARD_CFG_PATH, JSON.stringify(config._dash, null, 4));
-            delete config._dash;
-            changed = true;
-            console.log('[Migration] Moved dashboard config to data/dashboardConfig.json');
-        }
-        if (config._dashUsers && Object.keys(config._dashUsers).length > 0) {
-            fs.writeFileSync(DASH_USERS_PATH, JSON.stringify(config._dashUsers, null, 4));
-            delete config._dashUsers;
-            changed = true;
-            console.log('[Migration] Moved dashboard users to data/dashUsers.json');
-        }
-        if (changed) {
-            saveConfig(config);
-        }
-    } catch { /* no migration needed */ }
-}
-
-// ──── Dashboard Config ────
+// ──── Dashboard Config (SQLite) ────
 const DEFAULT_DASHBOARD_CONFIG = {
     accentColor: '#5865F2',
     title: 'Bot Dashboard',
@@ -76,61 +50,44 @@ const DEFAULT_DASHBOARD_CONFIG = {
     botAvatarUrl: null,
 };
 
-function loadDashConfig() {
-    try {
-        return JSON.parse(fs.readFileSync(DASHBOARD_CFG_PATH, 'utf8'));
-    } catch {
-        migrateFromConfig();
-        return {};
-    }
-}
-
-function saveDashConfig(cfg) {
-    try {
-        fs.writeFileSync(DASHBOARD_CFG_PATH, JSON.stringify(cfg, null, 4));
-    } catch (err) {
-        console.error('[Dashboard] Failed to save config:', err.message);
-    }
-}
-
-function loadDashUsers() {
-    try {
-        return JSON.parse(fs.readFileSync(DASH_USERS_PATH, 'utf8'));
-    } catch {
-        migrateFromConfig();
-        return {};
-    }
-}
-
-function saveDashUsers(users) {
-    try {
-        fs.writeFileSync(DASH_USERS_PATH, JSON.stringify(users, null, 4));
-    } catch (err) {
-        console.error('[Dashboard] Failed to save users:', err.message);
-    }
-}
-
 function getDashboardConfig() {
-    const cfg = loadDashConfig();
-    if (!cfg.accentColor) {
-        // First load — merge defaults
-        const merged = { ...DEFAULT_DASHBOARD_CONFIG, ...cfg };
-        saveDashConfig(merged);
-        return merged;
+    const db = getDb();
+    const row = db.prepare('SELECT config FROM dash_config WHERE id = 1').get();
+    if (!row) {
+        // First load — use defaults
+        db.prepare('INSERT OR REPLACE INTO dash_config (id, config) VALUES (1, ?)').run(JSON.stringify(DEFAULT_DASHBOARD_CONFIG));
+        return { ...DEFAULT_DASHBOARD_CONFIG };
     }
-    return cfg;
+    try {
+        const saved = JSON.parse(row.config);
+        return { ...DEFAULT_DASHBOARD_CONFIG, ...saved };
+    } catch {
+        return { ...DEFAULT_DASHBOARD_CONFIG };
+    }
 }
 
 function updateDashboardConfig(partial) {
-    const cfg = loadDashConfig();
-    const updated = { ...DEFAULT_DASHBOARD_CONFIG, ...cfg, ...partial };
-    saveDashConfig(updated);
+    const current = getDashboardConfig();
+    const updated = { ...current, ...partial };
+    const db = getDb();
+    db.prepare('INSERT OR REPLACE INTO dash_config (id, config) VALUES (1, ?)').run(JSON.stringify(updated));
     return updated;
 }
 
-// ──── Dashboard Users (Discord ID auth) ────
+// ──── Dashboard Users (SQLite) ────
 function getDashUsers() {
-    return loadDashUsers();
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM dash_users WHERE active = 1').all();
+    const result = {};
+    for (const row of rows) {
+        result[row.user_id] = {
+            addedAt: row.added_at,
+            addedBy: row.added_by,
+            active: !!row.active,
+            accessToken: row.access_token,
+        };
+    }
+    return result;
 }
 
 function generateAccessToken() {
@@ -141,33 +98,26 @@ function generateAccessToken() {
 }
 
 function addDashUser(userId, addedBy) {
-    const users = loadDashUsers();
+    const db = getDb();
     const token = generateAccessToken();
-    users[userId] = {
-        addedAt: Date.now(),
-        addedBy: addedBy || 'unknown',
-        active: true,
-        accessToken: token,
-    };
-    saveDashUsers(users);
-    return { users, accessToken: token };
+    db.prepare('INSERT OR REPLACE INTO dash_users (user_id, added_at, added_by, active, access_token) VALUES (?, ?, ?, 1, ?)')
+        .run(userId, Date.now(), addedBy || 'unknown', token);
+    return { users: getDashUsers(), accessToken: token };
 }
 
 function removeDashUser(userId) {
-    const users = loadDashUsers();
-    if (users[userId]) {
-        delete users[userId];
-        saveDashUsers(users);
-    }
+    const db = getDb();
+    db.prepare('DELETE FROM dash_users WHERE user_id = ?').run(userId);
 }
 
 function isDashUser(userId, accessToken) {
-    const users = loadDashUsers();
-    if (!userId || !users[userId] || !users[userId].active) return false;
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM dash_users WHERE user_id = ? AND active = 1').get(userId);
+    if (!row) return false;
     if (accessToken) {
-        return users[userId].accessToken === accessToken;
+        return row.access_token === accessToken;
     }
-    return false;
+    return true;
 }
 
 // ──── Sessions ────

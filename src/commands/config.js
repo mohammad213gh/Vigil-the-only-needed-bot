@@ -192,7 +192,7 @@ async function executePresence(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to set presence: ' + err.message, ephemeral: true }).catch(() => {});
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to set presence: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
     }
 }
 

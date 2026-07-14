@@ -1,99 +1,98 @@
-const fs = require('fs');
-const { getDataPath } = require('./data');
+const { getDb } = require('./db');
 
-const STATS_PATH = getDataPath('stats.json');
-
-// ─── Migration from old config.json ───
-function findConfigPath() {
-    if (process.env.CONFIG_PATH) return process.env.CONFIG_PATH;
-    if (fs.existsSync('./config.json')) return './config.json';
-    const dataPath = getDataPath('config.json');
-    if (fs.existsSync(dataPath)) return dataPath;
-    return './config.json';
-}
-
-function migrateFromConfig() {
-    try {
-        const configPath = findConfigPath();
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        if (config._stats && Object.keys(config._stats).length > 0) {
-            fs.writeFileSync(STATS_PATH, JSON.stringify(config._stats, null, 4));
-            delete config._stats;
-            fs.writeFileSync(configPath, JSON.stringify(config, null, 4));
-            console.log('[Migration] Moved stats data to data/stats.json');
-        }
-    } catch { /* no migration needed */ }
-}
-
-function loadStats() {
-    try {
-        return JSON.parse(fs.readFileSync(STATS_PATH, 'utf8'));
-    } catch {
-        migrateFromConfig();
-        return {};
-    }
-}
-
-function saveStats(stats) {
-    try {
-        fs.writeFileSync(STATS_PATH, JSON.stringify(stats, null, 4));
-    } catch (err) {
-        console.error('[Stats] Failed to save:', err.message);
-    }
-}
-
-function ensureGuild(guildId) {
-    const stats = loadStats();
-    if (!stats[guildId]) {
-        stats[guildId] = {
-            totalJoins: 0,
-            totalLeaves: 0,
-            dailySnapshots: [],
-            lastSnapshotDate: '',
-        };
-        saveStats(stats);
-    }
-    return stats[guildId];
-}
+// ─── Public API ───
 
 function getGuildStats(guildId) {
-    return ensureGuild(guildId);
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM guild_stats WHERE guild_id = ?').get(guildId);
+    const snapshots = db.prepare('SELECT * FROM stats_snapshots WHERE guild_id = ? ORDER BY date ASC').all(guildId);
+    return {
+        totalJoins: row?.total_joins || 0,
+        totalLeaves: row?.total_leaves || 0,
+        dailySnapshots: snapshots.map(s => ({ date: s.date, joins: s.joins, leaves: s.leaves })),
+        lastSnapshotDate: snapshots.length > 0 ? snapshots[snapshots.length - 1].date : '',
+    };
 }
 
 function recordJoin(guildId) {
-    const stats = loadStats();
-    if (!stats[guildId]) {
-        stats[guildId] = { totalJoins: 0, totalLeaves: 0, dailySnapshots: [], lastSnapshotDate: '' };
-    }
-    stats[guildId].totalJoins++;
+    const db = getDb();
+
+    // Upsert guild_stats
+    db.prepare(`
+        INSERT INTO guild_stats (guild_id, total_joins, total_leaves) VALUES (?, 1, 0)
+        ON CONFLICT(guild_id) DO UPDATE SET total_joins = total_joins + 1
+    `).run(guildId);
+
+    // Update or insert daily snapshot
     const today = new Date().toISOString().slice(0, 10);
-    const snapshots = stats[guildId].dailySnapshots;
-    const lastSnap = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
-    if (lastSnap && lastSnap.date === today) {
-        lastSnap.joins++;
-    } else {
-        snapshots.push({ date: today, joins: 1, leaves: 0 });
-        if (snapshots.length > 90) snapshots.shift();
-    }
-    saveStats(stats);
+    db.prepare(`
+        INSERT INTO stats_snapshots (guild_id, date, joins, leaves) VALUES (?, ?, 1, 0)
+        ON CONFLICT(guild_id, date) DO UPDATE SET joins = joins + 1
+    `).run(guildId, today);
+
+    // Prune old snapshots (keep last 90 days)
+    db.prepare(`
+        DELETE FROM stats_snapshots WHERE guild_id = ? AND date NOT IN (
+            SELECT date FROM stats_snapshots WHERE guild_id = ? ORDER BY date DESC LIMIT 90
+        )
+    `).run(guildId, guildId);
 }
 
 function recordLeave(guildId) {
-    const stats = loadStats();
-    if (!stats[guildId]) {
-        stats[guildId] = { totalJoins: 0, totalLeaves: 0, dailySnapshots: [], lastSnapshotDate: '' };
-    }
-    stats[guildId].totalLeaves++;
+    const db = getDb();
+
+    db.prepare(`
+        INSERT INTO guild_stats (guild_id, total_joins, total_leaves) VALUES (?, 0, 1)
+        ON CONFLICT(guild_id) DO UPDATE SET total_leaves = total_leaves + 1
+    `).run(guildId);
+
     const today = new Date().toISOString().slice(0, 10);
-    const snapshots = stats[guildId].dailySnapshots;
-    const lastSnap = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
-    if (lastSnap && lastSnap.date === today) {
-        lastSnap.leaves++;
-    } else {
-        snapshots.push({ date: today, joins: 0, leaves: 1 });
-        if (snapshots.length > 90) snapshots.shift();
+    db.prepare(`
+        INSERT INTO stats_snapshots (guild_id, date, joins, leaves) VALUES (?, ?, 0, 1)
+        ON CONFLICT(guild_id, date) DO UPDATE SET leaves = leaves + 1
+    `).run(guildId, today);
+
+    db.prepare(`
+        DELETE FROM stats_snapshots WHERE guild_id = ? AND date NOT IN (
+            SELECT date FROM stats_snapshots WHERE guild_id = ? ORDER BY date DESC LIMIT 90
+        )
+    `).run(guildId, guildId);
+}
+
+function loadStats() {
+    // Legacy: return the old nested format
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM guild_stats').all();
+    const result = {};
+    for (const row of rows) {
+        const gs = getGuildStats(row.guild_id);
+        result[row.guild_id] = gs;
     }
-    saveStats(stats);
+    return result;
+}
+
+function saveStats(stats) {
+    // Legacy: accept old nested format and persist to DB
+    const db = getDb();
+    const upsertStats = db.prepare(`
+        INSERT INTO guild_stats (guild_id, total_joins, total_leaves) VALUES (?, ?, ?)
+        ON CONFLICT(guild_id) DO UPDATE SET total_joins = excluded.total_joins, total_leaves = excluded.total_leaves
+    `);
+    const upsertSnap = db.prepare(`
+        INSERT INTO stats_snapshots (guild_id, date, joins, leaves) VALUES (?, ?, ?, ?)
+        ON CONFLICT(guild_id, date) DO UPDATE SET joins = excluded.joins, leaves = excluded.leaves
+    `);
+    const tx = db.transaction(() => {
+        for (const [guildId, s] of Object.entries(stats)) {
+            upsertStats.run(guildId, s.totalJoins || 0, s.totalLeaves || 0);
+            if (s.dailySnapshots) {
+                for (const snap of s.dailySnapshots) {
+                    upsertSnap.run(guildId, snap.date, snap.joins || 0, snap.leaves || 0);
+                }
+            }
+        }
+    });
+    tx();
 }
 
 module.exports = {

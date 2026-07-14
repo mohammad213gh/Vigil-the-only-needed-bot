@@ -1,74 +1,56 @@
-const fs = require('fs');
-const { getDataPath } = require('./data');
+const { getDb } = require('./db');
 
-const WARNINGS_PATH = getDataPath('warnings.json');
+// ─── Public API ───
 
 function loadWarnings() {
-    try {
-        return JSON.parse(fs.readFileSync(WARNINGS_PATH, 'utf8'));
-    } catch {
-        return {};
+    // Legacy: return old nested format
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM warnings ORDER BY date ASC').all();
+    const result = {};
+    for (const row of rows) {
+        if (!result[row.guild_id]) result[row.guild_id] = {};
+        if (!result[row.guild_id][row.user_id]) result[row.guild_id][row.user_id] = [];
+        result[row.guild_id][row.user_id].push({
+            id: row.id,
+            reason: row.reason,
+            moderator: row.moderator,
+            date: row.date,
+        });
     }
-}
-
-function saveWarnings(warnings) {
-    try {
-        fs.writeFileSync(WARNINGS_PATH, JSON.stringify(warnings, null, 4));
-    } catch (err) {
-        console.error('[Warnings] Failed to save warnings.json:', err.message);
-    }
-}
-
-function getGuildWarnings(guildId) {
-    const warnings = loadWarnings();
-    if (!warnings[guildId]) {
-        warnings[guildId] = {};
-        saveWarnings(warnings);
-    }
-    return warnings[guildId];
+    return result;
 }
 
 function addWarning(guildId, userId, moderatorTag, reason) {
-    const warnings = loadWarnings();
-    if (!warnings[guildId]) warnings[guildId] = {};
-    if (!warnings[guildId][userId]) warnings[guildId][userId] = [];
-
-    warnings[guildId][userId].push({
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        reason: reason || 'No reason provided',
-        moderator: moderatorTag,
-        date: new Date().toISOString(),
-    });
-
-    saveWarnings(warnings);
-    return warnings[guildId][userId];
+    const db = getDb();
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    db.prepare('INSERT INTO warnings (id, guild_id, user_id, moderator, reason, date) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(id, guildId, userId, moderatorTag, reason || 'No reason provided', new Date().toISOString());
+    return getWarnings(guildId, userId);
 }
 
 function getWarnings(guildId, userId) {
-    const warnings = loadWarnings();
-    return warnings[guildId]?.[userId] || [];
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM warnings WHERE guild_id = ? AND user_id = ? ORDER BY date ASC')
+        .all(guildId, userId);
+    return rows.map(r => ({
+        id: r.id,
+        reason: r.reason,
+        moderator: r.moderator,
+        date: r.date,
+    }));
 }
 
 function clearWarnings(guildId, userId) {
-    const warnings = loadWarnings();
-    if (warnings[guildId]) {
-        delete warnings[guildId][userId];
-        saveWarnings(warnings);
-    }
+    const db = getDb();
+    db.prepare('DELETE FROM warnings WHERE guild_id = ? AND user_id = ?').run(guildId, userId);
     return true;
 }
 
 function removeWarning(guildId, userId, warningId) {
-    const warnings = loadWarnings();
-    const userWarnings = warnings[guildId]?.[userId];
-    if (!userWarnings) return false;
-
-    const index = userWarnings.findIndex(w => w.id === warningId);
-    if (index === -1) return false;
-
-    userWarnings.splice(index, 1);
-    saveWarnings(warnings);
-    return true;
+    const db = getDb();
+    const result = db.prepare('DELETE FROM warnings WHERE guild_id = ? AND user_id = ? AND id = ?')
+        .run(guildId, userId, warningId);
+    return result.changes > 0;
 }
 
 module.exports = {

@@ -1,7 +1,4 @@
-const fs = require('fs');
-const path = require('path');
-
-const REMINDERS_PATH = process.env.REMINDERS_PATH || './reminders.json';
+const { getDb } = require('./db');
 
 let client = null;
 let checkInterval = null;
@@ -10,32 +7,18 @@ function setReminderClient(c) {
     client = c;
 }
 
-// ──────────────────── Data Persistence ────────────────────
-
-function loadReminders() {
-    try {
-        return JSON.parse(fs.readFileSync(REMINDERS_PATH, 'utf8'));
-    } catch {
-        return [];
-    }
-}
-
-function saveReminders(reminders) {
-    try {
-        fs.writeFileSync(REMINDERS_PATH, JSON.stringify(reminders, null, 4));
-    } catch (err) {
-        console.error('[Reminders] Failed to save:', err.message);
-    }
-}
-
-// ──────────────────── Manage Reminders ────────────────────
+// ──────────────────── Manage Reminders (SQLite) ────────────────────
 
 function addReminder(userId, channelId, text, durationMs) {
-    const reminders = loadReminders();
+    const db = getDb();
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const remindAt = Date.now() + durationMs;
 
-    const reminder = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    db.prepare('INSERT INTO reminders (id, user_id, channel_id, text, created_at, remind_at, notified) VALUES (?, ?, ?, ?, ?, ?, 0)')
+        .run(id, userId, channelId || null, text, Date.now(), remindAt);
+
+    return {
+        id,
         userId,
         channelId,
         text,
@@ -43,29 +26,42 @@ function addReminder(userId, channelId, text, durationMs) {
         remindAt,
         notified: false,
     };
-
-    reminders.push(reminder);
-    saveReminders(reminders);
-    return reminder;
 }
 
 function removeReminder(reminderId, userId) {
-    const reminders = loadReminders();
-    const filtered = reminders.filter(r => !(r.id === reminderId && r.userId === userId));
-    if (filtered.length === reminders.length) return false;
-    saveReminders(filtered);
-    return true;
+    const db = getDb();
+    const result = db.prepare('DELETE FROM reminders WHERE id = ? AND user_id = ?')
+        .run(reminderId, userId);
+    return result.changes > 0;
 }
 
 function getUserReminders(userId) {
-    const reminders = loadReminders();
-    return reminders
-        .filter(r => r.userId === userId && !r.notified)
-        .sort((a, b) => a.remindAt - b.remindAt);
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM reminders WHERE user_id = ? AND notified = 0 ORDER BY remind_at ASC')
+        .all(userId);
+    return rows.map(r => ({
+        id: r.id,
+        userId: r.user_id,
+        channelId: r.channel_id,
+        text: r.text,
+        createdAt: r.created_at,
+        remindAt: r.remind_at,
+        notified: !!r.notified,
+    }));
 }
 
 function getAllPending() {
-    return loadReminders().filter(r => !r.notified);
+    const db = getDb();
+    const rows = db.prepare('SELECT * FROM reminders WHERE notified = 0 ORDER BY remind_at ASC').all();
+    return rows.map(r => ({
+        id: r.id,
+        userId: r.user_id,
+        channelId: r.channel_id,
+        text: r.text,
+        createdAt: r.created_at,
+        remindAt: r.remind_at,
+        notified: !!r.notified,
+    }));
 }
 
 // ──────────────────── Check Loop ────────────────────
@@ -74,41 +70,50 @@ function startReminderChecker() {
     if (checkInterval) clearInterval(checkInterval);
 
     checkInterval = setInterval(async () => {
-        const reminders = loadReminders();
+        const db = getDb();
         const now = Date.now();
-        let changed = false;
 
-        for (const reminder of reminders) {
-            if (reminder.notified) continue;
-            if (reminder.remindAt <= now) {
-                reminder.notified = true;
-                changed = true;
+        try {
+            // Find all due reminders
+            const due = db.prepare('SELECT * FROM reminders WHERE notified = 0 AND remind_at <= ?').all(now);
 
-                // Try to DM the user
+            if (due.length === 0) return;
+
+            const markNotified = db.prepare('UPDATE reminders SET notified = 1 WHERE id = ?');
+
+            const tx = db.transaction(() => {
+                for (const reminder of due) {
+                    markNotified.run(reminder.id);
+                }
+            });
+            tx();
+
+            // Send DMs outside the transaction (async)
+            for (const reminder of due) {
                 try {
-                    const user = await client.users.fetch(reminder.userId).catch(() => null);
+                    const user = await client.users.fetch(reminder.user_id).catch(() => null);
                     if (user) {
                         await user.send({
                             embeds: [{
                                 color: 0x5865F2,
                                 title: '⏰ Reminder',
                                 description: reminder.text,
-                                footer: { text: 'Set ' + new Date(reminder.createdAt).toLocaleString() },
+                                footer: { text: 'Set ' + new Date(reminder.created_at).toLocaleString() },
                                 timestamp: new Date().toISOString(),
                             }],
                         });
                     }
-                } catch { /* if DMs are closed, silently fail */ }
+                } catch { /* DMs closed, skip */ }
             }
+
+            // Prune notified reminders older than 24 hours
+            const oneDayAgo = Date.now() - 86400000;
+            db.prepare('DELETE FROM reminders WHERE notified = 1 AND remind_at < ?').run(oneDayAgo);
+
+        } catch (err) {
+            console.error('[Reminders] Check error:', err.message);
         }
-
-        if (changed) saveReminders(reminders);
-
-        // Prune notified reminders older than 24 hours
-        const oneDayAgo = Date.now() - 86400000;
-        const pruned = reminders.filter(r => !r.notified || r.remindAt > oneDayAgo);
-        if (pruned.length !== reminders.length) saveReminders(pruned);
-    }, 15000); // Check every 15 seconds
+    }, 15000);
 
     return checkInterval;
 }
