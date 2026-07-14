@@ -21,7 +21,7 @@ This is a Discord bot I built for my own server because I got tired of premium b
 - A **Discord bot token** from the [Developer Portal](https://discord.com/developers/applications)
 - Somewhere to host it (I recommend Railway, it's free and easy)
 
-### Setup
+### Local Testing
 
 ```bash
 git clone <your-repo-url>
@@ -36,7 +36,16 @@ Open `.env` and fill in your token, user ID, and dashboard password. Then:
 npm start
 ```
 
-That's it. The bot comes online, registers all commands (instantly if you set `GUILD_ID`), and starts the dashboard on port 3000.
+### Railway (what I use)
+
+Railway doesn't use .env files — you add variables in their dashboard. Skip the `.env` step and add them here instead:
+
+Go to your Railway project → **Variables** tab → add:
+- `BOT_TOKEN`
+- `OWNER_ID`
+- `DASHBOARD_PASSWORD`
+- `DATA_DIR` = `/data` (after setting up a volume)
+- `GUILD_ID` (optional, for instant commands)
 
 ---
 
