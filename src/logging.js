@@ -1,4 +1,5 @@
 const { getGuildConfig } = require('./config');
+const { logError } = require('./logError');
 
 let client = null;
 
@@ -29,7 +30,9 @@ async function sendLog(embed, category, channelId, guildId) {
     // Verify the channel belongs to this guild — prevents cross-server leaks
     if (targetId) {
         let ch = client.channels.cache.get(targetId);
-        if (!ch) try { ch = await client.channels.fetch(targetId); } catch {}
+        if (!ch) try { ch = await client.channels.fetch(targetId); } catch (err) {
+            logError(err, 'logging', 'channel_fetch ' + targetId);
+        }
         if (!ch || (ch.guildId && ch.guildId !== guildId)) {
             targetId = null;
         }

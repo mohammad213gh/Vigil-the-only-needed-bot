@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { makeEmbed } = require('../embeds');
+const { logError } = require('../logError');
 
 async function executeDashboard(interaction) {
     // Support both Railway's auto-domain and generic DASHBOARD_URL
@@ -31,7 +32,9 @@ async function executeDashAccess(interaction) {
         try {
             await user.send('**\u2705 Dashboard Access Granted**\n\nYou can now log into the bot dashboard using your Discord ID and this access token:\n\n**Access Token:** `' + token + '`\n\nGo to the dashboard URL \u2192 **Discord ID** tab \u2192 enter your ID and this token.\n\n\u26A0\uFE0F **Keep this token private.** Do not share it with anyone.');
             dmSent = true;
-        } catch {}
+        } catch (err) {
+            logError(err, 'commands', 'dashaccess DM to ' + user.id);
+        }
         const embed = makeEmbed({
             color: 'Green',
             title: '\u2705 Dashboard Access Granted',

@@ -1,4 +1,5 @@
     const { EmbedBuilder } = require('discord.js');
+const { logError } = require('../logError');
 
     module.exports = [
         {
@@ -31,7 +32,9 @@
                         if (entry && entry.target?.id === member.user.id) {
                             addedBy = ' by ' + String(entry.executor);
                         }
-                    } catch {}
+                    } catch (err) {
+                        logError(err, 'events', 'guildMemberAdd/bot_audit');
+                    }
                 }
 
                 const embed = new EmbedBuilder()

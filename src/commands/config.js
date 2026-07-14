@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { getBotConfig, saveBotConfig, getGuildConfig, updateGuildConfig } = require('../config');
 const { makeEmbed } = require('../embeds');
+const { logError } = require('../logError');
 const { CATEGORY_EMOJIS, LOG_CATEGORIES } = require('../constants');
 
 async function executeLog(interaction) {
@@ -130,7 +131,8 @@ async function executeEmbedConfig(interaction) {
         try {
             color = parseInt(hexRaw.replace('#', ''), 16);
             if (isNaN(color) || color < 0 || color > 0xFFFFFF) throw new Error();
-        } catch {
+        } catch (err) {
+            logError(err, 'commands', 'config/embed color');
             return interaction.reply({ content: '\u26A0\uFE0F Invalid hex color! Use format like `#5865F2` or `FF5733`.', ephemeral: true });
         }
 

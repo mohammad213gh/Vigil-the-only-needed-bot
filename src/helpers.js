@@ -1,4 +1,5 @@
 const { COUNTRY_FLAGS } = require('./constants');
+const { logError } = require('./logError');
 
 // ──────────────────── String Utilities ────────────────────
 
@@ -112,7 +113,8 @@ async function fetchAuditLogExecutor(guild, actionType, targetId) {
         // Return the most recent entry's executor
         const first = audit.entries.first();
         return first?.executor || null;
-    } catch {
+    } catch (err) {
+        logError(err, 'helpers', 'fetchAuditLogExecutor(' + actionType + ')' );
         return null;
     }
 }

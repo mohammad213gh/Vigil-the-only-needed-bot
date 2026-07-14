@@ -9,7 +9,38 @@ const { getGuildStats } = require('./stats');
 const { getReactionRoles } = require('./reactionRoles');
 const { getAllPermissions } = require('./permissions');
 const { LOG_CATEGORIES, WS_STATUS } = require('./constants');
+const { logError } = require('./logError');
 const multer = require('multer');
+
+// ──── Rate Limiter ────
+const loginAttempts = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 10; // max attempts per window
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+    let entry = loginAttempts.get(ip);
+    if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW) {
+        entry = { count: 1, windowStart: now };
+        loginAttempts.set(ip, entry);
+        return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+    }
+    entry.count++;
+    if (entry.count > RATE_LIMIT_MAX) {
+        return { allowed: false, remaining: 0 };
+    }
+    return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count };
+}
+
+// Clean up old entries every 5 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of loginAttempts.entries()) {
+        if (now - entry.windowStart > RATE_LIMIT_WINDOW * 2) {
+            loginAttempts.delete(ip);
+        }
+    }
+}, 5 * 60 * 1000);
 
 let client = null;
 let dashboardPassword = '';
@@ -163,6 +194,13 @@ function createDashboard() {
 
     // ── Auth (password OR Discord ID + Access Token) ──
     app.post('/api/login', (req, res) => {
+        // Rate limiting by IP
+        const ip = req.ip || req.connection.remoteAddress || 'unknown';
+        const rateCheck = checkRateLimit(ip);
+        if (!rateCheck.allowed) {
+            console.warn('[Dashboard] Rate limit hit for IP:', ip);
+            return res.status(429).json({ success: false, error: 'Too many attempts. Please wait a minute.' });
+        }
         const { password, discordId, accessToken } = req.body;
         if (password && password === dashboardPassword) {
             const token = generateSession();

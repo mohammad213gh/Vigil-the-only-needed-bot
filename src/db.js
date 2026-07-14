@@ -325,6 +325,20 @@ function migrateFromJson() {
     return migrated;
 }
 
+// ──────────────────── Close ────────────────────
+
+function closeDb() {
+    if (db) {
+        try {
+            db.close();
+            console.log('[DB] Database closed.');
+        } catch (err) {
+            console.error('[DB] Error closing database:', err.message);
+        }
+        db = null;
+    }
+}
+
 // ──────────────────── Initialize ────────────────────
 
 function initDb() {
@@ -344,4 +358,4 @@ function initDb() {
 // Call init on require — synchronously
 initDb();
 
-module.exports = { getDb, initDb, migrateFromJson };
+module.exports = { getDb, initDb, closeDb, migrateFromJson };

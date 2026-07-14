@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { logError } = require('../logError');
 
 module.exports = [
     {
@@ -22,7 +23,9 @@ module.exports = [
                     if (member) {
                         try {
                             await member.roles.add(rr.roleId);
-                        } catch { /* silent */ }
+                        } catch (err) {
+                            logError(err, 'events', 'reaction_roles/add ' + rr.roleId);
+                        }
                     }
                     return; // Don't log reaction role interactions
                 }
@@ -76,7 +79,9 @@ module.exports = [
                     if (member) {
                         try {
                             await member.roles.remove(rr.roleId);
-                        } catch { /* silent */ }
+                        } catch (err) {
+                            logError(err, 'events', 'reaction_roles/remove ' + rr.roleId);
+                        }
                     }
                     return; // Don't log reaction role interactions
                 }

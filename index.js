@@ -8,6 +8,7 @@ const {
 const { loadConfig } = require('./src/config');
 const { recordJoin, recordLeave } = require('./src/stats');
 const { truncate, formatUptime, emojiToString, fetchAuditLogExecutor } = require('./src/helpers');
+const { logError } = require('./src/logError');
 const { deployCommands } = require('./src/deploy');
 const { setLoggerClient, sendLog } = require('./src/logging');
 const { findReactionRole } = require('./src/reactionRoles');
@@ -114,7 +115,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const reply = interaction.deferred || interaction.replied
             ? interaction.editReply.bind(interaction)
             : interaction.reply.bind(interaction);
-        reply({ content: '\u26A0\uFE0F An error occurred while executing that command.', ephemeral: true }).catch(() => {});
+        reply({ content: '\u26A0\uFE0F An error occurred while executing that command.', ephemeral: true }).catch(err => logError(err, 'commands', 'reply_fallback'));
     }
 });
 
@@ -133,6 +134,24 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('Dashboard running on port ' + PORT);
 });
+
+// ──────────────────── Login ────────────────────
+
+// ──────────────────── Graceful Shutdown ────────────────────
+
+const { closeDb } = require('./src/db');
+
+function shutdown(signal) {
+    console.log('\n[Bot] Received ' + signal + '. Shutting down gracefully...');
+    closeDb();
+    client.destroy();
+    console.log('[Bot] Goodbye!');
+    process.exit(0);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGQUIT', () => shutdown('SIGQUIT'));
 
 // ──────────────────── Login ────────────────────
 

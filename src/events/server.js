@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { CHANNEL_TYPE_NAMES } = require('../constants');
+const { logError } = require('../logError');
 
 // ─── Permission Name Lookup (friendly display for channel overwrites) ───
 const PERM_NAMES = {
@@ -270,7 +271,9 @@ module.exports = [
                     try {
                         audit = await guild.fetchAuditLogs({ type, limit: 3 });
                         if (audit?.entries?.size) break;
-                    } catch {}
+                    } catch (err) {
+                        logError(err, 'events', 'webhooksUpdate/audit type=' + type);
+                    }
                 }
                 if (audit?.entries?.size) {
                     const entry = audit.entries.filter(e => {
@@ -284,7 +287,9 @@ module.exports = [
                         else { actionType = 'updated'; embedColor = 0xF1C40F; }
                     }
                 }
-            } catch {}
+            } catch (err) {
+                logError(err, 'events', 'webhooksUpdate');
+            }
 
             const byUser = executor ? ' by ' + String(executor) : '';
 
