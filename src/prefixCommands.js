@@ -8,9 +8,10 @@ const { addReminder, removeReminder, getUserReminders } = require('./reminders')
 const { updateGuildConfig } = require('./config');
 const { getGuildStats } = require('./stats');
 const { isOwner, truncate, parseDuration, formatDuration, formatNumber, randomItem, randomInt, reverseText, mockText } = require('./helpers');
-const { hasPermission } = require('./permissions');
+const { hasPermission, grantPermission, revokePermission, getAllPermissions } = require('./permissions');
 const { getFlag, formatUptime } = require('./helpers');
 const os = require('os');
+const { getReactionRoles, addReactionRole, removeAllForMessage } = require('./reactionRoles');
 const { WS_STATUS } = require('./constants');
 const {
     BALL_RESPONSES, JOKES, FACTS, ADVICE, QUOTES,
@@ -741,15 +742,383 @@ handlers.reminders = async (message) => {
     }
 };
 
+// ─── Permissions ───
+
+handlers.perm = async (message) => {
+    // Permission already checked by dispatcher
+    const sub = message.args[0];
+    if (!sub || !['grant', 'revoke', 'list', 'user'].includes(sub)) {
+        return message.reply('⚠️ Usage: `' + message.prefix + 'perm grant @user <cmd>`, `' + message.prefix + 'perm revoke @user <cmd>`, `' + message.prefix + 'perm list`, `' + message.prefix + 'perm user @user`');
+    }
+    const guild = message.guild;
+
+    if (sub === 'grant') {
+        const user = message.mentions.users.first();
+        const command = message.args[1];
+        if (!user || !command) return message.reply('⚠️ Usage: `' + message.prefix + 'perm grant @user <command|all>`');
+        if (isOwner(user.id)) return message.reply('⚠️ The owner already has access to everything.');
+        const ownerOnly = ['deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'shutdown', 'perm'];
+        if (ownerOnly.includes(command)) return message.reply('⚠️ That command is owner-only and cannot be granted.');
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth'];
+        if (command === 'all') {
+            for (const cmd of grantableCmds) grantPermission(guild.id, cmd, user.id);
+            return message.reply('✅ Granted **all** commands to ' + user);
+        }
+        if (!grantableCmds.includes(command)) return message.reply('⚠️ Unknown command. Use `all` or one of the available commands.');
+        grantPermission(guild.id, command, user.id);
+        const embed = new EmbedBuilder()
+            .setColor('Green').setTitle('🔑 Permission Granted')
+            .setDescription(user + ' can now use `' + command + '`')
+            .setFooter({ text: 'Granted by ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    } else if (sub === 'revoke') {
+        const user = message.mentions.users.first();
+        const command = message.args[1];
+        if (!user || !command) return message.reply('⚠️ Usage: `' + message.prefix + 'perm revoke @user <command|all>`');
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth'];
+        if (command === 'all') {
+            for (const cmd of grantableCmds) revokePermission(guild.id, cmd, user.id);
+            return message.reply('✅ Revoked **all** permissions from ' + user);
+        }
+        revokePermission(guild.id, command, user.id);
+        const embed = new EmbedBuilder()
+            .setColor('Red').setTitle('🔑 Permission Revoked')
+            .setDescription(user + ' can no longer use `' + command + '`')
+            .setFooter({ text: 'Revoked by ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    } else if (sub === 'list') {
+        const allPerms = getAllPermissions(guild.id);
+        const entries = Object.entries(allPerms);
+        if (!entries.length) return message.reply('🔑 No special permissions granted.');
+        const fields = entries.map(([cmd, userIds]) => '`' + cmd + '` → ' + userIds.map(id => '<@' + id + '>').join(', '));
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('🔑 Granted Permissions')
+            .setDescription(fields.join('\n'))
+            .setFooter({ text: guild.name }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    } else if (sub === 'user') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply('⚠️ Usage: `' + message.prefix + 'perm user @user`');
+        const allPerms = getAllPermissions(guild.id);
+        const granted = Object.entries(allPerms).filter(([, ids]) => ids.includes(user.id)).map(([cmd]) => '`' + cmd + '`');
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('🔑 Permissions for ' + user.tag)
+            .setDescription(granted.length ? user + ' can use:\n' + granted.join('\n') : user + ' has no special permissions.')
+            .setFooter({ text: guild.name }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    }
+};
+
+// ─── Track Channels ───
+
+handlers.track = async (message) => {
+    // Permission already checked by dispatcher
+    const sub = message.args[0];
+    if (!sub || !['add', 'remove', 'list'].includes(sub)) return message.reply('⚠️ Usage: `' + message.prefix + 'track add #channel`, `' + message.prefix + 'track remove #channel`, `' + message.prefix + 'track list`');
+    if (sub === 'list') {
+        const existing = updateGuildConfig(message.guild.id, (g) => g);
+        const tracked = existing.trackedChannels || [];
+        if (!tracked.length) return message.reply('📡 Tracking **all channels**. Use `' + message.prefix + 'track add #channel` to restrict.');
+        const list = tracked.map(id => '<#' + id + '>').join('\n');
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('📡 Tracked Channels (' + tracked.length + ')')
+            .setDescription(list).setFooter({ text: message.guild.name }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+        return;
+    }
+    const channel = message.mentions.channels.first();
+    if (!channel) return message.reply('⚠️ Usage: `' + message.prefix + 'track add/remove #channel`');
+    updateGuildConfig(message.guild.id, (cfg) => {
+        if (!cfg.trackedChannels) cfg.trackedChannels = [];
+        if (sub === 'add') {
+            if (!cfg.trackedChannels.includes(channel.id)) cfg.trackedChannels.push(channel.id);
+        } else {
+            cfg.trackedChannels = cfg.trackedChannels.filter(id => id !== channel.id);
+        }
+        return cfg;
+    });
+    const embed = new EmbedBuilder()
+        .setColor(sub === 'add' ? 'Green' : 'Red').setTitle('📡 Channel ' + (sub === 'add' ? 'Added' : 'Removed'))
+        .setDescription(channel + ' is ' + (sub === 'add' ? 'now' : 'no longer') + ' being tracked.')
+        .setFooter({ text: 'By ' + message.author.tag }).setTimestamp();
+    await message.reply({ embeds: [embed] });
+};
+
+// ─── Logging Config ───
+
+handlers.log = async (message) => {
+    // Permission already checked by dispatcher
+    const sub = message.args[0];
+    if (!sub || !['channel', 'toggle', 'list'].includes(sub)) return message.reply('⚠️ Usage: `' + message.prefix + 'log channel <category> [#channel]`, `' + message.prefix + 'log toggle <category> on/off`, `' + message.prefix + 'log list`');
+    const guild = message.guild;
+    const cats = ['messages', 'reactions', 'members', 'roles', 'server', 'voice', 'threads', 'emojis', 'bans', 'invites', 'stickers', 'automod', 'scheduled', 'stage', 'webhooks', 'integrations'];
+
+    if (sub === 'list') {
+        const cfg = updateGuildConfig(guild.id, (g) => g);
+        const lines = cats.map(c => {
+            const enabled = cfg.logCategories?.[c] !== false;
+            const ch = cfg.logChannels?.[c] ? '<#' + cfg.logChannels[c] + '>' : '*default*';
+            return (enabled ? '✅' : '❌') + ' **' + c + '** → ' + ch;
+        });
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('🔍 Logging Configuration')
+            .setDescription(lines.join('\n')).setFooter({ text: guild.name }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+        return;
+    }
+
+    const category = message.args[1];
+    if (!category || !cats.includes(category)) return message.reply('⚠️ Invalid category. Options: ' + cats.join(', '));
+
+    if (sub === 'channel') {
+        const channel = message.mentions.channels.first();
+        updateGuildConfig(guild.id, (cfg) => {
+            if (!cfg.logChannels) cfg.logChannels = {};
+            cfg.logChannels[category] = channel ? channel.id : null;
+            return cfg;
+        });
+        const embed = new EmbedBuilder()
+            .setColor(channel ? 'Green' : 'Red').setTitle('📋 Log Channel: ' + category)
+            .setDescription(channel ? '**' + category + '** logs → ' + channel : '**' + category + '** log channel cleared')
+            .setFooter({ text: 'By ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    } else if (sub === 'toggle') {
+        const enabled = message.args[2] !== 'off';
+        updateGuildConfig(guild.id, (cfg) => {
+            if (!cfg.logCategories) cfg.logCategories = {};
+            cfg.logCategories[category] = enabled;
+            return cfg;
+        });
+        const embed = new EmbedBuilder()
+            .setColor(enabled ? 'Green' : 'Red').setTitle('🔍 Log Toggle: ' + category)
+            .setDescription('**' + category + '** logs ' + (enabled ? '✅ enabled' : '❌ disabled'))
+            .setFooter({ text: 'By ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    }
+};
+
+// ─── Reaction Roles ───
+
+handlers.reactionrole = async (message) => {
+    // Permission already checked by dispatcher
+    const sub = message.args[0];
+    if (!sub || !['add', 'remove', 'list'].includes(sub)) return message.reply('⚠️ Usage: `' + message.prefix + 'reactionrole add #channel @role <emoji>`, `' + message.prefix + 'reactionrole remove <message_id>`, `' + message.prefix + 'reactionrole list`');
+    const guild = message.guild;
+    if (!guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) return message.reply('⚠️ I need **Manage Roles** permission.');
+
+    if (sub === 'list') {
+        const roles = getReactionRoles(guild.id);
+        if (!roles.length) return message.reply('🏷️ No reaction roles configured.');
+        const grouped = {};
+        for (const rr of roles) {
+            if (!grouped[rr.messageId]) grouped[rr.messageId] = { channelId: rr.channelId, roles: [] };
+            grouped[rr.messageId].roles.push(rr);
+        }
+        const fields = Object.entries(grouped).map(([msgId, data]) => ({
+            name: 'Message: ' + msgId,
+            value: data.roles.map(r => r.emoji + ' → <@&' + r.roleId + '>' + (r.label ? ' (' + r.label + ')' : '')).join('\n') + '\n[Jump](https://discord.com/channels/' + guild.id + '/' + data.channelId + '/' + msgId + ')',
+        }));
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('🏷️ Reaction Roles (' + roles.length + ')')
+            .addFields(fields).setFooter({ text: guild.name }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+        return;
+    }
+
+    if (sub === 'remove') {
+        const msgId = message.args[1];
+        if (!msgId) return message.reply('⚠️ Usage: `' + message.prefix + 'reactionrole remove <message_id>`');
+        const count = removeAllForMessage(guild.id, msgId);
+        if (!count) return message.reply('⚠️ No reaction roles for that message ID.');
+        return message.reply('🗑️ Removed **' + count + '** reaction role(s).');
+    }
+
+    if (sub === 'add') {
+        const channel = message.mentions.channels.first();
+        const role = message.mentions.roles.first();
+        const emojiRaw = message.args[3];
+        if (!channel || !role || !emojiRaw) return message.reply('⚠️ Usage: `' + message.prefix + 'reactionrole add #channel @role <emoji> [label]`');
+        if (!channel.isTextBased?.()) return message.reply('⚠️ Please select a text channel.');
+        if (role.managed || role.id === guild.id) return message.reply('⚠️ Cannot manage that role.');
+        if (guild.members.me.roles.highest.position <= role.position) return message.reply('⚠️ That role is higher than mine.');
+        const label = message.restArgs.slice(4).join(' ');
+        try {
+            const embed = new EmbedBuilder()
+                .setColor(role.hexColor || 0x5865F2).setTitle('🏷️ Reaction Role' + (label ? ': ' + label : ''))
+                .setDescription('React with ' + emojiRaw + ' to get the **' + role.name + '** role!')
+                .addFields({ name: 'Role', value: role.toString(), inline: true }, { name: 'Reaction', value: emojiRaw, inline: true })
+                .setFooter({ text: guild.name }).setTimestamp();
+            const roleMessage = await channel.send({ embeds: [embed] });
+            await roleMessage.react(emojiRaw);
+            const normalized = emojiRaw.match(/<a?:(\w+):(\d+)>/) ? emojiRaw.match(/<a?:(\w+):(\d+)>/)[1] + ':' + emojiRaw.match(/<a?:(\w+):(\d+)>/)[2] : emojiRaw;
+            addReactionRole(guild.id, roleMessage.id, channel.id, normalized, role.id, label || null);
+            message.reply('✅ Reaction role set up! ' + roleMessage.url);
+        } catch (err) {
+            message.reply('⚠️ Failed: ' + err.message);
+        }
+    }
+};
+
+// ─── Bot Customization ───
+
+handlers.deploy = async (message) => {
+    // Permission already checked by dispatcher
+    await message.reply('🔄 Re-registering commands...');
+    try {
+        const { deployCommands } = require('./deploy');
+        const success = await deployCommands(message.client.user);
+        message.reply(success ? '✅ Commands re-registered!' : '❌ Failed.');
+    } catch (err) {
+        message.reply('❌ Error: ' + err.message);
+    }
+};
+
+handlers.botavatar = async (message) => {
+    // Permission already checked by dispatcher
+    const url = message.args[0];
+    if (!url) return message.reply('⚠️ Usage: `' + message.prefix + 'botavatar <image_url>`');
+    await message.reply('🔄 Changing avatar...');
+    try {
+        await message.client.user.setAvatar(url);
+        message.reply('✅ Avatar changed!');
+    } catch (err) {
+        message.reply('⚠️ Failed: ' + err.message);
+    }
+};
+
+handlers.botname = async (message) => {
+    // Permission already checked by dispatcher
+    const name = message.restArgs.join(' ');
+    if (!name) return message.reply('⚠️ Usage: `' + message.prefix + 'botname <new_name>`');
+    await message.reply('🔄 Changing name...');
+    try {
+        await message.client.user.setUsername(name);
+        message.reply('✅ Name changed to **' + name + '**!');
+    } catch (err) {
+        message.reply('⚠️ Failed: ' + err.message + ' (Discord limits name changes to 2/hour)');
+    }
+};
+
+handlers.presence = async (message) => {
+    // Permission already checked by dispatcher
+    const type = message.args[0];
+    const text = message.restArgs.slice(1).join(' ');
+    if (!type || !text || !['playing', 'watching', 'listening', 'competing'].includes(type)) {
+        return message.reply('⚠️ Usage: `' + message.prefix + 'presence <playing|watching|listening|competing> <text>`');
+    }
+    const types = { playing: 0, watching: 3, listening: 2, competing: 5 };
+    try {
+        await message.client.user.setPresence({
+            activities: [{ name: text, type: types[type] || 0 }],
+            status: 'online',
+        });
+        message.reply('✅ Presence updated to **' + type + '** "' + text + '"');
+    } catch (err) {
+        message.reply('⚠️ Failed: ' + err.message);
+    }
+};
+
+handlers.embedconfig = async (message) => {
+    // Permission already checked by dispatcher
+    const sub = message.args[0];
+    if (!sub || !['footer', 'color', 'show'].includes(sub)) return message.reply('⚠️ Usage: `' + message.prefix + 'embedconfig footer <text> [icon_url]`, `' + message.prefix + 'embedconfig color <hex>`, `' + message.prefix + 'embedconfig show`');
+    const { saveBotConfig, getBotConfig } = require('./config');
+    if (sub === 'footer') {
+        const text = message.restArgs.slice(1).join(' ') || null;
+        saveBotConfig({ embedFooterText: text });
+        message.reply(text ? '✅ Embed footer set to: "' + text + '"' : '🗑️ Embed footer cleared.');
+    } else if (sub === 'color') {
+        const hexRaw = message.args[1];
+        if (!hexRaw) return message.reply('⚠️ Usage: `' + message.prefix + 'embedconfig color <hex>` or `clear`');
+        if (hexRaw.toLowerCase() === 'clear') {
+            saveBotConfig({ embedColor: null });
+            return message.reply('✅ Embed color reset to default.');
+        }
+        const color = parseInt(hexRaw.replace('#', ''), 16);
+        if (isNaN(color) || color < 0 || color > 0xFFFFFF) return message.reply('⚠️ Invalid hex color! Use like `#5865F2`.');
+        saveBotConfig({ embedColor: color });
+        message.reply('✅ Embed color set to `#' + color.toString(16).toUpperCase().padStart(6, '0') + '`');
+    } else if (sub === 'show') {
+        const botCfg = getBotConfig();
+        const lines = [
+            '**Footer Text:** ' + (botCfg.embedFooterText || '*Not set*'),
+            '**Embed Color:** ' + (botCfg.embedColor ? '`#' + botCfg.embedColor.toString(16).toUpperCase().padStart(6, '0') + '`' : '*Default (Blurple)*'),
+        ];
+        message.reply(lines.join('\n'));
+    }
+};
+
+handlers.dashboard = async (message) => {
+    // Permission already checked by dispatcher
+    const dashUrl = process.env.DASHBOARD_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : null);
+    if (dashUrl) {
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('🌐 Bot Dashboard')
+            .setDescription('**[Open Dashboard](' + dashUrl + ')**')
+            .setTimestamp();
+        await message.reply({ embeds: [embed] });
+    } else {
+        message.reply('⚠️ DASHBOARD_URL is not set.');
+    }
+};
+
+handlers.dashaccess = async (message) => {
+    // Permission already checked by dispatcher
+    const sub = message.args[0];
+    if (!sub || !['add', 'remove', 'list'].includes(sub)) return message.reply('⚠️ Usage: `' + message.prefix + 'dashaccess add @user`, `' + message.prefix + 'dashaccess remove <user_id>`, `' + message.prefix + 'dashaccess list`');
+    const { addDashUser, removeDashUser, getDashUsers } = require('./dashboard');
+    if (sub === 'add') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply('⚠️ Mention a user.');
+        const result = addDashUser(user.id, message.author.tag);
+        const token = result.accessToken;
+        try {
+            await user.send('✅ Dashboard access granted!\n**Access Token:** `' + token + '`\nUse this to log in via Discord ID.');
+            message.reply('✅ Dashboard access granted to ' + user);
+        } catch {
+            message.reply('✅ Access granted but could not DM them. Token: `' + token + '`');
+        }
+    } else if (sub === 'remove') {
+        const userId = message.args[1];
+        if (!userId) return message.reply('⚠️ Usage: `' + message.prefix + 'dashaccess remove <user_id>`');
+        removeDashUser(userId);
+        message.reply('✅ Dashboard access removed from `' + userId + '`');
+    } else if (sub === 'list') {
+        const users = getDashUsers();
+        const entries = Object.entries(users).filter(([, u]) => u.active);
+        if (!entries.length) return message.reply('ℹ️ No dashboard users.');
+        const lines = entries.map(([id, u]) => '<@' + id + '> — Added by ' + u.addedBy);
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('👥 Dashboard Users (' + entries.length + ')')
+            .setDescription(lines.join('\n')).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    }
+};
+
+handlers.shutdown = async (message) => {
+    // Permission already checked by dispatcher
+    await message.reply('💤 Shutting down... Goodbye!');
+    setTimeout(() => process.exit(0), 1500);
+};
+
+handlers.stats = async (message) => {
+    const sub = message.args[0];
+    if (sub === 'server') return handlers.server(message);
+    if (sub === 'growth') return handlers.growth(message);
+    return message.reply('⚠️ Usage: `' + message.prefix + 'stats server` or `' + message.prefix + 'stats growth`');
+};
+
 handlers.help = async (message) => {
     const prefix = message.prefix;
     const categories = [
-        { name: '🛡️ Moderation', cmds: ['kick @user [reason]', 'ban @user [reason]', 'unban <id>', 'timeout @user <time> [reason]', 'untimeout @user', 'warn @user [reason]', 'warnings @user', 'clearwarnings @user', 'lock [#channel]', 'unlock [#channel]', 'purge <amount>', 'slowmode <seconds> [#channel]', 'say #channel <text>', 'nickname @user <name>'] },
-        { name: '📝 Utility', cmds: ['embed #channel <title> | <desc> | #color', 'announce #channel <title> | <msg> | #color', 'poll <q> | <opt1> | <opt2> [| opt3]'] },
-        { name: '👥 Role', cmds: ['role add/remove @user @role', 'role list [@user]'] },
-        { name: '📰 Info', cmds: ['ping', 'status', 'botinfo', 'userinfo [@user]', 'avatar [@user]', 'server', 'growth'] },
+        { name: '🛡️ Moderation', cmds: ['kick @user [reason]', 'ban @user [reason]', 'unban <id>', 'timeout @user <time> [reason]', 'untimeout @user', 'warn @user [reason]', 'warnings @user', 'clearwarnings @user', 'lock [#channel]', 'unlock [#channel]', 'purge <amount>', 'slowmode <seconds> [#channel]', 'nickname @user <name>', 'say #channel <text>'] },
+        { name: '📝 Utility', cmds: ['embed #channel <title> | <desc> | #color', 'announce #channel <title> | <msg> | #color', 'poll <q> | <opt1> | <opt2> [| opt3]', 'track add/remove/list [#channel]', 'log channel/toggle/list <cat>', 'deploy'] },
+        { name: '👥 Role', cmds: ['role add/remove @user @role', 'role list [@user]', 'reactionrole add #ch @role <emoji>', 'reactionrole list', 'reactionrole remove <msg_id>'] },
+        { name: '🔑 Permissions', cmds: ['perm grant @user <cmd|all>', 'perm revoke @user <cmd|all>', 'perm list', 'perm user @user'] },
+        { name: '📰 Info', cmds: ['ping', 'status', 'botinfo', 'userinfo [@user]', 'avatar [@user]', 'server', 'growth', 'stats server/growth'] },
         { name: '🎲 Fun', cmds: ['8ball <question>', 'coinflip', 'dice [sides]', 'rps <choice>', 'joke', 'fact', 'advice', 'quote', 'reverse <text>', 'mock <text>', 'random <min> <max>', 'worldcup <t1> <t2>'] },
         { name: '⏰ Utilities', cmds: ['remindme <time> <text>', 'reminders list', 'reminders cancel <id>', 'prefix [newprefix]', 'help'] },
+        { name: '⚙️ Bot Config', cmds: ['botname <name>', 'botavatar <url>', 'presence <type> <text>', 'embedconfig footer/color/show', 'dashboard', 'dashaccess add/remove/list', 'shutdown'] },
     ];
     const lines = categories.map(c => '**' + c.name + '**\n' + c.cmds.map(cmd => '`' + prefix + cmd + '`').join(' ')).join('\n\n');
     const embed = new EmbedBuilder()
@@ -780,7 +1149,7 @@ async function handlePrefixMessage(message, prefix) {
     message.restArgs = parts.slice(1);
 
     // Check permission for owner-only prefix commands
-    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll'];
+    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'shutdown'];
     if (ownerOnlyCmds.includes(cmdName)) {
         if (!checkOwnerOrPerm(message, cmdName)) return true;
     }
