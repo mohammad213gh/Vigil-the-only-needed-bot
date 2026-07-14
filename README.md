@@ -30,10 +30,11 @@ This is a Discord bot I built for my own server because I got tired of premium b
 
 ## Quick Start
 
-### You'll need
-- **Node.js 20+**
-- A **Discord bot token** from the [Developer Portal](https://discord.com/developers/applications)
-- Somewhere to host it (I recommend Railway, it's free and easy)
+### Prerequisites
+
+1. **Node.js 20 or higher** — Required for modern Discord.js v14 features
+2. **A Discord bot token** from the [Developer Portal](https://discord.com/developers/applications)<br>Make sure you enable these intents in the Bot tab: **Message Content**, **Guild Members**, and **Presence Intent**
+3. **Somewhere to host it** (I recommend Railway, it's free and easy)
 
 ### Local Testing
 
@@ -103,7 +104,9 @@ Users can set reminders with `/remindme 30s do the thing` and the bot will DM th
 2. Go to **Volumes** → **Add Volume** → mount at `/data`
 3. Set your env vars: `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `DATA_DIR=/data`
 4. Go to **Settings** → **Networking** → **Generate Domain** for the dashboard
-5. Done
+5. **After deploying, run `/deploy` in your Discord server** to register all commands so they show up correctly
+
+> ⚠️ **Every time you update your bot** (add new commands, change permissions, etc.), run `/deploy` again to sync the changes. Skip this and commands might not work.
 
 ### Docker
 ```bash
