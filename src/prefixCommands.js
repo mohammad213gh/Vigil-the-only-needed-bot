@@ -967,7 +967,11 @@ handlers.deploy = async (message) => {
     try {
         const { deployCommands } = require('./deploy');
         const success = await deployCommands(message.client.user);
-        message.reply(success ? '✅ Commands re-registered!' : '❌ Failed.');
+        if (success === true) {
+            message.reply('✅ Commands re-registered!');
+        } else {
+            message.reply('❌ Deploy failed: ' + (success || 'Unknown error'));
+        }
     } catch (err) {
         message.reply('❌ Error: ' + err.message);
     }

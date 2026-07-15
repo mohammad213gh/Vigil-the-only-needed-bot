@@ -235,11 +235,15 @@ async function executeEmbed(interaction) {
 
 async function executeDeploy(interaction) {
     await interaction.deferReply({ ephemeral: true });
-    const success = await deployCommands(interaction.client.user);
-    if (success) {
-        await interaction.editReply({ content: '\u2705 Slash commands re-registered successfully!' });
-    } else {
-        await interaction.editReply({ content: '\u26A0\uFE0F Failed to re-register commands. Check the console for details.' });
+    try {
+        const result = await deployCommands(interaction.client.user);
+        if (result === true) {
+            await interaction.editReply({ content: '\u2705 Slash commands re-registered successfully!' });
+        } else {
+            await interaction.editReply({ content: '\u274C **Deploy failed:** ' + (result || 'Unknown error. Check Railway logs for details.') });
+        }
+    } catch (err) {
+        await interaction.editReply({ content: '\u274C **Deploy error:** ' + (err.message || 'Unknown error') });
     }
 }
 

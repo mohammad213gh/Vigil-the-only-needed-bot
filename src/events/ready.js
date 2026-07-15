@@ -10,10 +10,10 @@ module.exports = {
 
         deps.loadConfig();
         const result = await deps.deployCommands(client.user);
-        if (result) {
+        if (result === true) {
             console.log('\u2705 Commands deployed successfully! Try using /deploy in Discord if commands still do not appear.');
         } else {
-            console.log('\u274C Command deployment failed. Check your BOT_TOKEN and try running /deploy in Discord.');
+            console.log('\u274C Command deployment failed. ' + (result || 'Check your BOT_TOKEN.'));
         }
     },
 };

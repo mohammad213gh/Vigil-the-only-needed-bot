@@ -735,8 +735,12 @@ async function deployCommands(clientUser) {
         }
         return true;
     } catch (err) {
-        console.error('\u274C Failed to register commands:', err.message);
-        return false;
+        const msg = err.rawError?.message || err.message || 'Unknown error';
+        console.error('\u274C Failed to register commands:', msg);
+        if (err.rawError?.errors) {
+            try { console.error('Detailed errors:', JSON.stringify(err.rawError.errors, null, 2).slice(0, 2000)); } catch {}
+        }
+        return 'Discord API: ' + msg;
     }
 }
 
