@@ -651,6 +651,15 @@ const commandDefs = [
             sub.setName('list')
                 .setDescription('List all users with dashboard access')),
 
+    // ── Server Leave (owner only) ──
+    new SlashCommandBuilder()
+        .setName('server_leave')
+        .setDescription('Force the bot to leave a server by ID (owner only)')
+        .addStringOption(opt =>
+            opt.setName('server_id')
+                .setDescription('The ID of the server to leave')
+                .setRequired(true)),
+
     // ── Shutdown (owner only) ──
     new SlashCommandBuilder()
         .setName('shutdown')

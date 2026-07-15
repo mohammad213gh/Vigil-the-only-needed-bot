@@ -1095,6 +1095,24 @@ handlers.dashaccess = async (message) => {
     }
 };
 
+handlers.server_leave = async (message) => {
+    // Permission already checked by dispatcher
+    const guildId = message.args[0];
+    if (!guildId) return message.reply('⚠️ Usage: `' + message.prefix + 'server_leave <server_id>`');
+    const guild = message.client.guilds.cache.get(guildId);
+    if (!guild) return message.reply('⚠️ I\'m not in a server with that ID.');
+    try {
+        await guild.leave();
+        const embed = new EmbedBuilder()
+            .setColor(0xE74C3C).setTitle('👋 Left Server')
+            .setDescription('Successfully left **' + guild.name + '** (' + guildId + ').')
+            .setFooter({ text: 'By ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    } catch (err) {
+        message.reply('⚠️ Failed: ' + err.message);
+    }
+};
+
 handlers.shutdown = async (message) => {
     // Permission already checked by dispatcher
     await message.reply('💤 Shutting down... Goodbye!');
@@ -1149,7 +1167,7 @@ async function handlePrefixMessage(message, prefix) {
     message.restArgs = parts.slice(1);
 
     // Check permission for owner-only prefix commands
-    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'shutdown'];
+    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'server_leave', 'shutdown'];
     if (ownerOnlyCmds.includes(cmdName)) {
         if (!checkOwnerOrPerm(message, cmdName)) return true;
     }

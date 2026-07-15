@@ -27,7 +27,7 @@ const { executePerm } = require('./permissions');
 const { executeReactionRole } = require('./reactionRoles');
 
 // ── Owner ──
-const { executeDashboard, executeDashAccess, executeShutdown } = require('./owner');
+const { executeDashboard, executeDashAccess, executeServerLeave, executeShutdown } = require('./owner');
 
 // ──────────────────── Registry Map ────────────────────
 
@@ -99,6 +99,7 @@ const commandRegistry = {
     // Owner
     dashboard: executeDashboard,
     dashaccess: executeDashAccess,
+    server_leave: executeServerLeave,
     shutdown: executeShutdown,
 };
 

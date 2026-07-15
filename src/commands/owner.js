@@ -74,6 +74,29 @@ async function executeDashAccess(interaction) {
     }
 }
 
+async function executeServerLeave(interaction) {
+    const guildId = interaction.options.getString('server_id');
+    if (!guildId) return interaction.reply({ content: '\u26A0\uFE0F Please provide a server ID.', ephemeral: true });
+
+    const guild = interaction.client.guilds.cache.get(guildId);
+    if (!guild) return interaction.reply({ content: '\u26A0\uFE0F I\'m not in a server with that ID.', ephemeral: true });
+
+    const guildName = guild.name;
+    try {
+        await guild.leave();
+        const embed = makeEmbed({
+            color: 'Red',
+            title: '\uD83D\uDC4B Left Server',
+            description: 'Successfully left **' + guildName + '** (' + guildId + ').',
+            footer: { text: 'Forced leave by ' + interaction.user.tag },
+            timestamp: true,
+        });
+        await interaction.reply({ embeds: [embed] });
+    } catch (err) {
+        await interaction.reply({ content: '\u274C Failed to leave: ' + err.message, ephemeral: true });
+    }
+}
+
 async function executeShutdown(interaction) {
     const embed = makeEmbed({
         color: 'Red',
@@ -86,4 +109,4 @@ async function executeShutdown(interaction) {
     setTimeout(() => process.exit(0), 1500);
 }
 
-module.exports = { executeDashboard, executeDashAccess, executeShutdown };
+module.exports = { executeDashboard, executeDashAccess, executeServerLeave, executeShutdown };
