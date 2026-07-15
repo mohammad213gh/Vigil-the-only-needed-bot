@@ -716,31 +716,56 @@ const commandDefs = [
 // ──────────────────── Deploy Function ────────────────────
 
 async function deployCommands(clientUser) {
-    try {
-        const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
+    const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
 
-        if (process.env.GUILD_ID) {
+    // Try guild-specific deploy first (instant updates)
+    if (process.env.GUILD_ID) {
+        try {
             await rest.put(
                 Routes.applicationGuildCommands(clientUser.id, process.env.GUILD_ID),
                 { body: commandDefs },
             );
             console.log('\u2705 Registered ' + commandDefs.length + ' commands for guild ' + process.env.GUILD_ID);
-        } else {
-            await rest.put(
-                Routes.applicationCommands(clientUser.id),
-                { body: commandDefs },
-            );
-            console.log('\u26A0\uFE0F Registered ' + commandDefs.length + ' global commands. They may take ~1 hour to appear in Discord.');
-            console.log('\uD83D\uDC41\uFE0F Tip: Set GUILD_ID in your .env file for INSTANT command registration!');
+            // Also deploy globally so commands work in other servers
+            try {
+                await rest.put(
+                    Routes.applicationCommands(clientUser.id),
+                    { body: commandDefs },
+                );
+                console.log('\u2705 Also deployed globally for other servers.');
+            } catch (globalErr) {
+                // Global deploy is non-critical if guild deploy succeeded
+                console.log('\u26A0\uFE0F Global deploy optional, guild commands are live.');
+            }
+            return true;
+        } catch (guildErr) {
+            const guildMsg = guildErr.rawError?.message || guildErr.message || 'Unknown error';
+            console.error('\u26A0\uFE0F Guild deploy failed (' + guildMsg + '). Falling back to global deploy...');
+            // Fall through to global deploy
+        }
+    }
+
+    // Global deploy (works regardless of GUILD_ID)
+    try {
+        await rest.put(
+            Routes.applicationCommands(clientUser.id),
+            { body: commandDefs },
+        );
+        const guildNote = process.env.GUILD_ID ? ' (GUILD_ID is set but guild deploy failed)' : '';
+        console.log('\u26A0\uFE0F Registered ' + commandDefs.length + ' global commands. They may take ~1 hour to appear in Discord.' + guildNote);
+        console.log('\uD83D\uDC41\uFE0F Tip: For instant updates, set GUILD_ID to a server ID your bot is in.');
+        if (process.env.GUILD_ID) {
+            console.log('\u274C Your GUILD_ID (' + process.env.GUILD_ID + ') may be wrong or the bot lacks the applications.commands scope in that server.');
         }
         return true;
     } catch (err) {
         const msg = err.rawError?.message || err.message || 'Unknown error';
+        const code = err.rawError?.code || '';
         console.error('\u274C Failed to register commands:', msg);
         if (err.rawError?.errors) {
             try { console.error('Detailed errors:', JSON.stringify(err.rawError.errors, null, 2).slice(0, 2000)); } catch {}
         }
-        return 'Discord API: ' + msg;
+        return 'Discord API: ' + msg + (code ? ' (code ' + code + ')' : '');
     }
 }
 
