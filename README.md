@@ -89,8 +89,12 @@ Users can set reminders with `/remindme 30s do the thing` and the bot will DM th
 ### 🎮 Fun Commands
 8ball, coinflip, dice, rock-paper-scissors, jokes, facts, advice, quotes, reverse text, mock text, random numbers, and a World Cup match predictor.
 
+### 🔤 Prefix Commands
+Every command also works via text prefix (default `;`). Type `;help` to see everything, `;ping` to test it, `;kick @user` for mod actions. You can change the prefix per-server with `/prefix` or `;prefix !`.
+
 ### 🛠️ Other Stuff
-- Permission system so you can grant specific commands to trusted users without making them owner
+- **Force leave a server** with `/server_leave <server_id>` — useful if the bot ends up in a server you don't want it in
+- Permission system so you can grant specific commands — including **all at once** with `/perm grant @user all`
 - Bot customization — change name, avatar, and presence from Discord or the dashboard
 - Server growth stats with daily snapshots
 - Graceful shutdown so data doesn't corrupt when the bot stops
@@ -139,9 +143,16 @@ On Railway this means setting up a volume. It takes 2 minutes and you never lose
 **Admin:** `/role` `/purge` `/slowmode` `/nickname` `/say` `/embed` `/deploy` `/track` `/poll` `/announce`
 **Permissions:** `/perm grant` `/perm revoke` `/perm list` `/perm user`
 **Reaction Roles:** `/reactionrole add` `/reactionrole remove` `/reactionrole list`
-**Other:** `/dashboard` `/dashaccess` `/shutdown`
+**Other:** `/dashboard` `/dashaccess` `/server_leave` `/shutdown` `/prefix`
 
-Use `/perm grant @user command` to let trusted people use specific commands without making them full owners.
+Use `/perm grant @user command` to let trusted people use specific commands, or `/perm grant @user all` to grant everything at once.
+
+### Prefix Commands
+All features also work with the text prefix (default `;`). Just type in chat:
+
+`;help` `;ping` `;status` `;kick @user` `;ban @user` `;purge 10` `;warn @user` `;prefix !` `;server` `;growth` `;server_leave 123456789`
+
+Run `;help` in any server to see the full list of 40+ prefix commands.
 
 ---
 
