@@ -643,9 +643,9 @@ const commandDefs = [
         .addSubcommand(sub =>
             sub.setName('remove')
                 .setDescription('Revoke dashboard access from a user')
-                .addStringOption(opt =>
-                    opt.setName('user_id')
-                        .setDescription('The Discord user ID to revoke')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to revoke dashboard access from')
                         .setRequired(true)))
         .addSubcommand(sub =>
             sub.setName('list')

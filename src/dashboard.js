@@ -137,14 +137,18 @@ function addDashUser(userId, addedBy) {
 }
 
 function removeDashUser(userId) {
+    if (!userId) return false;
     const db = getDb();
-    db.prepare('DELETE FROM dash_users WHERE user_id = ?').run(userId);
-    // Invalidate all active sessions for this user
+    const result = db.prepare('DELETE FROM dash_users WHERE user_id = ?').run(userId);
+    const removed = result.changes > 0;
+    if (!removed) return false;
+    // Invalidate all active sessions for this user — clear every session type
     for (const [token, session] of sessions.entries()) {
-        if (session.method === 'discord' && session.userId === userId) {
+        if (session.userId === userId) {
             sessions.delete(token);
         }
     }
+    return true;
 }
 
 function isDashUser(userId, accessToken) {

@@ -45,12 +45,16 @@ async function executeDashAccess(interaction) {
         });
         await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'remove') {
-        const userId = interaction.options.getString('user_id');
-        removeDashUser(userId);
+        const user = interaction.options.getUser('user');
+        if (!user) return interaction.reply({ content: 'Please specify a user.', ephemeral: true });
+        const result = removeDashUser(user.id);
+        if (!result) {
+            return interaction.reply({ content: 'User <@' + user.id + '> was not found in the dashboard access list.', ephemeral: true });
+        }
         const embed = makeEmbed({
             color: 'Red',
             title: '\u274C Dashboard Access Revoked',
-            description: 'User `' + userId + '` can no longer log into the dashboard.',
+            description: '<@' + user.id + '> (' + user.id + ') can no longer log into the dashboard.\nThey have been logged out of any active sessions.',
         });
         await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'list') {
