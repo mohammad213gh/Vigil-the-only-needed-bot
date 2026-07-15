@@ -35,7 +35,7 @@ async function executePerm(interaction) {
                 .addFields({ name: 'Commands (' + grantableCmds.length + ')', value: grantableCmds.map(c => '`/' + c + '`').join(' ') })
                 .setFooter({ text: 'Granted by ' + interaction.user.tag })
                 .setTimestamp();
-            return interaction.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
         grantPermission(guild.id, command, user.id);
@@ -47,7 +47,7 @@ async function executePerm(interaction) {
             .setFooter({ text: 'Granted by ' + interaction.user.tag })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'revoke') {
         const user = interaction.options.getUser('user');
         const command = interaction.options.getString('command');
@@ -64,7 +64,7 @@ async function executePerm(interaction) {
                 .setDescription(user + ' can no longer use any granted commands.')
                 .setFooter({ text: 'Revoked by ' + interaction.user.tag })
                 .setTimestamp();
-            return interaction.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
         revokePermission(guild.id, command, user.id);
@@ -76,7 +76,7 @@ async function executePerm(interaction) {
             .setFooter({ text: 'Revoked by ' + interaction.user.tag })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'list') {
         const allPerms = getAllPermissions(guild.id);
         const entries = Object.entries(allPerms);
@@ -89,7 +89,7 @@ async function executePerm(interaction) {
                 .setFooter({ text: guild.name, iconURL: guild.iconURL() })
                 .setTimestamp();
 
-            return interaction.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed], ephemeral: true });
         }
 
         const fields = entries.map(([cmd, userIds]) => ({
@@ -112,7 +112,7 @@ async function executePerm(interaction) {
             .setFooter({ text: guild.name, iconURL: guild.iconURL() })
             .setTimestamp());
 
-        await interaction.reply({ embeds });
+        await interaction.reply({ embeds, ephemeral: true });
     } else if (sub === 'user') {
         const user = interaction.options.getUser('user');
         const allPerms = getAllPermissions(guild.id);
@@ -130,7 +130,7 @@ async function executePerm(interaction) {
             .setFooter({ text: guild.name, iconURL: guild.iconURL() })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 }
 

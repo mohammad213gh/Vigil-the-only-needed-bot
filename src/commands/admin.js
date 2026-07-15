@@ -267,7 +267,7 @@ async function executeTrack(interaction) {
             .setFooter({ text: 'Added by ' + interaction.user.tag })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'remove') {
         const channel = interaction.options.getChannel('channel');
         
@@ -287,7 +287,7 @@ async function executeTrack(interaction) {
             .setFooter({ text: 'Removed by ' + interaction.user.tag })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'list') {
         const guildConfig = getGuildConfig(guild.id);
         if (guildConfig.trackedChannels.length === 0) {
@@ -301,7 +301,7 @@ async function executeTrack(interaction) {
             .setFooter({ text: guild.name, iconURL: guild.iconURL() })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 }
 

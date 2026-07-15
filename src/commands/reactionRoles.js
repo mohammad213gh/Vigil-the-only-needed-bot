@@ -81,7 +81,7 @@ async function executeReactionRole(interaction) {
             .setFooter({ text: 'By ' + interaction.user.tag })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'list') {
         const roles = getReactionRoles(guild.id);
 
@@ -120,7 +120,7 @@ async function executeReactionRole(interaction) {
             .setFooter({ text: guild.name, iconURL: guild.iconURL() })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 }
 

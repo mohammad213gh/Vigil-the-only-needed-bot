@@ -32,7 +32,7 @@ async function executeLog(interaction) {
             .setFooter({ text: 'Changed by ' + interaction.user.tag })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'toggle') {
         const category = interaction.options.getString('category');
         const enabled = interaction.options.getBoolean('enabled');
@@ -50,7 +50,7 @@ async function executeLog(interaction) {
             .setFooter({ text: 'Changed by ' + interaction.user.tag })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'list') {
         const guildConfig = getGuildConfig(guild.id);
         const lines = [];
@@ -145,7 +145,7 @@ async function executeEmbedConfig(interaction) {
             footer: { text: 'Changed by ' + interaction.user.tag },
             timestamp: true,
         });
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'show') {
         const botCfg = getBotConfig();
         const lines = [];
@@ -160,7 +160,7 @@ async function executeEmbedConfig(interaction) {
             footer: { text: interaction.guild.name, iconURL: interaction.guild.iconURL() },
             timestamp: true,
         });
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 }
 

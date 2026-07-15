@@ -1052,11 +1052,12 @@ handlers.dashboard = async (message) => {
     // Permission already checked by dispatcher
     const dashUrl = process.env.DASHBOARD_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : null);
     if (dashUrl) {
-        const embed = new EmbedBuilder()
-            .setColor(0x5865F2).setTitle('🌐 Bot Dashboard')
-            .setDescription('**[Open Dashboard](' + dashUrl + ')**')
-            .setTimestamp();
-        await message.reply({ embeds: [embed] });
+        try {
+            await message.author.send('🌐 **Bot Dashboard**\n[Open Dashboard](' + dashUrl + ')');
+            message.reply('📬 Check your DMs for the dashboard link!').catch(() => {});
+        } catch {
+            message.reply('⚠️ Could not DM you. Dashboard URL: ' + dashUrl);
+        }
     } else {
         message.reply('⚠️ DASHBOARD_URL is not set.');
     }

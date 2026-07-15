@@ -52,7 +52,7 @@ async function executeDashAccess(interaction) {
             title: '\u274C Dashboard Access Revoked',
             description: 'User `' + userId + '` can no longer log into the dashboard.',
         });
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (sub === 'list') {
         const users = getDashUsers();
         const entries = Object.entries(users).filter(([, u]) => u.active);
@@ -61,7 +61,7 @@ async function executeDashAccess(interaction) {
                 color: 'Yellow',
                 title: '\uD83D\uDC40 Dashboard Users',
                 description: 'No users have been granted dashboard access yet.\nUse `/dashaccess add @user` to grant access.',
-            })] });
+            })], ephemeral: true });
         }
         const embed = makeEmbed({
             color: 0x5865F2,
@@ -91,7 +91,7 @@ async function executeServerLeave(interaction) {
             footer: { text: 'Forced leave by ' + interaction.user.tag },
             timestamp: true,
         });
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     } catch (err) {
         await interaction.reply({ content: '\u274C Failed to leave: ' + err.message, ephemeral: true });
     }
@@ -105,7 +105,7 @@ async function executeShutdown(interaction) {
         footer: { text: 'Shutdown by ' + interaction.user.tag },
         timestamp: true,
     });
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
     setTimeout(() => process.exit(0), 1500);
 }
 
