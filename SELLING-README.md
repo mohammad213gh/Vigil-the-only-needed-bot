@@ -141,13 +141,14 @@ Dashboard
 
 ### Screenshots
 
-| Login Page | Dashboard Overview |
-|---|---|
-| <img src="https://i.ibb.co/23dkJKj4/Screenshot-2026-07-16-225748.png" alt="Login Page" width="100%"> | <img src="https://i.ibb.co/LdYHjJ3f/Screenshot-2026-07-16-225843.png" alt="Dashboard Overview" width="100%"> |
+![Login Page](https://i.ibb.co/23dkJKj4/Screenshot-2026-07-16-225748.png)
+*Dashboard login page*
 
-| Logging Panel (Discord) |
-|---|
-| <img src="https://i.ibb.co/PGQpDRxP/Screenshot-2026-07-16-225613.png" alt="Logging Output" width="100%"> |
+![Dashboard Overview](https://i.ibb.co/LdYHjJ3f/Screenshot-2026-07-16-225843.png)
+*Main dashboard — server overview, stats, and controls*
+
+![Logging Output](https://i.ibb.co/PGQpDRxP/Screenshot-2026-07-16-225613.png)
+*Logging panel — 16 categories of Discord events logged in real time*
 
 ---
 
