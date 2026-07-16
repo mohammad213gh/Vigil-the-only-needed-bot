@@ -2,7 +2,8 @@
 
 # NLux Bot
 
-**v1.0.0** — [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue)](LICENSE)
+**v1.0.0** ![GitHub package.json version](https://img.shields.io/github/package-json/v/mohammad213gh/Discord-bot)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue)](LICENSE)
 ![GitHub last commit](https://img.shields.io/github/last-commit/mohammad213gh/Discord-bot)
 ![GitHub repo size](https://img.shields.io/github/repo-size/mohammad213gh/Discord-bot)
 
