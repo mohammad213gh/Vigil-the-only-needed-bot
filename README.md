@@ -2,6 +2,10 @@
 
 # NLux Bot
 
+**v1.0.0** — [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue)](LICENSE)
+![GitHub last commit](https://img.shields.io/github/last-commit/mohammad213gh/Discord-bot)
+![GitHub repo size](https://img.shields.io/github/repo-size/mohammad213gh/Discord-bot)
+
 **The self-hosted Discord management bot that refuses to put features behind a paywall**
 
 > Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization
@@ -20,19 +24,19 @@ Instead of paying monthly for features that should just *work*, I built everythi
 
 ## How It Compares (Honestly)
 
-Look, I'm not gonna sit here and pretend this bot is better than MEE6 or Dyno. Those projects have been around for years with entire teams behind them. They're polished, documented, and supported. What this bot offers is something different:
+This isn't meant to compete with long-established bots like MEE6, Dyno, or Carl-bot. Those projects have years of development behind them. The goal here is different: complete control, self-hosting, and no premium paywalls.
 
 **You host it. You control it. You don't pay monthly.**
 
 | Feature | NLux Bot | MEE6 | Dyno | Carl-bot |
 |---|---|---|---|---|
 | Moderation | ✅ Yes | ✅ Free tier | ✅ Free tier | ✅ Free tier |
-| Logging (16 categories) | ✅ Yes | ✅ Free (limited) | ✅ Free (basic) | ❌ |
-| Reaction Roles | ✅ Yes | ✅ Free (limited) | ❌ | ✅ Free |
+| Logging | ✅ 16 categories | ✅ Free (limited) | ✅ Free (basic) | ✅ Free |
+| Reaction Roles | ✅ Yes | ✅ Free (limited) | ✅ Free (modules) | ✅ Free |
 | Reminders | ✅ Yes | ❌ | ❌ | ✅ Free |
 | Fun Commands | ✅ Yes | ✅ Free | ✅ Free | ❌ |
-| Web Dashboard | ✅ Yes | 🔒 Premium | 🔒 Premium | ❌ |
-| Customization | ✅ Yes | ❌ | ❌ | ❌ |
+| Web Dashboard | ✅ Yes | ✅ Free | 🔒 Premium | ❌ |
+| Customization | ✅ Themes, colors, glass | ❌ | ❌ | ❌ |
 | Prefix Commands | ✅ Yes | ❌ | ✅ Yes | ✅ Yes |
 | Permission System | ✅ Yes | 🔒 Premium | 🔒 Premium | 🔒 Premium |
 | Server Stats / Growth | ✅ Yes | 🔒 Premium | ❌ | ❌ |
@@ -42,10 +46,8 @@ Look, I'm not gonna sit here and pretend this bot is better than MEE6 or Dyno. T
 **The honest tradeoffs:**
 - **Polished UI?** MEE6 and Dyno have better docs and sleeker UIs. They've been doing this longer.
 - **Features?** Premium bots have niche stuff like leveling, music, giveaways, and ticket systems built in.
-- **Reliability?** Cloud bots have 99.9% uptime. Mine goes down when Railway goes down.
+- **Reliability?** Cloud bots have 99.9% uptime. This one goes down when Railway goes down.
 - **But** — I don't charge you a dime. You own your data. You can customize everything. And I built this alone for my own server, then shared it in case it helps someone else.
-
-**🏆 Badges:** `FREE` `SELF-HOSTED` `NO-TRACKING` `CUSTOMIZABLE` `OPEN-SOURCE`
 
 ---
 
