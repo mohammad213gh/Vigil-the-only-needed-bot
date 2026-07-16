@@ -4,14 +4,14 @@
 
 **A complete Discord management bot — source code included**
 
-> **$39 — $49** · One-time payment · Full source code · Lifetime updates
+> **$39** · One-time payment · Full source code
 
 ![Node](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)
 ![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2?logo=discord&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 
-**70+ Commands · 16 Logging Categories · Web Dashboard · Reaction Roles · Server Stats**
+**Self-Hosted · Full Source Code · Web Dashboard · Own Your Data · No Subscription**
 
 *Built by **franc** (`.nlux.`) — DM me on Discord to buy: **.nlux.** (ID: 1200828694088917114)*
 
@@ -21,11 +21,13 @@
 
 ## What Is This?
 
-This is a complete, production-ready Discord management bot that I built from scratch. Fully self-hosted, persistent SQLite database, 70+ commands, 16 logging categories, a full web dashboard, and zero dependency on any third-party service.
+This is a complete Discord management bot, battle-tested in my own server. Fully self-hosted, persistent SQLite database, a full web dashboard, and zero dependency on any third-party service.
 
-You get the **full source code**. You host it yourself. You own every piece of it.
+You get the **full source code**. You host it yourself. You own every piece of it. No monthly fee.
 
 **Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization**
+
+It comes with 70+ commands across moderation, logging, reaction roles, fun, utility, and stats — but the real selling points are the ones you can't get from a premium bot: **your own dashboard, your own data, and no subscription.**
 
 ---
 
@@ -58,7 +60,7 @@ This isn't meant to compete with long-established bots like MEE6, Dyno, or Carl-
 | Permission System | ✅ Yes | 🔒 Premium | 🔒 Premium | 🔒 Premium |
 | Server Stats / Growth | ✅ Yes | 🔒 Premium | ❌ | ❌ |
 | Self-Hosted (own data) | ✅ Yes | ❌ Cloud | ❌ Cloud | ❌ Cloud |
-| **One-Time Payment** | ✅ **$39-$49** | ❌ $5–$12/mo | ❌ $5–$10/mo | ❌ $5–$10/mo |
+| **One-Time Payment** | ✅ **$39** | ❌ $5–$12/mo | ❌ $5–$10/mo | ❌ $5–$10/mo |
 
 **The honest tradeoffs:**
 - **Polished UI?** MEE6 and Dyno have better docs and sleeker UIs. They've been doing this longer.
@@ -219,7 +221,7 @@ The bot and dashboard are designed to look and feel the way *you* want.
 - **Web dashboard** (HTML/CSS/JS, self-hosted)
 - **Dockerfile** for containerized deployment
 - **discloud.config** for Discloud hosting
-- **Lifetime updates** — any improvements I make, you get
+- **Free updates while the project is actively maintained**
 - **Support** — DM me on Discord if something breaks
 
 ---
@@ -284,16 +286,15 @@ When you purchase NLux Bot Premium, you get:
 - Use the bot on your own Discord server(s)
 - Modify the source code for your own use
 - Host it anywhere you want
-- Receive lifetime updates
+- Receive free updates while the project is actively maintained
 
 ❌ **You cannot:**
 - Resell the source code (modified or unmodified)
 - Share the source code with anyone who hasn't purchased a license
-- Claim it as your own creation
+- Remove copyright notices from the source code
+- Claim authorship of the original work
 
-**Credit must be given** — If you use this bot, you must credit the original developer:
-- Mention **franc**, or
-- Include the Discord tag **.nlux.** (ID: 1200828694088917114)
+If you're sharing screenshots or showing the bot publicly, I'd appreciate if you mentioned **franc** or included my Discord tag **.nlux.** (ID: 1200828694088917114). No pressure — just helps people find me if they're interested too.
 
 ---
 
