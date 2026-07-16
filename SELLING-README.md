@@ -1,6 +1,6 @@
 <div align="center">
 
-# NLux Bot Premium
+# NLux Bot
 
 **A complete Discord management bot — source code included**
 
