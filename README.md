@@ -207,9 +207,7 @@ A single Node.js process handles both the Discord bot and the web dashboard. No 
 
 ### The Memory Leak That Almost Killed the Project
 
-At one point during development, there was a bad memory leak. The bot would start at around 60 MB and climb to 400+ MB within hours. I couldn't figure out what was causing it—checked every listener, every interval, every event handler. At one point I almost scrapped the entire project because I thought the codebase was fundamentally broken.
-
-Turned out it was a single unremoved event listener inside a logging handler that re-registered itself every time a message was deleted. One line. Fixed it in seconds once I found it. That's the thing about building something yourself—you run into stuff like this, and either you push through or you give up. I pushed through.
+Early on, a single unremoved event listener caused memory to climb from 60 MB to 400+ MB within hours. It took ages to find, but it was one line. Almost scrapped the whole thing over it.
 
 ---
 
@@ -244,9 +242,7 @@ The bot and dashboard are designed to look and feel the way *you* want.
 
 ### Why It Looks the Way It Does
 
-I'm the type of person who likes things minimal, clean, and aesthetic. I hate clutter, I hate visual noise, and I hate dashboards that look like they were designed by a committee. So when I built this one, I based it entirely on my own vision—what *I* wanted to see when I opened it.
-
-It took a lot of tries. I rewrote the dashboard code from scratch over 30 times. Thirty. Some versions were too flashy, some were too boring, some just didn't feel right. I kept scrapping and restarting until it clicked. What you see now is the result of that—a dashboard that looks good because I refused to settle for something that didn't feel right.
+I like things minimal and clean, so I built the dashboard around my own vision. Rewrote it from scratch over 30 times until it felt right. What you see now is the result of not settling.
 
 ---
 
