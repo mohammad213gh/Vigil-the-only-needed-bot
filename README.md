@@ -2,302 +2,178 @@
 
 # NLux Bot
 
-**v1.0.0** ![Version](https://img.shields.io/badge/version-1.0.0-5865F2)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue)](LICENSE)
-![Last Commit](https://img.shields.io/badge/last%20commit-private-lightgrey)
-![Repo Size](https://img.shields.io/badge/repo%20size-private-lightgrey)
-![Stars](https://img.shields.io/badge/stars-private-lightgrey)
-![Forks](https://img.shields.io/badge/forks-private-lightgrey)
-![Issues](https://img.shields.io/badge/issues-private-lightgrey)
+**A premium Discord management bot — source code included**
+
+> **$39 — $49** · One-time payment · Full source code · Lifetime updates
 
 ![Node](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)
 ![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2?logo=discord&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 
-**The self-hosted Discord management bot that refuses to put features behind a paywall**
+**Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization**
 
-> Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization
+*Built by franc (`.nlux.`) — DM me on Discord to purchase: **.nlux.** (ID: 1200828694088917114)*
 
 </div>
 
 ---
 
-## Why?
+## What Is This?
 
-I got tired of Discord bots locking basic moderation, logging, and server management features behind premium subscriptions. You know the drill—want to see who left? That's $5/month. Want reaction roles? That's another tier. Want a dashboard? Upgrade again.
+This is a complete, production-ready Discord management bot that I built from scratch — fully self-hosted, persistent SQLite database, 70+ commands, 16 logging categories, a full web dashboard, and zero dependency on any third-party service.
 
-Instead of paying monthly for features that should just *work*, I built everything my server needed from scratch. This is that bot—open-source, self-hosted, and free forever. No hidden tiers, no "premium only" buttons, no upsells. Run it yourself and own your data.
-
----
-
-## How It Compares (Honestly)
-
-This isn't meant to compete with long-established bots like MEE6, Dyno, or Carl-bot. Those projects have years of development behind them. The goal here is different: complete control, self-hosting, and no premium paywalls.
-
-**You host it. You control it. You don't pay monthly.**
-
-| Feature | NLux Bot | MEE6 | Dyno | Carl-bot |
-|---|---|---|---|---|
-| Moderation | ✅ Yes | ✅ Free tier | ✅ Free tier | ✅ Free tier |
-| Logging | ✅ 16 categories | ✅ Free (limited) | ✅ Free (basic) | ✅ Free |
-| Reaction Roles | ✅ Yes | ✅ Free (limited) | ✅ Free (modules) | ✅ Free |
-| Reminders | ✅ Yes | ❌ | ❌ | ✅ Free |
-| Fun Commands | ✅ Yes | ✅ Free | ✅ Free | ❌ |
-| Web Dashboard | ✅ Yes | ✅ Free | 🔒 Premium | ❌ |
-| Customization | ✅ Themes, colors, glass | ❌ | ❌ | ❌ |
-| Prefix Commands | ✅ Yes | ❌ | ✅ Yes | ✅ Yes |
-| Permission System | ✅ Yes | 🔒 Premium | 🔒 Premium | 🔒 Premium |
-| Server Stats / Growth | ✅ Yes | 🔒 Premium | ❌ | ❌ |
-| Self-Hosted (own your data) | ✅ Yes | ❌ Cloud | ❌ Cloud | ❌ Cloud |
-| No Paywall | ✅ Yes | ❌ | ❌ | ❌ |
-
-**The honest tradeoffs:**
-- **Polished UI?** MEE6 and Dyno have better docs and sleeker UIs. They've been doing this longer.
-- **Features?** Premium bots have niche stuff like leveling, music, giveaways, and ticket systems built in.
-- **Reliability?** Cloud bots have 99.9% uptime. This one goes down when Railway goes down.
-- **But** — I don't charge you a dime. You own your data. You can customize everything. And I built this alone for my own server, then shared it in case it helps someone else.
+You get the **full source code**. Host it yourself. Run it on your own server. Own every piece of it.
 
 ---
 
-## Table of Contents
+## Why I Built It
 
-- [Quick Start](#quick-start)
-- [Commands](#commands)
-- [Dashboard](#dashboard)
-- [Architecture](#architecture)
-- [Performance](#performance)
-- [Security](#security)
-- [Customization](#customization)
-- [Hosting](#hosting)
-- [Data Persistence](#data-persistence)
-- [License](#license)
-- [Found a bug?](#found-a-bug)
+I was tired of Discord bots locking basic features behind monthly subscriptions. Want to log who left? That's $5/month. Reaction roles? Another tier. A dashboard to manage your server? Upgrade again.
+
+So I built my own. Everything my server needed, from scratch. 30+ rewrites of the dashboard alone until it felt right. One memory leak that made me almost scrap the whole project. But I stuck with it, and this is what came out of it.
+
+I've been using this in my own server for a long time. It works. Now I'm selling the source so others can run it too.
+
+---
+
+## What You Get (The Full List)
+
+**70+ Commands across 8 categories:**
+
+| Category | Commands |
+|---|---|
+| Moderation | `/kick`, `/ban`, `/unban`, `/timeout`, `/untimeout`, `/warn`, `/warnings`, `/clearwarnings`, `/lock`, `/unlock` |
+| Logging | 16 categories — messages, members, voice, roles, channels, bans, invites, emojis, stickers, threads, automod, server, stage, mentions, boosts, moderation |
+| Permissions | `/perm grant`, `/perm revoke`, `/perm list`, `/perm user` — granular control over who can use what |
+| Reaction Roles | `/reactionrole add`, `/remove`, `/list` — embed-based, fully customizable |
+| Fun | `/8ball`, `/coinflip`, `/dice`, `/rps`, `/joke`, `/fact`, `/advice`, `/quote`, `/reverse`, `/mock`, `/random`, `/worldcup` |
+| Utility | `/ping`, `/status`, `/botinfo`, `/userinfo`, `/avatar`, `/remindme`, `/reminders`, `/poll`, `/announce`, `/say`, `/embed` |
+| Stats | `/stats server`, `/stats growth`, `/stats topmembers`, `/track` — server analytics with charts |
+| Owner | `/dashboard`, `/dashaccess`, `/deploy`, `/shutdown`, `/server_leave`, `/prefix`, `/embedconfig`, `/presence`, `/botavatar`, `/botname` |
+
+**Both slash commands (/)** and **prefix commands (;)** work side-by-side. Use whatever feels natural.
+
+**40 Discord events logged** — Every meaningful server event is captured and logged to your configured channel.
+
+**Full web dashboard** — A complete self-hosted dashboard with:
+- Live server overview (status, uptime, memory, member count)
+- Logging configuration (toggle categories, set channels per server)
+- Moderation panel (warn, kick, ban from browser)
+- Audit log browser with filters
+- Statistics with growth charts and trends
+- Full customization (themes, accent colors, glassmorphism, animations)
+- Account and session management
+
+**SQLite persistence** — Everything saves to a single database file. Warnings, configs, stats, reminders, settings — all survive restarts, redeploys, and crashes. No external database needed.
+
+**Performance** — ~80–100 MB RAM with 200+ members. Runs for weeks without issues on Railway, Fly.io, or a $5 VPS.
+
+---
+
+## What It's Not
+
+Let me be straight with you:
+
+- **Not a competitor to MEE6 or Dyno.** Those bots have years of dev time, teams, and polished UIs. This is one person's project.
+- **No leveling system, no music, no giveaways, no ticket system.** I didn't build those because better bots already do them.
+- **Not cloud-hosted.** You host it yourself. That means you're responsible for uptime, backups, and updates.
+- **The dashboard is minimal and custom.** I built it for my own taste — clean, glassmorphic, dark. You can customize colors and themes, but it's not a drag-and-drop builder.
+
+If you need a polished all-in-one with 99.9% uptime and a team behind it, go with a premium bot. If you want **full control, your own data, and no monthly fees**, this is it.
+
+---
+
+## What's Included
+
+- **Full source code** (Node.js, Discord.js v14, Express, SQLite)
+- **Web dashboard** (HTML/CSS/JS, self-hosted)
+- **Dockerfile** for containerized deployment
+- **discloud.config** for Discloud hosting
+- **Lifetime updates** — any improvements I make, you get
+- **Support** — DM me on Discord if something breaks
+
+---
+
+## How to Get It
+
+**DM me on Discord: `.nlux.` (ID: 1200828694088917114)**
+
+Price: **$39 — $49** (one-time, full source, lifetime updates)
+
+Payment methods: I'll work with you on this. DM me and we'll sort it out.
+
+After payment, you'll get:
+1. The full source code
+2. Instructions for setup and hosting
+3. Any future updates
+
+---
+
+## Requirements
+
+- **Node.js 20+** (required for Discord.js v14 features)
+- **A Discord bot token** from the [Developer Portal](https://discord.com/developers/applications) — enable **Message Content**, **Guild Members**, and **Presence Intent**
+- **A hosting provider** — I recommend Railway (free tier works), but any VPS, Fly.io, or Discloud works too
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-1. **Node.js 20 or higher** — Required for modern Discord.js v14 features
-2. **A Discord bot token** from the [Developer Portal](https://discord.com/developers/applications)<br>Make sure you enable these intents in the Bot tab: **Message Content**, **Guild Members**, and **Presence Intent**
-3. **Somewhere to host it** (I recommend Railway, it's free and easy)
-
-### Local Testing
-
 ```bash
-git clone <your-repo-url>
-cd discord-bot
+# After you receive the source:
 npm install
-cp .env.example .env
-```
-
-Open `.env` and fill in your token, user ID, and dashboard password. Then:
-
-```bash
+# Set up your .env file:
+BOT_TOKEN=your_token
+OWNER_ID=your_discord_id
+DASHBOARD_PASSWORD=choose_a_password
+DATA_DIR=./data
+GUILD_ID=your_server_id  # optional, for instant commands
 npm start
 ```
 
-### Railway (what I use)
-
-Railway doesn't use .env files — you add variables in their dashboard. Skip the `.env` step and add them here instead:
-
-Go to your Railway project → **Variables** tab → add:
-- `BOT_TOKEN`
-- `OWNER_ID`
-- `DASHBOARD_PASSWORD`
-- `DATA_DIR` = `/data` (after setting up a volume)
-- `GUILD_ID` (optional, for instant commands)
+Run `/deploy` in your Discord server after first launch to register all commands.
 
 ---
 
-## Commands
+## Tech Stack
 
-### Slash Commands (/) — the modern way
-Type `/` and Discord shows you everything you can use. Clean, fast, and discoverable.
-
-### Prefix Commands (;) — the classic way
-Every command also works via text prefix (default `;`). Type `;help` to see the list, `;ping` to test it. Change the prefix per-server with `/prefix` or `;prefix !`.
-
-Both systems work side-by-side. Use whatever feels natural.
-
-### Anyone can use these
-`/ping` `/status` `/botinfo` `/userinfo` `/avatar` `/stats server` `/stats growth` `/worldcup` `/8ball` `/coinflip` `/dice` `/rps` `/joke` `/fact` `/advice` `/quote` `/reverse` `/mock` `/random` `/remindme` `/reminders list` `/reminders cancel`
-
-### Owner-only (unless you grant permissions)
-**Logging:** `/log channel` `/log toggle` `/log list`
-**Config:** `/embedconfig` `/presence` `/botavatar` `/botname`
-**Moderation:** `/kick` `/ban` `/unban` `/timeout` `/untimeout` `/warn` `/warnings` `/clearwarnings` `/lock` `/unlock`
-**Admin:** `/role` `/purge` `/slowmode` `/nickname` `/say` `/embed` `/deploy` `/track` `/poll` `/announce`
-**Permissions:** `/perm grant` `/perm revoke` `/perm list` `/perm user`
-**Reaction Roles:** `/reactionrole add` `/reactionrole remove` `/reactionrole list`
-**Other:** `/dashboard` `/dashaccess` `/server_leave` `/shutdown` `/prefix`
-
-Use `/perm grant @user command` to let trusted people use specific commands, or `/perm grant @user all` to grant everything at once.
-
-> **After first deploy or any update, run `/deploy` in your server** to sync all commands so they show up correctly.
+| Layer | Technology |
+|---|---|
+| Runtime | Node.js 20+ |
+| Discord Library | Discord.js v14 |
+| Web Server | Express |
+| Database | SQLite (better-sqlite3) |
+| File Uploads | Multer |
+| Dashboard | Vanilla HTML/CSS/JS |
 
 ---
 
-## Project Statistics
+## License & Terms
 
-```
-Features
-├── 70+ Commands
-├── 40 Discord events logged
-├── 16 logging categories
-├── Slash + Prefix support
-├── Web dashboard with live stats
-└── SQLite persistence (no external DB)
-```
+When you purchase NLux Bot, you get:
 
----
+✅ **You can:**
+- Use the bot on your own Discord server(s)
+- Modify the source code for your own use
+- Host it anywhere you want
+- Get lifetime updates
 
-## Dashboard
+❌ **You cannot:**
+- Resell the source code (modified or not)
+- Share the source code with others who haven't purchased it
+- Claim it as your own creation
 
-The dashboard is a full web interface that runs alongside your bot. It's customizable, self-hosted, and gives you control over everything without touching a terminal.
-
-```
-Dashboard
-├── Overview           — Live status, uptime, memory, member count
-├── Logging            — Toggle 16 categories per server, set channels
-├── Moderation         — Quick access to warn, kick, ban from browser
-├── Audit Logs         — Browse recent events with filters
-├── Customization      — Themes, colors, cards, animations
-├── Statistics         — Growth charts, command usage, server trends
-└── Account Settings   — Profile, tokens, session management
-```
-
-### URL Structure
-
-```
-/dashboard          → Login / landing
-/dashboard/{id}     → Server overview
-/dashboard/{id}/logs      → Logging config
-/dashboard/{id}/moderation → Mod actions
-/dashboard/{id}/audit      → Audit log viewer
-/dashboard/{id}/settings   → Server customization
-/dashboard/admin           → Bot-wide settings
-```
-
----
-
-## Architecture
-
-```
-Discord
-  │
-Discord.js v14
-  │
-┌─────────────────┐
-│   Bot Process    │
-│  (single thread) │
-│  80–100 MB RAM   │
-└─────────────────┘
-  │
-SQLite Database (better-sqlite3)
-  │
-Express Dashboard (web UI)
-```
-
-A single Node.js process handles both the Discord bot and the web dashboard. No microservices, no containers required—just one process, one database, and a flat file structure.
-
----
-
-## Performance
-
-- **SQLite** — No external database server needed. Everything lives in a single file inside your `DATA_DIR`.
-- **Single process** — The bot and dashboard share one Node.js instance. No extra overhead.
-- **Memory usage** — ~80–100 MB on a server with 200+ members. Tested and stable over weeks of uptime.
-- **Graceful shutdown** — Catches SIGTERM/SIGINT, closes database connections cleanly, and writes pending data. No corruption on restart.
-- **Designed for long-term hosting** — Runs for weeks without issues on Railway, Fly.io, or a $5 VPS.
-
-### The Memory Leak That Almost Killed the Project
-
-Early on, a single unremoved event listener caused memory to climb from 60 MB to 400+ MB within hours. It took ages to find, but it was one line. Almost scrapped the whole thing over it.
-
----
-
-## Security
-
-- **Rate-limited login** — The dashboard login endpoint is rate-limited per IP. Nobody can brute force your password.
-- **Session tokens** — Dashboard sessions use cryptographically random tokens. Revoking a user's access immediately invalidates all their sessions.
-- **Ephemeral commands** — Sensitive operations (permissions, deployment, shutdown, config) reply privately so only you see them.
-- **Permission system** — Granular control over who can use which commands. No need to give out admin roles.
-- **Force leave** — `/server_leave` lets you remove the bot from any server instantly.
-- **No tracking** — No analytics, no telemetry, no external API calls except to Discord. Your data stays yours.
-
----
-
-## Customization
-
-The bot and dashboard are designed to look and feel the way *you* want.
-
-**Dashboard customization includes:**
-- **Themes** — Light, dark, and custom presets
-- **Accent colors** — Pick any color for buttons, headers, and highlights
-- **Background effects** — Gradients, patterns, or solid colors
-- **Glassmorphism** — Frosted glass card styles
-- **Card styles** — Flat, elevated, outlined, or glass
-- **Animation speed** — Slow, normal, fast, or no animations
-- **Rounded corners** — From sharp to fully pill-shaped
-
-**Bot customization includes:**
-- Change the bot's name, avatar, and presence status
-- Per-server prefix configuration
-- Per-server logging categories and channels
-
-### Why It Looks the Way It Does
-
-I like things minimal and clean, so I built the dashboard around my own vision. Rewrote it from scratch over 30 times until it felt right. What you see now is the result of not settling.
-
----
-
-## Hosting
-
-### Railway (what I use)
-1. Push to GitHub and connect the repo on Railway
-2. Go to **Volumes** → **Add Volume** → mount at `/data`
-3. Set your env vars: `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `DATA_DIR=/data`
-4. Go to **Settings** → **Networking** → **Generate Domain** for the dashboard
-5. **After deploying, run `/deploy` in your Discord server** to register all commands so they show up correctly
-
-> ⚠️ **Every time you update your bot** (add new commands, change permissions, etc.), run `/deploy` again to sync the changes. Skip this and commands might not work.
-
-### Docker
-```bash
-docker build -t discord-bot .
-docker run -p 3000:3000 --env-file .env -v /host/data:/data -e DATA_DIR=/data discord-bot
-```
-
-### Fly.io or Discloud
-Should work fine. Just set the env vars and make sure `DATA_DIR` points to persistent storage.
-
----
-
-## Data Persistence
-
-Everything saves to a single SQLite database (`bot.db`) inside your `DATA_DIR`. That means warnings, configs, stats, reminders, dashboard settings — they all survive redeploys as long as `DATA_DIR` is set to a persistent path.
-
-On Railway this means setting up a volume. It takes 2 minutes and you never lose data again.
-
----
-
-## Found a bug?
-
-DM me on Discord: **.nlux.** (ID: 1200828694088917114)
-
----
-
-## License
-
-This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
-
-Basically: you can use, modify, and share it, but you have to keep the same license and give credit. No closed-source versions.
+**Credit must be given** — If you use this bot, you must credit the original developer:
+- Mention **franc** or
+- Include the Discord tag **.nlux.** (ID: 1200828694088917114)
 
 ---
 
 <div align="center">
-Built for personal use, sharing in case it helps someone else.
+
+**Built by franc · Discord: .nlux. (1200828694088917114)**
+
+*One person's project, shared for a fair price. No subscriptions. No upsells. Just the bot.*
+
 </div>
