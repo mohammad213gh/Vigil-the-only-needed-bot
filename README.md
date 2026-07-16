@@ -4,9 +4,16 @@
 
 **v1.0.0** ![Version](https://img.shields.io/badge/version-1.0.0-5865F2)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue)](LICENSE)
-![Stars](https://img.shields.io/badge/stars-0-lightgrey)
-![Forks](https://img.shields.io/badge/forks-0-lightgrey)
-![Issues](https://img.shields.io/badge/issues-0-lightgrey)
+![Last Commit](https://img.shields.io/badge/last%20commit-private-lightgrey)
+![Repo Size](https://img.shields.io/badge/repo%20size-private-lightgrey)
+![Stars](https://img.shields.io/badge/stars-private-lightgrey)
+![Forks](https://img.shields.io/badge/forks-private-lightgrey)
+![Issues](https://img.shields.io/badge/issues-private-lightgrey)
+
+![Node](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)
+![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2?logo=discord&logoColor=white)
+![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 
 **The self-hosted Discord management bot that refuses to put features behind a paywall**
 
