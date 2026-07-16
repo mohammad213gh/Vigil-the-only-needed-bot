@@ -18,25 +18,34 @@ Instead of paying monthly for features that should just *work*, I built everythi
 
 ---
 
-## How It Stacks Up
+## How It Compares (Honestly)
 
-| Feature | NLux Bot | MEE6 Premium | Dyno Premium | Carl-bot Premium |
+Look, I'm not gonna sit here and pretend this bot is better than MEE6 or Dyno. Those projects have been around for years with entire teams behind them. They're polished, documented, and supported. What this bot offers is something different:
+
+**You host it. You control it. You don't pay monthly.**
+
+| Feature | NLux Bot | MEE6 | Dyno | Carl-bot |
 |---|---|---|---|---|
-| Moderation | ✅ Free | ✅ Paid | ✅ Paid | ✅ Paid |
-| Logging (16 categories) | ✅ Free | ✅ Paid | ✅ Paid | ✅ Paid |
-| Reaction Roles | ✅ Free | ✅ Paid | ❌ | ✅ Paid |
-| Reminders | ✅ Free | ❌ | ❌ | ✅ Free |
-| Fun Commands | ✅ Free | ✅ Free | ✅ Free | ❌ |
-| Web Dashboard | ✅ Free | ✅ Paid | ✅ Paid | ❌ |
-| Custom Themes | ✅ Free | ❌ | ❌ | ❌ |
-| Prefix Commands | ✅ Free | ❌ | ✅ Free | ✅ Free |
-| Custom Commands | ✅ Free | ❌ | ❌ | ❌ |
-| Permission System | ✅ Free | ✅ Paid | ✅ Paid | ✅ Paid |
-| Server Stats / Growth | ✅ Free | ✅ Paid | ❌ | ❌ |
-| Force Leave | ✅ Free | ❌ | ❌ | ❌ |
-| No Data Collected | ✅ Yes | ❌ | ❌ | ❌ |
+| Moderation | ✅ Yes | ✅ Free tier | ✅ Free tier | ✅ Free tier |
+| Logging (16 categories) | ✅ Yes | ✅ Free (limited) | ✅ Free (basic) | ❌ |
+| Reaction Roles | ✅ Yes | ✅ Free (limited) | ❌ | ✅ Free |
+| Reminders | ✅ Yes | ❌ | ❌ | ✅ Free |
+| Fun Commands | ✅ Yes | ✅ Free | ✅ Free | ❌ |
+| Web Dashboard | ✅ Yes | 🔒 Premium | 🔒 Premium | ❌ |
+| Customization | ✅ Yes | ❌ | ❌ | ❌ |
+| Prefix Commands | ✅ Yes | ❌ | ✅ Yes | ✅ Yes |
+| Permission System | ✅ Yes | 🔒 Premium | 🔒 Premium | 🔒 Premium |
+| Server Stats / Growth | ✅ Yes | 🔒 Premium | ❌ | ❌ |
+| Self-Hosted (own your data) | ✅ Yes | ❌ Cloud | ❌ Cloud | ❌ Cloud |
+| No Paywall | ✅ Yes | ❌ | ❌ | ❌ |
 
-**🏆 Badges:** `FREE` `SELF-HOSTED` `NO-TRACKING` `CUSTOMIZABLE` `ALL-IN-ONE` `OPEN-SOURCE`
+**The honest tradeoffs:**
+- **Polished UI?** MEE6 and Dyno have better docs and sleeker UIs. They've been doing this longer.
+- **Features?** Premium bots have niche stuff like leveling, music, giveaways, and ticket systems built in.
+- **Reliability?** Cloud bots have 99.9% uptime. Mine goes down when Railway goes down.
+- **But** — I don't charge you a dime. You own your data. You can customize everything. And I built this alone for my own server, then shared it in case it helps someone else.
+
+**🏆 Badges:** `FREE` `SELF-HOSTED` `NO-TRACKING` `CUSTOMIZABLE` `OPEN-SOURCE`
 
 ---
 
@@ -193,6 +202,12 @@ A single Node.js process handles both the Discord bot and the web dashboard. No 
 - **Graceful shutdown** — Catches SIGTERM/SIGINT, closes database connections cleanly, and writes pending data. No corruption on restart.
 - **Designed for long-term hosting** — Runs for weeks without issues on Railway, Fly.io, or a $5 VPS.
 
+### The Memory Leak That Almost Killed the Project
+
+At one point during development, there was a bad memory leak. The bot would start at around 60 MB and climb to 400+ MB within hours. I couldn't figure out what was causing it—checked every listener, every interval, every event handler. At one point I almost scrapped the entire project because I thought the codebase was fundamentally broken.
+
+Turned out it was a single unremoved event listener inside a logging handler that re-registered itself every time a message was deleted. One line. Fixed it in seconds once I found it. That's the thing about building something yourself—you run into stuff like this, and either you push through or you give up. I pushed through.
+
 ---
 
 ## Security
@@ -223,6 +238,12 @@ The bot and dashboard are designed to look and feel the way *you* want.
 - Change the bot's name, avatar, and presence status
 - Per-server prefix configuration
 - Per-server logging categories and channels
+
+### Why It Looks the Way It Does
+
+I'm the type of person who likes things minimal, clean, and aesthetic. I hate clutter, I hate visual noise, and I hate dashboards that look like they were designed by a committee. So when I built this one, I based it entirely on my own vision—what *I* wanted to see when I opened it.
+
+It took a lot of tries. I rewrote the dashboard code from scratch over 30 times. Thirty. Some versions were too flashy, some were too boring, some just didn't feel right. I kept scrapping and restarting until it clicked. What you see now is the result of that—a dashboard that looks good because I refused to settle for something that didn't feel right.
 
 ---
 
