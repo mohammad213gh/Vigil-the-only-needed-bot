@@ -2,10 +2,11 @@
 
 # NLux Bot
 
-**v1.0.0** ![GitHub package.json version](https://img.shields.io/github/package-json/v/mohammad213gh/Discord-bot)
+**v1.0.0** ![Version](https://img.shields.io/badge/version-1.0.0-5865F2)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue)](LICENSE)
-![GitHub last commit](https://img.shields.io/github/last-commit/mohammad213gh/Discord-bot)
-![GitHub repo size](https://img.shields.io/github/repo-size/mohammad213gh/Discord-bot)
+![Stars](https://img.shields.io/badge/stars-0-lightgrey)
+![Forks](https://img.shields.io/badge/forks-0-lightgrey)
+![Issues](https://img.shields.io/badge/issues-0-lightgrey)
 
 **The self-hosted Discord management bot that refuses to put features behind a paywall**
 
