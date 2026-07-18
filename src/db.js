@@ -102,6 +102,14 @@ function initSchema() {
             active INTEGER NOT NULL DEFAULT 1,
             access_token TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS poll_votes (
+            message_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            option_index INTEGER NOT NULL,
+            voted_at INTEGER NOT NULL,
+            PRIMARY KEY (message_id, user_id)
+        );
     `);
 
     // Add prefix column if not exists (safe on every boot)

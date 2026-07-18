@@ -4,11 +4,7 @@
 
 const { EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
 const { addWarning } = require('./warnings');
-
-// ─── Poll Vote Tracking (in-memory) ───
-// Key: messageId, Value: Map<userId, optionIndex>
-// Note: votes are lost on bot restart. For persistent polls, use emoji reactions.
-const pollVotes = new Map();
+const { getDb } = require('./db');
 
 // ─── Custom ID Prefixes ───
 //   ck_{initiatorId}_{targetId}         = confirm kick
@@ -230,40 +226,61 @@ async function handleWarnSubmit(interaction, parts) {
     } catch { /* DMs closed */ }
 }
 
-// ──────────────────── Poll Vote ────────────────────
+// ──────────────────── Poll Vote (SQLite — survives restarts) ────────────────────
+
+// Load all votes for a message from the DB
+function getPollVotes(messageId) {
+    const db = getDb();
+    const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
+    var votes = new Map();
+    for (var i = 0; i < rows.length; i++) {
+        votes.set(rows[i].user_id, rows[i].option_index);
+    }
+    return votes;
+}
+
+function setPollVoteInDb(messageId, userId, optionIndex) {
+    const db = getDb();
+    db.prepare('INSERT OR REPLACE INTO poll_votes (message_id, user_id, option_index, voted_at) VALUES (?, ?, ?, ?)')
+        .run(messageId, userId, optionIndex, Date.now());
+}
+
+function removePollVoteFromDb(messageId, userId) {
+    const db = getDb();
+    db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ?').run(messageId, userId);
+}
 
 async function handlePollVote(interaction, parts) {
     const messageId = interaction.message.id;
     const optionIndex = parseInt(parts[2]); // parts = ['pv', 'vote', '0']
     const userId = interaction.user.id;
 
-    // Initialize poll data if needed
-    if (!pollVotes.has(messageId)) {
-        pollVotes.set(messageId, new Map());
-    }
-    const votes = pollVotes.get(messageId);
+    // Load votes fresh from SQLite (survives restarts)
+    var votes = getPollVotes(messageId);
 
     // Toggle vote: if already voted for this option, remove; otherwise set
     const previousVote = votes.get(userId);
     if (previousVote === optionIndex) {
-        votes.delete(userId);
+        removePollVoteFromDb(messageId, userId);
         await interaction.reply({ content: '🗳️ Your vote has been removed.', ephemeral: true });
     } else {
+        setPollVoteInDb(messageId, userId, optionIndex);
         votes.set(userId, optionIndex);
         await interaction.reply({ content: '🗳️ Your vote has been recorded!', ephemeral: true });
     }
 
-    // Update the embed with new vote counts
-    const embed = EmbedBuilder.from(interaction.message.embeds[0]);
+    // Reload votes after change to get accurate counts
+    votes = getPollVotes(messageId);
     const totalVoters = votes.size;
 
     // Count votes per option
-    const voteCounts = {};
-    for (const [, optIndex] of votes) {
+    var voteCounts = {};
+    for (var [, optIndex] of votes) {
         voteCounts[optIndex] = (voteCounts[optIndex] || 0) + 1;
     }
 
     // Update the embed fields to show vote counts
+    const embed = EmbedBuilder.from(interaction.message.embeds[0]);
     const fields = embed.data.fields || [];
     const updatedFields = fields.map(function (field, i) {
         const count = voteCounts[i] || 0;
@@ -300,6 +317,4 @@ async function handleSelectMenu(interaction) {
 
 module.exports = {
     handleInteraction,
-    // Exported for poll cleanup on restart
-    pollVotes,
 };
