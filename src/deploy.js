@@ -243,7 +243,7 @@ const commandDefs = [
                 .setRequired(true))
         .addStringOption(opt =>
             opt.setName('reason')
-                .setDescription('Reason for the warning')
+                .setDescription('Reason for the warning (or leave blank to use the interactive form)')
                 .setRequired(false)),
     new SlashCommandBuilder()
         .setName('warnings')

@@ -1,4 +1,4 @@
-const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { truncate } = require('../helpers');
 const { getGuildConfig, updateGuildConfig } = require('../config');
 const { deployCommands } = require('../deploy');
@@ -103,21 +103,29 @@ async function executePurge(interaction) {
         return interaction.reply({ content: '\u26A0\uFE0F This command can only be used in text channels.', ephemeral: true });
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    // Show confirmation buttons
+    const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle('\u2753 Confirm Purge')
+        .setDescription('Are you sure you want to delete **' + amount + '** messages in ' + interaction.channel + '?')
+        .setFooter({ text: 'By ' + interaction.user.tag })
+        .setTimestamp();
 
-    try {
-        const fetched = await interaction.channel.bulkDelete(amount, true);
-        const embed = new EmbedBuilder()
-            .setColor(0x5865F2)
-            .setTitle('\uD83E\uDDF9 Messages Purged')
-            .setDescription('Deleted **' + fetched.size + '** message(s) in ' + interaction.channel)
-            .setFooter({ text: 'By ' + interaction.user.tag })
-            .setTimestamp();
+    const confirm = new ButtonBuilder()
+        .setCustomId('cp_' + interaction.user.id + '_' + amount)
+        .setLabel('Confirm Purge')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('\u2705');
 
-        await interaction.editReply({ embeds: [embed] });
-    } catch (err) {
-        await interaction.editReply({ content: '\u26A0\uFE0F Failed to purge messages: ' + err.message });
-    }
+    const cancel = new ButtonBuilder()
+        .setCustomId('cancel_' + interaction.user.id)
+        .setLabel('Cancel')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('\u274C');
+
+    const row = new ActionRowBuilder().addComponents(confirm, cancel);
+
+    await interaction.reply({ embeds: [embed], components: [row] });
 }
 
 async function executeSlowmode(interaction) {
@@ -320,10 +328,12 @@ async function executePoll(interaction) {
     if (option3) options.push(option3);
     if (option4) options.push(option4);
 
-    const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+    const emojis = ['1\uFE0F\u20E3', '2\uFE0F\u20E3', '3\uFE0F\u20E3', '4\uFE0F\u20E3'];
+    const labels = ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+
     const fields = options.map((opt, i) => ({
         name: emojis[i] + ' ' + opt,
-        value: 'Vote with ' + emojis[i],
+        value: '\uD83D\uDDF3\uFE0F **0** votes',
         inline: true,
     }));
 
@@ -331,14 +341,25 @@ async function executePoll(interaction) {
         .setColor(0x5865F2)
         .setTitle('\uD83D\uDDF3\uFE0F Poll: ' + question)
         .addFields(fields)
-        .setFooter({ text: 'Poll by ' + interaction.user.tag })
+        .setFooter({ text: '\uD83D\uDDF3\uFE0F 0 total votes' })
         .setTimestamp();
 
-    const pollMessage = await interaction.reply({ embeds: [embed], fetchReply: true });
+    // Build vote buttons
+    const buttons = options.map((opt, i) => {
+        return new ButtonBuilder()
+            .setCustomId('pv_vote_' + i)
+            .setLabel(labels[i])
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji(emojis[i]);
+    });
 
-    for (let i = 0; i < options.length; i++) {
-        await pollMessage.react(emojis[i]).catch(err => console.error('[PollReaction]', err.message));
+    // Max 5 buttons per row — split into rows of 2 or 3
+    const rows = [];
+    for (let i = 0; i < buttons.length; i += 2) {
+        rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 2)));
     }
+
+    await interaction.reply({ embeds: [embed], components: rows });
 }
 
 async function executeAnnounce(interaction) {

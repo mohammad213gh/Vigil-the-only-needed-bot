@@ -90,7 +90,15 @@ for (const event of allEvents) {
 
 // ──────────────────── Interaction Handler ────────────────────
 
+const { handleInteraction } = require('./src/interactions');
+
 client.on(Events.InteractionCreate, async (interaction) => {
+    // Handle components (buttons, modals, select menus) separately
+    if (interaction.isButton() || interaction.isModalSubmit() || interaction.isStringSelectMenu()) {
+        return handleInteraction(interaction);
+    }
+
+    // Handle slash commands
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.guild) {
         return interaction.reply({ content: 'This bot only works in servers.', ephemeral: true });

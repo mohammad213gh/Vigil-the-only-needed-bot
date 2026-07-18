@@ -1,4 +1,4 @@
-const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { formatDuration } = require('../helpers');
 const { addWarning, getWarnings, clearWarnings } = require('../warnings');
 
@@ -18,23 +18,33 @@ async function executeKick(interaction) {
         return interaction.reply({ content: '\u26A0\uFE0F I need the **Kick Members** permission to do that.', ephemeral: true });
     }
 
-    try {
-        await member.kick(reason);
-        const embed = new EmbedBuilder()
-            .setColor(0xE74C3C)
-            .setTitle('\uD83D\uDC62 Member Kicked')
-            .setDescription(target + ' has been kicked from the server.')
-            .addFields(
-                { name: 'Reason', value: reason },
-                { name: 'Moderator', value: String(interaction.user) },
-            )
-            .setFooter({ text: guild.name, iconURL: guild.iconURL() })
-            .setTimestamp();
+    // Show confirmation buttons
+    const embed = new EmbedBuilder()
+        .setColor(0xE74C3C)
+        .setTitle('\u2753 Confirm Kick')
+        .setDescription('Are you sure you want to kick ' + target + '?')
+        .addFields(
+            { name: 'User', value: String(target), inline: true },
+            { name: 'Reason', value: reason, inline: true },
+        )
+        .setFooter({ text: guild.name, iconURL: guild.iconURL() })
+        .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
-    } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to kick user: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
-    }
+    const confirm = new ButtonBuilder()
+        .setCustomId('ck_' + interaction.user.id + '_' + target.id)
+        .setLabel('Confirm Kick')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('\u2705');
+
+    const cancel = new ButtonBuilder()
+        .setCustomId('cancel_' + interaction.user.id)
+        .setLabel('Cancel')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('\u274C');
+
+    const row = new ActionRowBuilder().addComponents(confirm, cancel);
+
+    await interaction.reply({ embeds: [embed], components: [row] });
 }
 
 async function executeBan(interaction) {
@@ -53,30 +63,41 @@ async function executeBan(interaction) {
         return interaction.reply({ content: '\u26A0\uFE0F I cannot ban that user. They may have a higher role than me.', ephemeral: true });
     }
 
-    const deleteMessageSeconds = {
+    const deleteSeconds = {
         'none': 0,
         'hour': 3600,
         '6hours': 21600,
         '24hours': 86400,
     }[deleteMessages] || 0;
 
-    try {
-        await guild.bans.create(target.id, { reason, deleteMessageSeconds });
-        const embed = new EmbedBuilder()
-            .setColor(0xE74C3C)
-            .setTitle('\uD83D\uDD28 Member Banned')
-            .setDescription(target + ' has been banned from the server.')
-            .addFields(
-                { name: 'Reason', value: reason },
-                { name: 'Moderator', value: String(interaction.user) },
-            )
-            .setFooter({ text: guild.name, iconURL: guild.iconURL() })
-            .setTimestamp();
+    // Show confirmation buttons
+    const embed = new EmbedBuilder()
+        .setColor(0xE74C3C)
+        .setTitle('\u2753 Confirm Ban')
+        .setDescription('Are you sure you want to ban ' + target + '?')
+        .addFields(
+            { name: 'User', value: String(target), inline: true },
+            { name: 'Reason', value: reason, inline: true },
+            { name: 'Delete Messages', value: deleteMessages, inline: true },
+        )
+        .setFooter({ text: guild.name, iconURL: guild.iconURL() })
+        .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
-    } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to ban user: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
-    }
+    const confirm = new ButtonBuilder()
+        .setCustomId('cb_' + interaction.user.id + '_' + target.id + (deleteSeconds > 0 ? '_clear' : ''))
+        .setLabel('Confirm Ban')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('\u2705');
+
+    const cancel = new ButtonBuilder()
+        .setCustomId('cancel_' + interaction.user.id)
+        .setLabel('Cancel')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('\u274C');
+
+    const row = new ActionRowBuilder().addComponents(confirm, cancel);
+
+    await interaction.reply({ embeds: [embed], components: [row] });
 }
 
 async function executeUnban(interaction) {
@@ -186,29 +207,51 @@ async function executeUntimeout(interaction) {
 
 async function executeWarn(interaction) {
     const target = interaction.options.getUser('user');
-    const reason = interaction.options.getString('reason') || 'No reason provided';
+    const reason = interaction.options.getString('reason');
     const guild = interaction.guild;
 
-    const warnings = addWarning(guild.id, target.id, interaction.user.tag, reason);
+    // If reason is provided, execute immediately (backward compat)
+    if (reason) {
+        const warnings = addWarning(guild.id, target.id, interaction.user.tag, reason);
 
+        const embed = new EmbedBuilder()
+            .setColor(0xF1C40F)
+            .setTitle('\u26A0\uFE0F Warning Issued')
+            .setDescription(target + ' has been warned.')
+            .addFields(
+                { name: 'Reason', value: reason },
+                { name: 'Warning Count', value: String(warnings.length) },
+                { name: 'Moderator', value: String(interaction.user) },
+            )
+            .setFooter({ text: guild.name, iconURL: guild.iconURL() })
+            .setTimestamp();
+
+        await interaction.reply({ embeds: [embed] });
+
+        // DM the user about the warning
+        try {
+            await target.send('\u26A0\uFE0F You have been warned in **' + guild.name + '**.\nReason: ' + reason);
+        } catch { /* if DMs are closed, that's fine */ }
+        return;
+    }
+
+    // No reason provided — show button to open modal
     const embed = new EmbedBuilder()
         .setColor(0xF1C40F)
-        .setTitle('\u26A0\uFE0F Warning Issued')
-        .setDescription(target + ' has been warned.')
-        .addFields(
-            { name: 'Reason', value: reason },
-            { name: 'Warning Count', value: String(warnings.length) },
-            { name: 'Moderator', value: String(interaction.user) },
-        )
+        .setTitle('\u26A0\uFE0F Warning ' + target.tag)
+        .setDescription('Click the button below to enter the warning reason.')
         .setFooter({ text: guild.name, iconURL: guild.iconURL() })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    const openModal = new ButtonBuilder()
+        .setCustomId('wm_' + interaction.user.id + '_' + target.id)
+        .setLabel('Write Reason')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('\uD83D\uDCDD');
 
-    // DM the user about the warning
-    try {
-        await target.send('\u26A0\uFE0F You have been warned in **' + guild.name + '**.\nReason: ' + reason);
-    } catch { /* if DMs are closed, that's fine */ }
+    const row = new ActionRowBuilder().addComponents(openModal);
+
+    await interaction.reply({ embeds: [embed], components: [row] });
 }
 
 async function executeWarnings(interaction) {
