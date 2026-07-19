@@ -369,11 +369,14 @@ async function handlePollVote(interaction, parts) {
     
     embed.setFooter({ text: footerParts.join('  \u2022  ') });
 
-    // ── Update embed FIRST (this acknowledges the interaction) ──
-    var components = interaction.message.components;
-    await interaction.update({ embeds: [embed], components: components.length > 0 ? components : undefined });
+    // ── Defer first (instant ack — avoids 3-second timeout) ──
+    await interaction.deferUpdate();
 
-    // ── Then send confirmation as follow-up (reply already used by update) ──
+    // ── Update the embed after all DB ops ──
+    var components = interaction.message.components;
+    await interaction.editReply({ embeds: [embed], components: components.length > 0 ? components : undefined });
+
+    // ── Send confirmation ──
     await interaction.followUp({ content: '\u2705 Vote ' + userVoteAction + '!', ephemeral: true });
 }
 
