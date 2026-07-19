@@ -234,9 +234,8 @@ async function handleWarnSubmit(interaction, parts) {
     } catch { /* DMs closed */ }
 }
 
-// ──────────────────── Poll Helpers ────────────────────
+// ──────────────────── Poll DB Helpers ────────────────────
 
-// Load all votes for a message from the DB (returns Map<userId, optionIndex[]> for multi-vote)
 function getPollVotes(messageId) {
     const db = getDb();
     const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
@@ -250,7 +249,6 @@ function getPollVotes(messageId) {
     return votes;
 }
 
-// Returns Map<userId, single optionIndex> for single-vote mode
 function getPollVotesFlat(messageId) {
     const db = getDb();
     const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
@@ -277,7 +275,7 @@ function removePollOptionVoteFromDb(messageId, userId, optionIndex) {
     db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ? AND option_index = ?').run(messageId, userId, optionIndex);
 }
 
-// ──────────────────── Poll Vote Handler ────────────────────
+// ──────────────────── Poll Vote Handler (log-style: clean fields, no bars) ────────────────────
 
 async function handlePollVote(interaction, parts) {
     const prefix = parts[0];
@@ -335,10 +333,9 @@ async function handlePollVote(interaction, parts) {
     // Find leading option
     var leadingIdx = getLeadingOption(voteCounts);
 
-    // ── Build updated embed ──
+    // ── Build updated embed (log-style: clean field values, no progress bars) ──
     const embed = EmbedBuilder.from(interaction.message.embeds[0]);
     
-    // Get original field names
     const fields = embed.data.fields || [];
     
     var updatedFields = [];
@@ -346,17 +343,16 @@ async function handlePollVote(interaction, parts) {
         const count = voteCounts[i] || 0;
         const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
         var isLeading = (leadingIdx === i && count > 0);
-        const bar = makePollBar(count, totalVotes || 1, isLeading);
         
-        // Keep the original option name, add crown/leading indicator
+        // Get clean option name, add crown for leading
         var optionName = fields[i].name;
         var badge = '';
         if (isLeading) badge = '  \uD83D\uDC51';
-        else if (count > 0 && leadingIdx !== null && count === voteCounts[leadingIdx]) badge = '  \uD83D\uDC51'; // tie also gets crown
+        else if (count > 0 && leadingIdx !== null && count === voteCounts[leadingIdx] && leadingIdx !== i) badge = '  \uD83D\uDC51';
         
         updatedFields.push({
             name: badge ? optionName.replace(/  \uD83C\uDFC6$/, '') + badge : optionName,
-            value: bar + '\n\uD83D\uDDF3  **' + count + '** vote' + (count !== 1 ? 's' : '') + '  \u2022  **' + pct + '%**',
+            value: '\uD83D\uDCCA Votes: **' + count + '** (' + pct + '%)',
             inline: fields[i].inline,
         });
     }
@@ -386,7 +382,6 @@ async function handlePollVote(interaction, parts) {
 async function handlePollVoters(interaction) {
     const messageId = interaction.message.id;
     
-    // Load all votes
     const db = getDb();
     const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ? ORDER BY option_index, voted_at').all(messageId);
     
@@ -394,7 +389,6 @@ async function handlePollVoters(interaction) {
         return interaction.reply({ content: 'No votes have been cast yet.', ephemeral: true });
     }
     
-    // Group voters by option
     var votersByOption = {};
     var userIds = new Set();
     for (var r of rows) {
@@ -403,7 +397,6 @@ async function handlePollVoters(interaction) {
         userIds.add(r.user_id);
     }
     
-    // Build response (only show first 15 voters per option)
     var lines = ['**\uD83D\uDDF3\uFE0F Poll Voters**', ''];
     var optNames = interaction.message.embeds[0]?.fields?.map(function(f) { return f.name; }) || [];
     
@@ -413,7 +406,6 @@ async function handlePollVoters(interaction) {
         var name = optNames[idx] || 'Option ' + (idx + 1);
         lines.push('**' + name + '** (' + voters.length + ' vote' + (voters.length !== 1 ? 's' : '') + '):');
         
-        // Show first 15 voters as mentions
         var showVoters = voters.slice(0, 15);
         var mentions = showVoters.map(function(uid) { return '<@' + uid + '>'; }).join(', ');
         if (voters.length > 15) mentions += ' +' + (voters.length - 15) + ' more';
@@ -429,7 +421,6 @@ async function handlePollVoters(interaction) {
 // ──────────────────── Select Menu Handler ────────────────────
 
 async function handleSelectMenu(interaction) {
-    // Placeholder for future select menu interactions
     await interaction.reply({ content: 'Select menu received.', ephemeral: true });
 }
 
