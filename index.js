@@ -5,7 +5,7 @@ const {
 } = require('discord.js');
 
 // ─── Utilities & Data Layers ───
-const { loadConfig } = require('./src/config');
+// Config is loaded on first access via getGuildConfig()
 const { recordJoin, recordLeave } = require('./src/stats');
 const { truncate, formatUptime, emojiToString, fetchAuditLogExecutor } = require('./src/helpers');
 const { logError } = require('./src/logError');
@@ -59,7 +59,6 @@ const eventDeps = {
     truncate,
     formatUptime,
     emojiToString,
-    loadConfig,
     deployCommands,
     recordJoin,
     recordLeave,

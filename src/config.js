@@ -91,7 +91,7 @@ function updateGuildConfig(guildId, updater) {
     return updated;
 }
 
-// ──────────────────── Load / Save (kept for backward compat with dashboard) ────────────────────
+// ──────────────────── Load / Save (legacy — kept for external tooling compatibility) ────────────────────
 
 function loadConfig() {
     // Returns the old nested format for compatibility with dashboard

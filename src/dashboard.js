@@ -3,7 +3,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { formatUptime, formatNumber } = require('./helpers');
-const { loadConfig, saveConfig, getBotConfig, updateGuildConfig } = require('./config');
+const { getBotConfig, getGuildConfig, updateGuildConfig } = require('./config');
 const { getDb } = require('./db');
 const { getGuildStats } = require('./stats');
 const { getReactionRoles } = require('./reactionRoles');
@@ -443,29 +443,25 @@ function createDashboard() {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
-        const config = loadConfig();
-        if (!config[guild.id]) config[guild.id] = {};
         const { category, channelId, enabled, trackedChannel, trackedChannels } = req.body;
-        if (!config[guild.id].logChannels) config[guild.id].logChannels = {};
-        if (!config[guild.id].logCategories) config[guild.id].logCategories = {};
-        if (!config[guild.id].trackedChannels) config[guild.id].trackedChannels = [];
-        if (category) {
-            if (channelId !== undefined) config[guild.id].logChannels[category] = channelId || null;
-            if (enabled !== undefined) config[guild.id].logCategories[category] = enabled;
-        }
-        if (trackedChannel !== undefined) {
-            const tc = config[guild.id].trackedChannels;
-            if (trackedChannels === 'set') {
-                config[guild.id].trackedChannels = Array.isArray(trackedChannel) ? trackedChannel : [trackedChannel];
-            } else if (trackedChannels === 'add') {
-                if (!tc.includes(trackedChannel)) tc.push(trackedChannel);
-            } else if (trackedChannels === 'remove') {
-                config[guild.id].trackedChannels = tc.filter(id => id !== trackedChannel);
-            } else if (trackedChannels === 'clear') {
-                config[guild.id].trackedChannels = [];
+        updateGuildConfig(guild.id, (cfg) => {
+            if (category) {
+                if (channelId !== undefined) cfg.logChannels[category] = channelId || null;
+                if (enabled !== undefined) cfg.logCategories[category] = enabled;
             }
-        }
-        saveConfig(config);
+            if (trackedChannel !== undefined) {
+                if (trackedChannels === 'set') {
+                    cfg.trackedChannels = Array.isArray(trackedChannel) ? trackedChannel : [trackedChannel];
+                } else if (trackedChannels === 'add') {
+                    if (!cfg.trackedChannels.includes(trackedChannel)) cfg.trackedChannels.push(trackedChannel);
+                } else if (trackedChannels === 'remove') {
+                    cfg.trackedChannels = cfg.trackedChannels.filter(id => id !== trackedChannel);
+                } else if (trackedChannels === 'clear') {
+                    cfg.trackedChannels = [];
+                }
+            }
+            return cfg;
+        });
         res.json({ success: true });
     });
 
@@ -474,27 +470,18 @@ function createDashboard() {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
-        const config = loadConfig();
-        if (!config[guild.id]) config[guild.id] = {};
-        if (!config[guild.id].logChannels) config[guild.id].logChannels = {};
-        if (!config[guild.id].logCategories) config[guild.id].logCategories = {};
-        if (!config[guild.id].trackedChannels) config[guild.id].trackedChannels = [];
-        
         const { categories } = req.body;
         if (Array.isArray(categories)) {
-            for (const cat of categories) {
-                if (cat.category) {
-                    if (cat.channelId !== undefined) {
-                        config[guild.id].logChannels[cat.category] = cat.channelId || null;
-                    }
-                    if (cat.enabled !== undefined) {
-                        config[guild.id].logCategories[cat.category] = cat.enabled;
+            updateGuildConfig(guild.id, (cfg) => {
+                for (const cat of categories) {
+                    if (cat.category) {
+                        if (cat.channelId !== undefined) cfg.logChannels[cat.category] = cat.channelId || null;
+                        if (cat.enabled !== undefined) cfg.logCategories[cat.category] = cat.enabled;
                     }
                 }
-            }
+                return cfg;
+            });
         }
-        
-        saveConfig(config);
         res.json({ success: true });
     });
 
@@ -514,8 +501,7 @@ function createDashboard() {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
-        const config = loadConfig();
-        const guildConfig = config[guild.id] || {};
+        const guildConfig = getGuildConfig(guild.id) || {};
         const logConfig = guildConfig.logChannels || {};
         const logCats = guildConfig.logCategories || {};
         const tracked = guildConfig.trackedChannels || [];
@@ -647,6 +633,88 @@ function createDashboard() {
             nodeVersion: process.version,
             uptime: formatUptime(process.uptime() * 1000),
         });
+    });
+
+    // ── SSE: Real-time events ──
+    const sseClients = new Set();
+    app.get('/api/events', requireAuth, (req, res) => {
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+        });
+        res.write('data: {"type":"connected"}\n\n');
+        sseClients.add(res);
+        req.on('close', () => sseClients.delete(res));
+    });
+
+    // Helper to broadcast events
+    global.broadcastDashboard = function broadcastDashboard(type, data) {
+        const msg = 'data: ' + JSON.stringify({ type: type, data: data, time: Date.now() }) + '\n\n';
+        for (const client of sseClients) {
+            try { client.write(msg); } catch { sseClients.delete(client); }
+        }
+    };
+
+    // ── Server Insights: Message activity ──
+    app.get('/api/insights/:id', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const db = getDb();
+        // Top users by message count
+        const topUsers = db.prepare('SELECT user_id, SUM(message_count) as total FROM activity_counts WHERE guild_id = ? GROUP BY user_id ORDER BY total DESC LIMIT 10').all(guild.id);
+        // Top channels by message count
+        const topChannels = db.prepare('SELECT channel_id, SUM(message_count) as total FROM activity_counts WHERE guild_id = ? GROUP BY channel_id ORDER BY total DESC LIMIT 10').all(guild.id);
+        // Total tracked messages
+        const totalTracked = db.prepare('SELECT SUM(message_count) as total FROM activity_counts WHERE guild_id = ?').get(guild.id);
+        res.json({
+            guildId: guild.id,
+            guildName: guild.name,
+            topUsers: topUsers.map(u => ({
+                userId: u.user_id,
+                total: u.total,
+                tag: guild.members.cache.get(u.user_id)?.user?.tag || u.user_id,
+                avatar: guild.members.cache.get(u.user_id)?.user?.displayAvatarURL({ size: 32 }) || null,
+            })),
+            topChannels: topChannels.map(c => ({
+                channelId: c.channel_id,
+                total: c.total,
+                name: guild.channels.cache.get(c.channel_id)?.name || c.channel_id,
+            })),
+            totalTracked: totalTracked?.total || 0,
+        });
+    });
+
+    // ── Message Search ──
+    app.get('/api/server/:id/messages', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const db = getDb();
+        const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+        const action = req.query.action || null;
+        const search = req.query.q || null;
+        let rows;
+        if (search) {
+            rows = db.prepare('SELECT * FROM message_log WHERE guild_id = ? AND content LIKE ? ORDER BY logged_at DESC LIMIT ?').all(guild.id, '%' + search + '%', limit);
+        } else if (action) {
+            rows = db.prepare('SELECT * FROM message_log WHERE guild_id = ? AND action = ? ORDER BY logged_at DESC LIMIT ?').all(guild.id, action, limit);
+        } else {
+            rows = db.prepare('SELECT * FROM message_log WHERE guild_id = ? ORDER BY logged_at DESC LIMIT ?').all(guild.id, limit);
+        }
+        res.json(rows.map(r => ({
+            id: r.id,
+            messageId: r.message_id,
+            channelId: r.channel_id,
+            channelName: guild.channels.cache.get(r.channel_id)?.name || r.channel_id,
+            authorId: r.author_id,
+            authorTag: r.author_tag,
+            content: r.content,
+            action: r.action,
+            attachments: r.attachments ? JSON.parse(r.attachments) : null,
+            loggedAt: r.logged_at,
+        })));
     });
 
     // ── Serve Frontend ──

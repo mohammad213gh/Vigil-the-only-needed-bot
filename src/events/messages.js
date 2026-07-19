@@ -2,6 +2,28 @@ const { EmbedBuilder } = require('discord.js');
 const { getGuildConfig } = require('../config');
 const { handlePrefixMessage } = require('../prefixCommands');
 
+const { getDb } = require('../db');
+
+// ──────────────────── Track message activity for insights ────────────────────
+function trackActivity(guildId, userId, channelId) {
+    const db = getDb();
+    try {
+        db.prepare('INSERT OR REPLACE INTO activity_counts (guild_id, user_id, channel_id, message_count) VALUES (?, ?, ?, COALESCE((SELECT message_count + 1 FROM activity_counts WHERE guild_id = ? AND user_id = ? AND channel_id = ?), 1))')
+            .run(guildId, userId, channelId, guildId, userId, channelId);
+    } catch {}
+}
+
+// ──────────────────── Log deleted/edited messages for search ────────────────────
+function logMessageAction(guildId, channelId, messageId, authorId, authorTag, content, action, attachments) {
+    const db = getDb();
+    try {
+        db.prepare('INSERT INTO message_log (guild_id, channel_id, message_id, author_id, author_tag, content, action, attachments, logged_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            .run(guildId, channelId, messageId, authorId, authorTag, content || '', action, attachments ? JSON.stringify(attachments) : null, Date.now());
+        // Keep only last 1000 per guild
+        db.prepare('DELETE FROM message_log WHERE id IN (SELECT id FROM message_log WHERE guild_id = ? ORDER BY logged_at DESC LIMIT -1 OFFSET 1000)').run(guildId);
+    } catch (err) {}
+}
+
 module.exports = [
     {
         name: 'messageCreate',
@@ -9,6 +31,9 @@ module.exports = [
         execute: (deps) => async (message) => {
             if (message.author?.bot) return;
             if (!message.guild) return;
+
+            // Track activity for server insights
+            trackActivity(message.guild.id, message.author.id, message.channelId);
 
             // Fast-path: check common prefixes first (; / ! .) before hitting DB
             const content = message.content;
@@ -45,6 +70,17 @@ module.exports = [
                 )
                 .setFooter({ text: '#' + message.channel.name + ' · ID: ' + message.id, iconURL: message.guild.iconURL() })
                 .setTimestamp();
+
+            // Log for message search
+            logMessageAction(message.guild.id, message.channelId, message.id, message.author.id, message.author.tag, message.content, 'deleted', message.attachments.map(a => ({ name: a.name, url: a.url })));
+
+            // Broadcast to dashboard via SSE
+            if (global.broadcastDashboard) {
+                global.broadcastDashboard('msg_deleted', {
+                    guildId: message.guild.id, channelId: message.channelId,
+                    authorTag: message.author.tag, content: message.content?.slice(0, 200),
+                });
+            }
 
             // Show the first image inline if there are attachments
             const imageAttachment = message.attachments.find(a => a.contentType && a.contentType.startsWith('image/'));
@@ -85,6 +121,19 @@ module.exports = [
                 )
                 .setFooter({ text: '#' + oldMessage.channel.name + ' · ID: ' + oldMessage.id, iconURL: oldMessage.guild.iconURL() })
                 .setTimestamp();
+
+            // Log for message search
+            logMessageAction(oldMessage.guild.id, oldMessage.channelId, oldMessage.id, oldMessage.author.id, oldMessage.author.tag, oldMessage.content + ' → ' + newMessage.content, 'edited', null);
+
+            // Broadcast to dashboard via SSE
+            if (global.broadcastDashboard) {
+                global.broadcastDashboard('msg_edited', {
+                    guildId: oldMessage.guild.id, channelId: oldMessage.channelId,
+                    authorTag: oldMessage.author.tag,
+                    before: oldMessage.content?.slice(0, 100),
+                    after: newMessage.content?.slice(0, 100),
+                });
+            }
 
             if (attachmentText) {
                 embed.addFields({ name: 'Attachments', value: attachmentText });

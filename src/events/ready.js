@@ -8,7 +8,6 @@ module.exports = {
             console.warn('[WARN] OWNER_ID is not set! All owner-only commands will be locked for everyone.');
         }
 
-        deps.loadConfig();
         const result = await deps.deployCommands(client.user);
         if (result === true) {
             console.log('\u2705 Commands deployed successfully! Try using /deploy in Discord if commands still do not appear.');

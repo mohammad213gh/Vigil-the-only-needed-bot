@@ -1,50 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
-const { CHANNEL_TYPE_NAMES } = require('../constants');
+const { CHANNEL_TYPE_NAMES, PERM_NAMES } = require('../constants');
 const { logError } = require('../logError');
-
-// ─── Permission Name Lookup (friendly display for channel overwrites) ───
-const PERM_NAMES = {
-    'Administrator': 'Administrator',
-    'ManageGuild': 'Manage Server',
-    'ManageRoles': 'Manage Roles',
-    'ManageChannels': 'Manage Channels',
-    'ManageMessages': 'Manage Messages',
-    'ManageNicknames': 'Manage Nicknames',
-    'ManageWebhooks': 'Manage Webhooks',
-    'ManageThreads': 'Manage Threads',
-    'ManageEvents': 'Manage Events',
-    'KickMembers': 'Kick Members',
-    'BanMembers': 'Ban Members',
-    'ModerateMembers': 'Timeout Members',
-    'MentionEveryone': 'Mention @everyone',
-    'ViewChannel': 'View Channels',
-    'SendMessages': 'Send Messages',
-    'SendTTSMessages': 'Send TTS Messages',
-    'SendMessagesInThreads': 'Send Thread Messages',
-    'CreatePrivateThreads': 'Create Private Threads',
-    'CreatePublicThreads': 'Create Public Threads',
-    'ReadMessageHistory': 'Read History',
-    'AttachFiles': 'Attach Files',
-    'AddReactions': 'Add Reactions',
-    'EmbedLinks': 'Embed Links',
-    'UseExternalEmojis': 'Use External Emojis',
-    'UseExternalStickers': 'Use External Stickers',
-    'UseExternalSounds': 'Use External Sounds',
-    'UseApplicationCommands': 'Use Commands',
-    'Connect': 'Connect',
-    'Speak': 'Speak',
-    'MuteMembers': 'Mute Members',
-    'DeafenMembers': 'Deafen Members',
-    'MoveMembers': 'Move Members',
-    'UseVAD': 'Use Voice Activity',
-    'PrioritySpeaker': 'Priority Speaker',
-    'Stream': 'Stream',
-    'CreateInstantInvite': 'Create Invite',
-    'ChangeNickname': 'Change Nickname',
-    'ViewAuditLog': 'View Audit Log',
-    'ViewGuildInsights': 'View Insights',
-    'SendPolls': 'Send Polls',
-};
 
 function formatPermList(perms) {
     if (!perms || perms.length === 0) return '(none)';

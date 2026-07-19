@@ -44,3 +44,6 @@ npm-debug.log*
 *.swo
 nul
 repo_check/
+
+# ─── Agent Skills ───
+.claude/skills/

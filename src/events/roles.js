@@ -1,49 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-
-// ─── Permission Name Lookup (friendly display) ───
-const PERM_NAMES = {
-    'Administrator': 'Administrator',
-    'ManageGuild': 'Manage Server',
-    'ManageRoles': 'Manage Roles',
-    'ManageChannels': 'Manage Channels',
-    'ManageMessages': 'Manage Messages',
-    'ManageNicknames': 'Manage Nicknames',
-    'ManageWebhooks': 'Manage Webhooks',
-    'ManageThreads': 'Manage Threads',
-    'ManageEvents': 'Manage Events',
-    'KickMembers': 'Kick Members',
-    'BanMembers': 'Ban Members',
-    'ModerateMembers': 'Timeout Members',
-    'MentionEveryone': 'Mention @everyone',
-    'ViewChannel': 'View Channels',
-    'SendMessages': 'Send Messages',
-    'SendTTSMessages': 'Send TTS Messages',
-    'SendMessagesInThreads': 'Send Thread Messages',
-    'CreatePrivateThreads': 'Create Private Threads',
-    'CreatePublicThreads': 'Create Public Threads',
-    'ReadMessageHistory': 'Read History',
-    'AttachFiles': 'Attach Files',
-    'AddReactions': 'Add Reactions',
-    'EmbedLinks': 'Embed Links',
-    'UseExternalEmojis': 'Use External Emojis',
-    'UseExternalStickers': 'Use External Stickers',
-    'UseExternalSounds': 'Use External Sounds',
-    'UseApplicationCommands': 'Use Commands',
-    'Connect': 'Connect (Voice)',
-    'Speak': 'Speak (Voice)',
-    'MuteMembers': 'Mute Members',
-    'DeafenMembers': 'Deafen Members',
-    'MoveMembers': 'Move Members',
-    'UseVAD': 'Use Voice Activity',
-    'PrioritySpeaker': 'Priority Speaker',
-    'Stream': 'Stream',
-    'CreateInstantInvite': 'Create Invite',
-    'ChangeNickname': 'Change Nickname',
-    'ViewAuditLog': 'View Audit Log',
-    'ViewGuildInsights': 'View Insights',
-    'RequestToSpeak': 'Request to Speak',
-    'CreateEvents': 'Create Events',
-};
+const { PERM_NAMES } = require('../constants');
 
 function formatPerms(permissions) {
     const perms = permissions.toArray ? permissions.toArray() : permissions;

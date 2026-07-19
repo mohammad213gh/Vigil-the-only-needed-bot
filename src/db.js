@@ -108,8 +108,35 @@ function initSchema() {
             user_id TEXT NOT NULL,
             option_index INTEGER NOT NULL,
             voted_at INTEGER NOT NULL,
-            PRIMARY KEY (message_id, user_id)
+            poll_type TEXT NOT NULL DEFAULT 'single',
+            PRIMARY KEY (message_id, user_id, option_index)
         );
+
+        CREATE TABLE IF NOT EXISTS message_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            message_id TEXT NOT NULL,
+            author_id TEXT NOT NULL,
+            author_tag TEXT NOT NULL,
+            content TEXT,
+            action TEXT NOT NULL,
+            attachments TEXT,
+            logged_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_msg_log_guild ON message_log(guild_id, action);
+        CREATE INDEX IF NOT EXISTS idx_msg_log_time ON message_log(guild_id, logged_at);
+
+        CREATE TABLE IF NOT EXISTS activity_counts (
+            guild_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            message_count INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY (guild_id, user_id, channel_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_activity_guild ON activity_counts(guild_id, message_count DESC);
     `);
 
     // Add prefix column if not exists (safe on every boot)

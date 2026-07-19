@@ -323,6 +323,8 @@ async function executePoll(interaction) {
     const option2 = interaction.options.getString('option2');
     const option3 = interaction.options.getString('option3');
     const option4 = interaction.options.getString('option4');
+    const multi = interaction.options.getBoolean('multi') || false;
+    const anonymous = interaction.options.getBoolean('anonymous') || false;
 
     const options = [option1, option2];
     if (option3) options.push(option3);
@@ -330,6 +332,11 @@ async function executePoll(interaction) {
 
     const emojis = ['1\uFE0F\u20E3', '2\uFE0F\u20E3', '3\uFE0F\u20E3', '4\uFE0F\u20E3'];
     const labels = ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+
+    // Add mode badges to title
+    let modeTag = '';
+    if (multi) modeTag += ' \uD83D\uDD01 Multi';
+    if (anonymous) modeTag += ' \uD83D\uDD75\uFE0F Anonymous';
 
     const fields = options.map((opt, i) => ({
         name: emojis[i] + ' ' + opt,
@@ -340,14 +347,18 @@ async function executePoll(interaction) {
     const embed = new EmbedBuilder()
         .setColor(0x5865F2)
         .setTitle('\uD83D\uDDF3\uFE0F Poll: ' + question)
+        .setDescription(modeTag || null)
         .addFields(fields)
-        .setFooter({ text: '\uD83D\uDDF3\uFE0F 0 total votes' })
+        .setFooter({ text: '\uD83D\uDDF3\uFE0F 0 total votes' + (anonymous ? ' \u2022 Anonymous' : '') })
         .setTimestamp();
+
+    // Determine custom ID prefix based on poll type
+    const votePrefix = multi ? 'pm_vote_' : (anonymous ? 'pa_vote_' : 'pv_vote_');
 
     // Build vote buttons
     const buttons = options.map((opt, i) => {
         return new ButtonBuilder()
-            .setCustomId('pv_vote_' + i)
+            .setCustomId(votePrefix + i)
             .setLabel(labels[i])
             .setStyle(ButtonStyle.Primary)
             .setEmoji(emojis[i]);

@@ -32,6 +32,16 @@ const commandDefs = [
                             { name: 'Roles', value: 'roles' },
                             { name: 'Server', value: 'server' },
                             { name: 'Voice', value: 'voice' },
+                            { name: 'Threads', value: 'threads' },
+                            { name: 'Emojis', value: 'emojis' },
+                            { name: 'Bans', value: 'bans' },
+                            { name: 'Invites', value: 'invites' },
+                            { name: 'Stickers', value: 'stickers' },
+                            { name: 'Auto Mod', value: 'automod' },
+                            { name: 'Scheduled', value: 'scheduled' },
+                            { name: 'Stage', value: 'stage' },
+                            { name: 'Webhooks', value: 'webhooks' },
+                            { name: 'Integrations', value: 'integrations' },
                         ))
                 .addChannelOption(opt =>
                     opt.setName('channel')
@@ -51,6 +61,16 @@ const commandDefs = [
                             { name: 'Roles', value: 'roles' },
                             { name: 'Server', value: 'server' },
                             { name: 'Voice', value: 'voice' },
+                            { name: 'Threads', value: 'threads' },
+                            { name: 'Emojis', value: 'emojis' },
+                            { name: 'Bans', value: 'bans' },
+                            { name: 'Invites', value: 'invites' },
+                            { name: 'Stickers', value: 'stickers' },
+                            { name: 'Auto Mod', value: 'automod' },
+                            { name: 'Scheduled', value: 'scheduled' },
+                            { name: 'Stage', value: 'stage' },
+                            { name: 'Webhooks', value: 'webhooks' },
+                            { name: 'Integrations', value: 'integrations' },
                         ))
                 .addBooleanOption(opt =>
                     opt.setName('enabled')
@@ -295,6 +315,14 @@ const commandDefs = [
         .addStringOption(opt =>
             opt.setName('option4')
                 .setDescription('Fourth option')
+                .setRequired(false))
+        .addBooleanOption(opt =>
+            opt.setName('multi')
+                .setDescription('Allow voting for multiple options')
+                .setRequired(false))
+        .addBooleanOption(opt =>
+            opt.setName('anonymous')
+                .setDescription('Hide who voted for what')
                 .setRequired(false)),
     new SlashCommandBuilder()
         .setName('announce')

@@ -13,7 +13,9 @@ const { getDb } = require('./db');
 //   cancel_{initiatorId}                = cancel action
 //   wm_{initiatorId}_{targetId}         = warn modal opener
 //   wr_{initiatorId}_{targetId}         = warn modal submit
-//   pv_vote_{optionIndex}               = poll vote (NO initiatorId — anyone can vote)
+//   pv_vote_{optionIndex}               = single poll vote (NO initiatorId — anyone can vote)
+//   pm_vote_{optionIndex}               = multi poll vote (can vote for multiple)
+//   pa_vote_{optionIndex}               = anonymous poll vote (votes hidden)
 
 // ──────────────────── Main Router ────────────────────
 
@@ -37,7 +39,8 @@ async function handleButton(interaction) {
     const initiatorId = parts[1];
 
     // Poll votes — anyone can vote, no security check needed
-    if (prefix === 'pv') {
+    // pv = single vote, pm = multi vote, pa = anonymous
+    if (prefix === 'pv' || prefix === 'pm' || prefix === 'pa') {
         return handlePollVote(interaction, parts);
     }
 
@@ -234,6 +237,19 @@ function getPollVotes(messageId) {
     const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
     var votes = new Map();
     for (var i = 0; i < rows.length; i++) {
+        if (!votes.has(rows[i].user_id)) {
+            votes.set(rows[i].user_id, []);
+        }
+        votes.get(rows[i].user_id).push(rows[i].option_index);
+    }
+    return votes;
+}
+
+function getPollVotesFlat(messageId) {
+    const db = getDb();
+    const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
+    var votes = new Map();
+    for (var i = 0; i < rows.length; i++) {
         votes.set(rows[i].user_id, rows[i].option_index);
     }
     return votes;
@@ -250,33 +266,70 @@ function removePollVoteFromDb(messageId, userId) {
     db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ?').run(messageId, userId);
 }
 
+function removePollOptionVoteFromDb(messageId, userId, optionIndex) {
+    const db = getDb();
+    db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ? AND option_index = ?').run(messageId, userId, optionIndex);
+}
+
 async function handlePollVote(interaction, parts) {
+    const prefix = parts[0]; // 'pv' = single, 'pm' = multi, 'pa' = anonymous
     const messageId = interaction.message.id;
-    const optionIndex = parseInt(parts[2]); // parts = ['pv', 'vote', '0']
+    const optionIndex = parseInt(parts[2]);
     const userId = interaction.user.id;
+    const isMulti = prefix === 'pm';
+    const isAnonymous = prefix === 'pa';
 
-    // Load votes fresh from SQLite (survives restarts)
-    var votes = getPollVotes(messageId);
-
-    // Toggle vote: if already voted for this option, remove; otherwise set
-    const previousVote = votes.get(userId);
-    if (previousVote === optionIndex) {
-        removePollVoteFromDb(messageId, userId);
-        await interaction.reply({ content: '🗳️ Your vote has been removed.', ephemeral: true });
-    } else {
+    if (isMulti) {
+        // Multi-vote: toggle individual option
+        const votes = getPollVotes(messageId);
+        const userOptions = votes.get(userId) || [];
+        
+        if (userOptions.includes(optionIndex)) {
+            removePollOptionVoteFromDb(messageId, userId, optionIndex);
+            await interaction.reply({ content: '🗳️ Your vote for option ' + (optionIndex + 1) + ' has been removed.', ephemeral: true });
+        } else {
+            setPollVoteInDb(messageId, userId, optionIndex);
+            await interaction.reply({ content: '🗳️ Your vote for option ' + (optionIndex + 1) + ' has been recorded!', ephemeral: true });
+        }
+    } else if (isAnonymous) {
+        // Anonymous: same as single but hide voter info in footer
+        const votes = getPollVotesFlat(messageId);
+        const previousVote = votes.get(userId);
+        
+        if (previousVote !== undefined) {
+            removePollVoteFromDb(messageId, userId);
+            await interaction.reply({ content: '🗳️ Your anonymous vote has been updated.', ephemeral: true });
+        }
         setPollVoteInDb(messageId, userId, optionIndex);
-        votes.set(userId, optionIndex);
-        await interaction.reply({ content: '🗳️ Your vote has been recorded!', ephemeral: true });
+        await interaction.reply({ content: '🗳️ Your anonymous vote has been recorded!', ephemeral: true });
+    } else {
+        // Single vote (existing behavior)
+        var votes = getPollVotesFlat(messageId);
+        const previousVote = votes.get(userId);
+        if (previousVote === optionIndex) {
+            removePollVoteFromDb(messageId, userId);
+            await interaction.reply({ content: '🗳️ Your vote has been removed.', ephemeral: true });
+            votes = getPollVotesFlat(messageId);
+        } else {
+            if (previousVote !== undefined) {
+                removePollVoteFromDb(messageId, userId);
+            }
+            setPollVoteInDb(messageId, userId, optionIndex);
+            await interaction.reply({ content: '🗳️ Your vote has been recorded!', ephemeral: true });
+            votes = getPollVotesFlat(messageId);
+        }
     }
 
-    // Reload votes after change to get accurate counts
-    votes = getPollVotes(messageId);
-    const totalVoters = votes.size;
+    // Reload votes after change
+    const allVotes = getPollVotes(messageId);
+    const totalVoters = allVotes.size;
 
-    // Count votes per option
+    // Count votes per option (for multi, count each option separately)
     var voteCounts = {};
-    for (var [, optIndex] of votes) {
-        voteCounts[optIndex] = (voteCounts[optIndex] || 0) + 1;
+    for (var [uid, options] of allVotes) {
+        for (var opt of options) {
+            voteCounts[opt] = (voteCounts[opt] || 0) + 1;
+        }
     }
 
     // Update the embed fields to show vote counts
@@ -292,7 +345,11 @@ async function handlePollVote(interaction, parts) {
         };
     });
     embed.spliceFields(0, fields.length, updatedFields);
-    embed.setFooter({ text: '🗳️ ' + totalVoters + ' total vote' + (totalVoters !== 1 ? 's' : '') + ' · Poll' });
+    
+    let footerText = '🗳️ ' + totalVoters + ' total vote' + (totalVoters !== 1 ? 's' : '');
+    if (isMulti) footerText += ' • Multi-vote';
+    if (isAnonymous) footerText += ' • Anonymous';
+    embed.setFooter({ text: footerText + ' · Poll' });
 
     await interaction.update({ embeds: [embed] });
 }
