@@ -317,6 +317,32 @@ async function executeTrack(interaction) {
     }
 }
 
+// ── Helper: build a premium progress bar ──
+function makePollBar(count, total, isLeading) {
+    if (total === 0) return '\u25CB'.repeat(10);
+    var filled = Math.round((count / total) * 10);
+    if (filled === 0 && count > 0) filled = 1;
+    var bar = '';
+    // Leading options get green fill, others blue
+    var fillChar = isLeading ? '\uD83D\uDFE2' : '\uD83D\uDD35';
+    for (var i = 0; i < filled; i++) bar += fillChar;
+    for (var i = filled; i < 10; i++) bar += '\u25AB';
+    return bar;
+}
+
+// ── Helper: find leading option index ──
+function getLeadingOption(voteCounts) {
+    var maxVotes = 0;
+    var leading = null;
+    for (var k in voteCounts) {
+        if (voteCounts[k] > maxVotes) {
+            maxVotes = voteCounts[k];
+            leading = parseInt(k);
+        }
+    }
+    return leading;
+}
+
 async function executePoll(interaction) {
     const question = interaction.options.getString('question');
     const option1 = interaction.options.getString('option1');
@@ -332,7 +358,6 @@ async function executePoll(interaction) {
     if (option4) options.push(option4);
 
     const emojis = ['1\uFE0F\u20E3', '2\uFE0F\u20E3', '3\uFE0F\u20E3', '4\uFE0F\u20E3'];
-    const optionColors = [0x5865F2, 0x3ba55c, 0xf1c40f, 0xe74c3c];
     
     // ── Calculate end time ──
     let endTimestamp = null;
@@ -346,43 +371,51 @@ async function executePoll(interaction) {
         }
     }
 
+    // ── Pick embed color based on poll type ──
+    // Normal: discord blue, Multi: purple, Anonymous: dark, Timed: orange, Multi+Timed: gradient-ish
+    var embedColor = 0x5865F2; // default blue
+    if (anonymous) embedColor = 0x2C2F33; // dark grey
+    else if (multi && durationLabel) embedColor = 0x9B59B6; // purple
+    else if (multi) embedColor = 0x71368A; // dark purple
+    else if (durationLabel) embedColor = 0xE67E22; // orange
+
     // ── Build mode badges ──
     let badges = [];
     if (multi) badges.push('\uD83D\uDD01 Multi-vote');
     if (anonymous) badges.push('\uD83D\uDD75\uFE0F Anonymous');
     if (durationLabel) badges.push('\u23F3 ' + durationLabel);
-    const badgeStr = badges.length > 0 ? badges.join(' \u2022 ') : null;
+    const badgeStr = badges.length > 0 ? '\n' + badges.join('  ') : '';
 
     // ── Build embed ──
+    // Uses a clean header with divider, then option bars, then a summary footer
     const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
-        .setTitle('\uD83D\uDDF3\uFE0F ' + question)
-        .setDescription(badgeStr)
+        .setColor(embedColor)
+        .setAuthor({ name: interaction.user.tag + ' created a poll', iconURL: interaction.user.displayAvatarURL() })
+        .setTitle('\uD83D\uDDF3\uFE0F  ' + question)
+        .setDescription('\u2500'.repeat(20) + (badgeStr ? badgeStr + '\n\u2500'.repeat(20) : ''))
         .setTimestamp();
 
-    // Add each option as a field with progress bar placeholder
+    // Add each option as a field with an empty progress bar placeholder
     for (let i = 0; i < options.length; i++) {
-        const bar = '\u25CB \u200B'.repeat(10); // empty bar placeholder
+        const bar = '\u25CB'.repeat(10);
         embed.addFields({
-            name: emojis[i] + ' ' + options[i],
-            value: bar + '\n\uD83D\uDDF3 **0** vote' + (multi ? 's' : '') + ' (0%)',
-            inline: true,
+            name: emojis[i] + '  ' + options[i],
+            value: bar + '\n\uD83D\uDDF3  **0** vote' + (multi ? 's' : '') + '  \u2022  **0%**',
+            inline: options.length <= 2 ? true : false,
         });
     }
 
-    embed.setFooter({ text: '\uD83D\uDDF3 0 total votes' + (anonymous ? ' \u2022 \uD83D\uDD75\uFE0F Anonymous' : '') });
+    embed.setFooter({ text: '\uD83D\uDDF3  0 total votes' + (anonymous ? '  \u2022  \uD83D\uDD75\uFE0F Anonymous' : '') + '  \u2022  Click a button below to vote!' });
 
-    // ── Also set a cool color per option count ──
-    embed.setColor(options.length === 2 ? 0x5865F2 : options.length === 3 ? 0x9B59B6 : 0xE74C3C);
-
-    // ── Build vote buttons ──
+    // ── Build vote buttons with actual option text ──
     const votePrefix = multi ? 'pm_vote_' : (anonymous ? 'pa_vote_' : 'pv_vote_');
     const buttons = options.map((opt, i) => {
+        // Truncate option text to ~50 chars for button label
+        var label = opt.length > 50 ? opt.substring(0, 47) + '...' : opt;
         return new ButtonBuilder()
             .setCustomId(votePrefix + i)
-            .setStyle(ButtonStyle.Primary)
-            .setLabel('Option ' + (i + 1))
+            .setStyle(i === 0 ? ButtonStyle.Primary : i === 1 ? ButtonStyle.Success : i === 2 ? ButtonStyle.Primary : ButtonStyle.Danger)
+            .setLabel(label)
             .setEmoji(emojis[i]);
     });
 
@@ -395,9 +428,8 @@ async function executePoll(interaction) {
     if (!anonymous) {
         var votersBtn = new ButtonBuilder()
             .setCustomId('pvv_voters')
-            .setLabel('Show Voters')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('\uD83D\uDC65');
+            .setLabel('Show Voters \uD83D\uDC65')
+            .setStyle(ButtonStyle.Secondary);
         rows.push(new ActionRowBuilder().addComponents(votersBtn));
     }
 
@@ -439,30 +471,28 @@ async function executePoll(interaction) {
                     }
                 }
                 
+                var totalVoters = Object.keys(voters).length || Object.keys(voteCounts).length;
+                
                 const finalEmbed = EmbedBuilder.from(msg.embeds[0])
                     .setColor(0x95A5A6)
-                    .setTitle('\uD83D\uDDF3\uFE0F Poll Ended: ' + question)
-                    .setDescription((badgeStr || '') + '\n\n\uD83D\uDD14 **Poll has ended!** ' + (winners.length > 0 ? '\n\uD83C\uDFC6 **Winner:** ' + winners.map(function(w) { return '**' + options[w] + '**'; }).join(', ') : ''));
+                    .setTitle('\uD83D\uDDF3\uFE0F  Poll Ended: ' + question)
+                    .setDescription((badgeStr ? badgeStr + '\n' : '') + '\uD83D\uDD14 **Poll has ended!**' + (winners.length > 0 ? '\n\uD83C\uDFC6 **Winner:** ' + winners.map(function(w) { return '**' + options[w] + '**'; }).join(', ') : ''));
                 
                 // Rebuild fields with final results
                 finalEmbed.spliceFields(0, embed.data.fields?.length || 0);
                 for (let i = 0; i < options.length; i++) {
                     const count = voteCounts[i] || 0;
                     const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                    const barLen = Math.round((count / Math.max(totalVotes, 1)) * 10);
-                    var barChars = '';
                     var isWinner = winners.includes(i);
-                    for (var b = 0; b < 10; b++) {
-                        barChars += b < barLen ? (isWinner ? '\uD83D\uDFE2' : '\uD83D\uDD35') : '\u26AA';
-                    }
+                    var bar = makePollBar(count, totalVotes || 1, isWinner);
                     finalEmbed.addFields({
-                        name: emojis[i] + ' ' + options[i] + (isWinner ? ' \uD83C\uDFC6' : ''),
-                        value: barChars + ' \u200B **' + count + '** vote' + (count !== 1 ? 's' : '') + ' (' + pct + '%)',
-                        inline: true,
+                        name: emojis[i] + '  ' + options[i] + (isWinner ? '  \uD83C\uDFC6' : ''),
+                        value: bar + '\n\uD83D\uDDF3  **' + count + '** vote' + (count !== 1 ? 's' : '') + '  \u2022  **' + pct + '%**',
+                        inline: options.length <= 2 ? true : false,
                     });
                 }
                 
-                finalEmbed.setFooter({ text: '\uD83D\uDDF3 ' + totalVotes + ' total votes \u2022 Poll ended' });
+                finalEmbed.setFooter({ text: '\uD83D\uDDF3  ' + totalVotes + ' total votes  \u2022  ' + totalVoters + ' voter' + (totalVoters !== 1 ? 's' : '') + '  \u2022  Poll ended' });
                 await msg.edit({ embeds: [finalEmbed], components: [] });
             } catch (err) { 
                 console.error('[Poll End Error]', err.message);

@@ -233,9 +233,9 @@ async function handleWarnSubmit(interaction, parts) {
     } catch { /* DMs closed */ }
 }
 
-// ──────────────────── Poll Vote (SQLite — survives restarts) ────────────────────
+// ──────────────────── Poll Helpers ────────────────────
 
-// Load all votes for a message from the DB
+// Load all votes for a message from the DB (returns Map<userId, optionIndex[]> for multi-vote)
 function getPollVotes(messageId) {
     const db = getDb();
     const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
@@ -249,6 +249,7 @@ function getPollVotes(messageId) {
     return votes;
 }
 
+// Returns Map<userId, single optionIndex> for single-vote mode
 function getPollVotesFlat(messageId) {
     const db = getDb();
     const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
@@ -275,17 +276,32 @@ function removePollOptionVoteFromDb(messageId, userId, optionIndex) {
     db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ? AND option_index = ?').run(messageId, userId, optionIndex);
 }
 
-// Better progress bar with colored blocks
-function makePollBar(count, total) {
-    if (total === 0) return '\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA';
+// Premium progress bar — leading option gets green fill, others get blue
+function makePollBar(count, total, isLeading) {
+    if (total === 0) return '\u25CB'.repeat(10);
     var filled = Math.round((count / total) * 10);
     if (filled === 0 && count > 0) filled = 1;
     var bar = '';
-    var fillChar = count === total ? '\uD83D\uDFE2' : '\uD83D\uDD35';
+    var fillChar = isLeading ? '\uD83D\uDFE2' : '\uD83D\uDD35';
     for (var i = 0; i < filled; i++) bar += fillChar;
-    for (var i = filled; i < 10; i++) bar += '\u26AA';
+    for (var i = filled; i < 10; i++) bar += '\u25AB';
     return bar;
 }
+
+// Find leading option from vote counts
+function getLeadingOption(voteCounts) {
+    var maxVotes = 0;
+    var leading = null;
+    for (var k in voteCounts) {
+        if (voteCounts[k] > maxVotes) {
+            maxVotes = voteCounts[k];
+            leading = parseInt(k);
+        }
+    }
+    return leading;
+}
+
+// ──────────────────── Poll Vote Handler ────────────────────
 
 async function handlePollVote(interaction, parts) {
     const prefix = parts[0];
@@ -340,30 +356,38 @@ async function handlePollVote(interaction, parts) {
     }
     var totalVotes = Object.keys(voteCounts).reduce(function(a, k) { return a + voteCounts[k]; }, 0);
 
+    // Find leading option
+    var leadingIdx = getLeadingOption(voteCounts);
+
     // ── Build updated embed ──
     const embed = EmbedBuilder.from(interaction.message.embeds[0]);
     
-    // Get option names from the field names (strip emoji prefix)
+    // Get original field names
     const fields = embed.data.fields || [];
     
     var updatedFields = [];
     for (var i = 0; i < fields.length; i++) {
         const count = voteCounts[i] || 0;
         const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-        const bar = makePollBar(count, totalVotes || 1);
+        var isLeading = (leadingIdx === i && count > 0);
+        const bar = makePollBar(count, totalVotes || 1, isLeading);
         
-        // Keep the original option name from the field
+        // Keep the original option name, add crown/leading indicator
         var optionName = fields[i].name;
+        var badge = '';
+        if (isLeading) badge = '  \uD83D\uDC51';
+        else if (count > 0 && leadingIdx !== null && count === voteCounts[leadingIdx]) badge = '  \uD83D\uDC51'; // tie also gets crown
+        
         updatedFields.push({
-            name: optionName,
-            value: bar + ' \u200B **' + count + '** vote' + (count !== 1 ? 's' : '') + ' (' + pct + '%)',
+            name: badge ? optionName.replace(/  \uD83C\uDFC6$/, '') + badge : optionName,
+            value: bar + '\n\uD83D\uDDF3  **' + count + '** vote' + (count !== 1 ? 's' : '') + '  \u2022  **' + pct + '%**',
             inline: fields[i].inline,
         });
     }
     embed.spliceFields(0, fields.length, updatedFields);
 
     // ── Build footer ──
-    var footerParts = ['\uD83D\uDDF3 ' + totalVoters + ' voter' + (totalVoters !== 1 ? 's' : '')];
+    var footerParts = ['\uD83D\uDDF3  ' + totalVoters + ' voter' + (totalVoters !== 1 ? 's' : '')];
     if (totalVotes > totalVoters) footerParts.push(totalVotes + ' total votes');
     if (isMulti) footerParts.push('\uD83D\uDD01 Multi');
     if (isAnonymous) footerParts.push('\uD83D\uDD75\uFE0F Anonymous');
@@ -375,7 +399,7 @@ async function handlePollVote(interaction, parts) {
         footerParts.push('Ends <t:' + endMatch[1] + ':R>');
     }
     
-    embed.setFooter({ text: footerParts.join(' \u2022 ') });
+    embed.setFooter({ text: footerParts.join('  \u2022  ') });
 
     // ── Preserve buttons from original message ──
     var components = interaction.message.components;
