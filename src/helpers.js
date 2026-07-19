@@ -119,6 +119,30 @@ async function fetchAuditLogExecutor(guild, actionType, targetId) {
     }
 }
 
+// ──────────────────── Poll Helpers ────────────────────
+function makePollBar(count, total, isLeading) {
+    if (total === 0) return '\u25AB'.repeat(10);
+    var filled = Math.round((count / total) * 10);
+    if (filled === 0 && count > 0) filled = 1;
+    var bar = '';
+    var fillChar = isLeading ? '\uD83D\uDFE2' : '\uD83D\uDD35';
+    for (var i = 0; i < filled; i++) bar += fillChar;
+    for (var i = filled; i < 10; i++) bar += '\u25AB';
+    return bar;
+}
+
+function getLeadingOption(voteCounts) {
+    var maxVotes = 0;
+    var leading = null;
+    for (var k in voteCounts) {
+        if (voteCounts[k] > maxVotes) {
+            maxVotes = voteCounts[k];
+            leading = parseInt(k);
+        }
+    }
+    return leading;
+}
+
 module.exports = {
     truncate,
     reverseText,

@@ -5,6 +5,7 @@
 const { EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
 const { addWarning } = require('./warnings');
 const { getDb } = require('./db');
+const { makePollBar, getLeadingOption } = require('./helpers');
 
 // ─── Custom ID Prefixes ───
 //   ck_{initiatorId}_{targetId}         = confirm kick
@@ -274,31 +275,6 @@ function removePollVoteFromDb(messageId, userId) {
 function removePollOptionVoteFromDb(messageId, userId, optionIndex) {
     const db = getDb();
     db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ? AND option_index = ?').run(messageId, userId, optionIndex);
-}
-
-// Premium progress bar — leading option gets green fill, others get blue
-function makePollBar(count, total, isLeading) {
-    if (total === 0) return '\u25CB'.repeat(10);
-    var filled = Math.round((count / total) * 10);
-    if (filled === 0 && count > 0) filled = 1;
-    var bar = '';
-    var fillChar = isLeading ? '\uD83D\uDFE2' : '\uD83D\uDD35';
-    for (var i = 0; i < filled; i++) bar += fillChar;
-    for (var i = filled; i < 10; i++) bar += '\u25AB';
-    return bar;
-}
-
-// Find leading option from vote counts
-function getLeadingOption(voteCounts) {
-    var maxVotes = 0;
-    var leading = null;
-    for (var k in voteCounts) {
-        if (voteCounts[k] > maxVotes) {
-            maxVotes = voteCounts[k];
-            leading = parseInt(k);
-        }
-    }
-    return leading;
 }
 
 // ──────────────────── Poll Vote Handler ────────────────────

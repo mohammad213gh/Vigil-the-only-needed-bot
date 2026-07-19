@@ -1,5 +1,5 @@
 const { EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { truncate } = require('../helpers');
+const { truncate, makePollBar, getLeadingOption } = require('../helpers');
 const { getGuildConfig, updateGuildConfig } = require('../config');
 const { deployCommands } = require('../deploy');
 
@@ -317,32 +317,6 @@ async function executeTrack(interaction) {
     }
 }
 
-// ── Helper: build a premium progress bar ──
-function makePollBar(count, total, isLeading) {
-    if (total === 0) return '\u25CB'.repeat(10);
-    var filled = Math.round((count / total) * 10);
-    if (filled === 0 && count > 0) filled = 1;
-    var bar = '';
-    // Leading options get green fill, others blue
-    var fillChar = isLeading ? '\uD83D\uDFE2' : '\uD83D\uDD35';
-    for (var i = 0; i < filled; i++) bar += fillChar;
-    for (var i = filled; i < 10; i++) bar += '\u25AB';
-    return bar;
-}
-
-// ── Helper: find leading option index ──
-function getLeadingOption(voteCounts) {
-    var maxVotes = 0;
-    var leading = null;
-    for (var k in voteCounts) {
-        if (voteCounts[k] > maxVotes) {
-            maxVotes = voteCounts[k];
-            leading = parseInt(k);
-        }
-    }
-    return leading;
-}
-
 async function executePoll(interaction) {
     const question = interaction.options.getString('question');
     const option1 = interaction.options.getString('option1');
@@ -397,7 +371,7 @@ async function executePoll(interaction) {
 
     // Add each option as a field with an empty progress bar placeholder
     for (let i = 0; i < options.length; i++) {
-        const bar = '\u25CB'.repeat(10);
+        const bar = '\u25AB'.repeat(10);
         embed.addFields({
             name: emojis[i] + '  ' + options[i],
             value: bar + '\n\uD83D\uDDF3  **0** vote' + (multi ? 's' : '') + '  \u2022  **0%**',
