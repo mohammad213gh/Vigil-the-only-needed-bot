@@ -43,6 +43,10 @@ async function handleButton(interaction) {
     if (prefix === 'pv' || prefix === 'pm' || prefix === 'pa') {
         return handlePollVote(interaction, parts);
     }
+    // Poll voters button
+    if (prefix === 'pvv') {
+        return handlePollVoters(interaction);
+    }
 
     // All other buttons: only the person who initiated the action can interact
     if (interaction.user.id !== initiatorId) {
@@ -271,96 +275,155 @@ function removePollOptionVoteFromDb(messageId, userId, optionIndex) {
     db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ? AND option_index = ?').run(messageId, userId, optionIndex);
 }
 
+// Better progress bar with colored blocks
+function makePollBar(count, total) {
+    if (total === 0) return '\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA\u26AA';
+    var filled = Math.round((count / total) * 10);
+    if (filled === 0 && count > 0) filled = 1;
+    var bar = '';
+    var fillChar = count === total ? '\uD83D\uDFE2' : '\uD83D\uDD35';
+    for (var i = 0; i < filled; i++) bar += fillChar;
+    for (var i = filled; i < 10; i++) bar += '\u26AA';
+    return bar;
+}
+
 async function handlePollVote(interaction, parts) {
-    const prefix = parts[0]; // 'pv' = single, 'pm' = multi, 'pa' = anonymous
+    const prefix = parts[0];
     const messageId = interaction.message.id;
     const optionIndex = parseInt(parts[2]);
     const userId = interaction.user.id;
     const isMulti = prefix === 'pm';
     const isAnonymous = prefix === 'pa';
 
+    // ── Record the vote ──
+    var userVoteAction = '';
     if (isMulti) {
-        // Multi-vote: toggle individual option
         const votes = getPollVotes(messageId);
         const userOptions = votes.get(userId) || [];
-        
         if (userOptions.includes(optionIndex)) {
             removePollOptionVoteFromDb(messageId, userId, optionIndex);
-            await interaction.reply({ content: '🗳️ Your vote for option ' + (optionIndex + 1) + ' has been removed.', ephemeral: true });
+            userVoteAction = 'removed from option ' + (optionIndex + 1);
         } else {
             setPollVoteInDb(messageId, userId, optionIndex);
-            await interaction.reply({ content: '🗳️ Your vote for option ' + (optionIndex + 1) + ' has been recorded!', ephemeral: true });
+            userVoteAction = 'cast for option ' + (optionIndex + 1);
         }
     } else if (isAnonymous) {
-        // Anonymous: same as single but hide voter info in footer
         const votes = getPollVotesFlat(messageId);
-        const previousVote = votes.get(userId);
-        
-        if (previousVote !== undefined) {
+        if (votes.has(userId)) {
             removePollVoteFromDb(messageId, userId);
-            await interaction.reply({ content: '🗳️ Your anonymous vote has been updated.', ephemeral: true });
         }
         setPollVoteInDb(messageId, userId, optionIndex);
-        await interaction.reply({ content: '🗳️ Your anonymous vote has been recorded!', ephemeral: true });
+        userVoteAction = 'anonymously cast';
     } else {
-        // Single vote (existing behavior)
         var votes = getPollVotesFlat(messageId);
-        const previousVote = votes.get(userId);
-        if (previousVote === optionIndex) {
+        if (votes.get(userId) === optionIndex) {
             removePollVoteFromDb(messageId, userId);
-            await interaction.reply({ content: '🗳️ Your vote has been removed.', ephemeral: true });
-            votes = getPollVotesFlat(messageId);
+            userVoteAction = 'removed';
         } else {
-            if (previousVote !== undefined) {
-                removePollVoteFromDb(messageId, userId);
-            }
+            if (votes.has(userId)) removePollVoteFromDb(messageId, userId);
             setPollVoteInDb(messageId, userId, optionIndex);
-            await interaction.reply({ content: '🗳️ Your vote has been recorded!', ephemeral: true });
-            votes = getPollVotesFlat(messageId);
+            userVoteAction = 'cast';
         }
     }
 
-    // Reload votes after change
-    const allVotes = getPollVotes(messageId);
-    const totalVoters = allVotes.size;
+    await interaction.reply({ content: '\u2705 Vote ' + userVoteAction + '!', ephemeral: true });
 
-    // Count votes per option (for multi, count each option separately)
+    // ── Reload votes ──
+    const allVotes = getPollVotes(messageId);
+    var totalVoters = allVotes.size;
+
     var voteCounts = {};
-    for (var [uid, options] of allVotes) {
-        for (var opt of options) {
+    for (var [uid, opts] of allVotes) {
+        for (var opt of opts) {
             voteCounts[opt] = (voteCounts[opt] || 0) + 1;
         }
     }
+    var totalVotes = Object.keys(voteCounts).reduce(function(a, k) { return a + voteCounts[k]; }, 0);
 
-    // Update the embed fields to show vote counts
+    // ── Build updated embed ──
     const embed = EmbedBuilder.from(interaction.message.embeds[0]);
-    const fields = embed.data.fields || [];
-    const updatedFields = fields.map(function (field, i) {
-        const count = voteCounts[i] || 0;
-        const bar = makeBar(count, totalVoters);
-        return {
-            name: field.name,
-            value: field.value.split('\n')[0] + '\n' + bar + ' **' + count + '** vote' + (count !== 1 ? 's' : ''),
-            inline: field.inline,
-        };
-    });
-    embed.spliceFields(0, fields.length, updatedFields);
     
-    let footerText = '🗳️ ' + totalVoters + ' total vote' + (totalVoters !== 1 ? 's' : '');
-    if (isMulti) footerText += ' • Multi-vote';
-    if (isAnonymous) footerText += ' • Anonymous';
-    embed.setFooter({ text: footerText + ' · Poll' });
+    // Get option names from the field names (strip emoji prefix)
+    const fields = embed.data.fields || [];
+    
+    var updatedFields = [];
+    for (var i = 0; i < fields.length; i++) {
+        const count = voteCounts[i] || 0;
+        const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+        const bar = makePollBar(count, totalVotes || 1);
+        
+        // Keep the original option name from the field
+        var optionName = fields[i].name;
+        updatedFields.push({
+            name: optionName,
+            value: bar + ' \u200B **' + count + '** vote' + (count !== 1 ? 's' : '') + ' (' + pct + '%)',
+            inline: fields[i].inline,
+        });
+    }
+    embed.spliceFields(0, fields.length, updatedFields);
 
-    await interaction.update({ embeds: [embed] });
+    // ── Build footer ──
+    var footerParts = ['\uD83D\uDDF3 ' + totalVoters + ' voter' + (totalVoters !== 1 ? 's' : '')];
+    if (totalVotes > totalVoters) footerParts.push(totalVotes + ' total votes');
+    if (isMulti) footerParts.push('\uD83D\uDD01 Multi');
+    if (isAnonymous) footerParts.push('\uD83D\uDD75\uFE0F Anonymous');
+    
+    // Check for end timestamp in description
+    var desc = embed.data.description || '';
+    var endMatch = desc.match(/Ends <t:(\d+):R>/);
+    if (endMatch) {
+        footerParts.push('Ends <t:' + endMatch[1] + ':R>');
+    }
+    
+    embed.setFooter({ text: footerParts.join(' \u2022 ') });
+
+    // ── Preserve buttons from original message ──
+    var components = interaction.message.components;
+    await interaction.update({ embeds: [embed], components: components.length > 0 ? components : undefined });
 }
 
-function makeBar(count, total) {
-    if (total === 0) return '▱▱▱▱▱▱▱▱▱▱';
-    const filled = Math.round((count / total) * 10);
-    var bar = '';
-    for (var i = 0; i < filled; i++) bar += '▰';
-    for (var i = filled; i < 10; i++) bar += '▱';
-    return bar;
+// ──────────────────── Poll Voters Button ────────────────────
+async function handlePollVoters(interaction) {
+    const messageId = interaction.message.id;
+    
+    // Load all votes
+    const db = getDb();
+    const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ? ORDER BY option_index, voted_at').all(messageId);
+    
+    if (rows.length === 0) {
+        return interaction.reply({ content: 'No votes have been cast yet.', ephemeral: true });
+    }
+    
+    // Group voters by option
+    var votersByOption = {};
+    var userIds = new Set();
+    for (var r of rows) {
+        if (!votersByOption[r.option_index]) votersByOption[r.option_index] = [];
+        votersByOption[r.option_index].push(r.user_id);
+        userIds.add(r.user_id);
+    }
+    
+    // Build response (only show first 15 voters per option)
+    var lines = ['**\uD83D\uDDF3\uFE0F Poll Voters**', ''];
+    var optNames = interaction.message.embeds[0]?.fields?.map(function(f) { return f.name; }) || [];
+    
+    for (var optIdx in votersByOption) {
+        var idx = parseInt(optIdx);
+        var voters = votersByOption[idx];
+        var name = optNames[idx] || 'Option ' + (idx + 1);
+        lines.push('**' + name + '** (' + voters.length + ' vote' + (voters.length !== 1 ? 's' : '') + '):');
+        
+        // Show first 15 voters as mentions
+        var showVoters = voters.slice(0, 15);
+        var mentions = showVoters.map(function(uid) { return '<@' + uid + '>'; }).join(', ');
+        if (voters.length > 15) mentions += ' +' + (voters.length - 15) + ' more';
+        lines.push(mentions);
+        lines.push('');
+    }
+    
+    lines.push('\uD83D\uDCCA **' + userIds.size + '** total voter' + (userIds.size !== 1 ? 's' : ''));
+    
+    await interaction.reply({ content: lines.join('\n').slice(0, 1900), ephemeral: true });
 }
 
 // ──────────────────── Select Menu Handler ────────────────────

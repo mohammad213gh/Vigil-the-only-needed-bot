@@ -325,52 +325,150 @@ async function executePoll(interaction) {
     const option4 = interaction.options.getString('option4');
     const multi = interaction.options.getBoolean('multi') || false;
     const anonymous = interaction.options.getBoolean('anonymous') || false;
+    const duration = interaction.options.getString('duration') || null;
 
     const options = [option1, option2];
     if (option3) options.push(option3);
     if (option4) options.push(option4);
 
     const emojis = ['1\uFE0F\u20E3', '2\uFE0F\u20E3', '3\uFE0F\u20E3', '4\uFE0F\u20E3'];
-    const labels = ['Option 1', 'Option 2', 'Option 3', 'Option 4'];
+    const optionColors = [0x5865F2, 0x3ba55c, 0xf1c40f, 0xe74c3c];
+    
+    // ── Calculate end time ──
+    let endTimestamp = null;
+    let durationLabel = '';
+    if (duration) {
+        const durationMap = { '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '6h': 21600, '24h': 86400, '3d': 259200, '7d': 604800 };
+        const seconds = durationMap[duration] || 0;
+        if (seconds > 0) {
+            endTimestamp = Math.floor(Date.now() / 1000) + seconds;
+            durationLabel = 'Ends <t:' + endTimestamp + ':R>';
+        }
+    }
 
-    // Add mode badges to title
-    let modeTag = '';
-    if (multi) modeTag += ' \uD83D\uDD01 Multi';
-    if (anonymous) modeTag += ' \uD83D\uDD75\uFE0F Anonymous';
+    // ── Build mode badges ──
+    let badges = [];
+    if (multi) badges.push('\uD83D\uDD01 Multi-vote');
+    if (anonymous) badges.push('\uD83D\uDD75\uFE0F Anonymous');
+    if (durationLabel) badges.push('\u23F3 ' + durationLabel);
+    const badgeStr = badges.length > 0 ? badges.join(' \u2022 ') : null;
 
-    const fields = options.map((opt, i) => ({
-        name: emojis[i] + ' ' + opt,
-        value: '\uD83D\uDDF3\uFE0F **0** votes',
-        inline: true,
-    }));
-
+    // ── Build embed ──
     const embed = new EmbedBuilder()
         .setColor(0x5865F2)
-        .setTitle('\uD83D\uDDF3\uFE0F Poll: ' + question)
-        .setDescription(modeTag || null)
-        .addFields(fields)
-        .setFooter({ text: '\uD83D\uDDF3\uFE0F 0 total votes' + (anonymous ? ' \u2022 Anonymous' : '') })
+        .setAuthor({ name: interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+        .setTitle('\uD83D\uDDF3\uFE0F ' + question)
+        .setDescription(badgeStr)
         .setTimestamp();
 
-    // Determine custom ID prefix based on poll type
-    const votePrefix = multi ? 'pm_vote_' : (anonymous ? 'pa_vote_' : 'pv_vote_');
+    // Add each option as a field with progress bar placeholder
+    for (let i = 0; i < options.length; i++) {
+        const bar = '\u25CB \u200B'.repeat(10); // empty bar placeholder
+        embed.addFields({
+            name: emojis[i] + ' ' + options[i],
+            value: bar + '\n\uD83D\uDDF3 **0** vote' + (multi ? 's' : '') + ' (0%)',
+            inline: true,
+        });
+    }
 
-    // Build vote buttons
+    embed.setFooter({ text: '\uD83D\uDDF3 0 total votes' + (anonymous ? ' \u2022 \uD83D\uDD75\uFE0F Anonymous' : '') });
+
+    // ── Also set a cool color per option count ──
+    embed.setColor(options.length === 2 ? 0x5865F2 : options.length === 3 ? 0x9B59B6 : 0xE74C3C);
+
+    // ── Build vote buttons ──
+    const votePrefix = multi ? 'pm_vote_' : (anonymous ? 'pa_vote_' : 'pv_vote_');
     const buttons = options.map((opt, i) => {
         return new ButtonBuilder()
             .setCustomId(votePrefix + i)
-            .setLabel(labels[i])
             .setStyle(ButtonStyle.Primary)
+            .setLabel('Option ' + (i + 1))
             .setEmoji(emojis[i]);
     });
 
-    // Max 5 buttons per row — split into rows of 2 or 3
     const rows = [];
     for (let i = 0; i < buttons.length; i += 2) {
         rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 2)));
     }
 
-    await interaction.reply({ embeds: [embed], components: rows });
+    // Add Show Voters button (not for anonymous polls)
+    if (!anonymous) {
+        var votersBtn = new ButtonBuilder()
+            .setCustomId('pvv_voters')
+            .setLabel('Show Voters')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('\uD83D\uDC65');
+        rows.push(new ActionRowBuilder().addComponents(votersBtn));
+    }
+
+    // ── Send the poll ──
+    const reply = await interaction.reply({ embeds: [embed], components: rows, fetchReply: true });
+    const messageId = reply.id;
+
+    // ── Schedule auto-end if duration set ──
+    if (endTimestamp) {
+        const ms = (endTimestamp - Math.floor(Date.now() / 1000)) * 1000;
+        setTimeout(async () => {
+            try {
+                const channel = interaction.channel;
+                const msg = await channel.messages.fetch(messageId).catch(() => null);
+                if (!msg) return;
+                
+                // Calculate final results
+                const { getDb } = require('../db');
+                const db = getDb();
+                const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
+                var voteCounts = {};
+                var voters = {};
+                for (var r of rows) {
+                    voteCounts[r.option_index] = (voteCounts[r.option_index] || 0) + 1;
+                    if (!voters[r.option_index]) voters[r.option_index] = [];
+                    voters[r.option_index].push(r.user_id);
+                }
+                var totalVotes = Object.keys(voteCounts).reduce(function(a, k) { return a + voteCounts[k]; }, 0);
+                
+                // Find winner(s)
+                var maxVotes = 0;
+                var winners = [];
+                for (var k in voteCounts) {
+                    if (voteCounts[k] > maxVotes) {
+                        maxVotes = voteCounts[k];
+                        winners = [parseInt(k)];
+                    } else if (voteCounts[k] === maxVotes && maxVotes > 0) {
+                        winners.push(parseInt(k));
+                    }
+                }
+                
+                const finalEmbed = EmbedBuilder.from(msg.embeds[0])
+                    .setColor(0x95A5A6)
+                    .setTitle('\uD83D\uDDF3\uFE0F Poll Ended: ' + question)
+                    .setDescription((badgeStr || '') + '\n\n\uD83D\uDD14 **Poll has ended!** ' + (winners.length > 0 ? '\n\uD83C\uDFC6 **Winner:** ' + winners.map(function(w) { return '**' + options[w] + '**'; }).join(', ') : ''));
+                
+                // Rebuild fields with final results
+                finalEmbed.spliceFields(0, embed.data.fields?.length || 0);
+                for (let i = 0; i < options.length; i++) {
+                    const count = voteCounts[i] || 0;
+                    const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                    const barLen = Math.round((count / Math.max(totalVotes, 1)) * 10);
+                    var barChars = '';
+                    var isWinner = winners.includes(i);
+                    for (var b = 0; b < 10; b++) {
+                        barChars += b < barLen ? (isWinner ? '\uD83D\uDFE2' : '\uD83D\uDD35') : '\u26AA';
+                    }
+                    finalEmbed.addFields({
+                        name: emojis[i] + ' ' + options[i] + (isWinner ? ' \uD83C\uDFC6' : ''),
+                        value: barChars + ' \u200B **' + count + '** vote' + (count !== 1 ? 's' : '') + ' (' + pct + '%)',
+                        inline: true,
+                    });
+                }
+                
+                finalEmbed.setFooter({ text: '\uD83D\uDDF3 ' + totalVotes + ' total votes \u2022 Poll ended' });
+                await msg.edit({ embeds: [finalEmbed], components: [] });
+            } catch (err) { 
+                console.error('[Poll End Error]', err.message);
+            }
+        }, ms);
+    }
 }
 
 async function executeAnnounce(interaction) {
