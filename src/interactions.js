@@ -316,8 +316,6 @@ async function handlePollVote(interaction, parts) {
         }
     }
 
-    await interaction.reply({ content: '\u2705 Vote ' + userVoteAction + '!', ephemeral: true });
-
     // ── Reload votes ──
     const allVotes = getPollVotes(messageId);
     var totalVoters = allVotes.size;
@@ -344,7 +342,6 @@ async function handlePollVote(interaction, parts) {
         const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
         var isLeading = (leadingIdx === i && count > 0);
         
-        // Get clean option name, add crown for leading
         var optionName = fields[i].name;
         var badge = '';
         if (isLeading) badge = '  \uD83D\uDC51';
@@ -364,7 +361,6 @@ async function handlePollVote(interaction, parts) {
     if (isMulti) footerParts.push('\uD83D\uDD01 Multi');
     if (isAnonymous) footerParts.push('\uD83D\uDD75\uFE0F Anonymous');
     
-    // Check for end timestamp in description
     var desc = embed.data.description || '';
     var endMatch = desc.match(/Ends <t:(\d+):R>/);
     if (endMatch) {
@@ -373,9 +369,12 @@ async function handlePollVote(interaction, parts) {
     
     embed.setFooter({ text: footerParts.join('  \u2022  ') });
 
-    // ── Preserve buttons from original message ──
+    // ── Update embed FIRST (this acknowledges the interaction) ──
     var components = interaction.message.components;
     await interaction.update({ embeds: [embed], components: components.length > 0 ? components : undefined });
+
+    // ── Then send confirmation as follow-up (reply already used by update) ──
+    await interaction.followUp({ content: '\u2705 Vote ' + userVoteAction + '!', ephemeral: true });
 }
 
 // ──────────────────── Poll Voters Button ────────────────────
