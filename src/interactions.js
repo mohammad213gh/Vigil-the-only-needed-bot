@@ -5,7 +5,7 @@
 const { EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
 const { addWarning } = require('./warnings');
 const { getDb } = require('./db');
-const { makePollBar, getLeadingOption } = require('./helpers');
+const { getLeadingOption } = require('./helpers');
 
 // ─── Custom ID Prefixes ───
 //   ck_{initiatorId}_{targetId}         = confirm kick

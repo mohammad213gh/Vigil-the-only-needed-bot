@@ -1,5 +1,5 @@
 const { EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { truncate, makePollBar, getLeadingOption } = require('../helpers');
+const { truncate } = require('../helpers');
 const { getGuildConfig, updateGuildConfig } = require('../config');
 const { deployCommands } = require('../deploy');
 
