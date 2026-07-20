@@ -178,12 +178,14 @@ async function showSrv(id){curSrv=id;document.getElementById('srvList').style.di
       '<button class="mgmt-tab" data-tab="channels" onclick="showSrvTab(\'channels\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Channels</button>'+
       '<button class="mgmt-tab" data-tab="logging" onclick="showSrvTab(\'logging\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Logging</button>'+
       '<button class="mgmt-tab" data-tab="audit" onclick="showSrvTab(\'audit\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Audit Log</button>'+
+      '<button class="mgmt-tab" data-tab="greetings" onclick="showSrvTab(\'greetings\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Greetings</button>'+
       '</div></div>'+
       '<div class="mgmt-panel" data-panel="overview"><div class="grid grid-2">'+(d.logging&&d.logging.perCategory?'<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>Logging</div><table class="tbl"><tr><th>Category</th><th>Channel</th><th>Status</th></tr>'+Object.entries(d.logging.perCategory).map(([cat,info])=>'<tr><td style="text-transform:capitalize;">'+cat+'</td><td>'+(info.channel?'<code>#'+info.channel+'</code>':'<span style="color:var(--text-muted);">Default</span>')+'</td><td><span class="tag '+(info.enabled?'green':'red')+'\">'+(info.enabled?'On':'Off')+'</span></td></tr>').join('')+'</table></div>':'')+'</div></div>'+
       '<div class="mgmt-panel" data-panel="roles" style="display:none;"><div id="mgmtRoles"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="channels" style="display:none;"><div id="mgmtChannels"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="logging" style="display:none;"><div id="mgmtLogging"><div class="loading"><div class="spin"></div></div></div></div>'+
-      '<div class="mgmt-panel" data-panel="audit" style="display:none;"><div id="mgmtAudit"><div class="loading"><div class="spin"></div></div></div></div>'}catch{dt.innerHTML='<p style="color:#ed4245;padding:16px;">Failed to load.</p>'}}
+      '<div class="mgmt-panel" data-panel="audit" style="display:none;"><div id="mgmtAudit"><div class="loading"><div class="spin"></div></div></div></div>'+
+      '<div class="mgmt-panel" data-panel="greetings" style="display:none;"><div id="mgmtGreetings"><div class="loading"><div class="spin"></div></div></div></div>'}catch{dt.innerHTML='<p style="color:#ed4245;padding:16px;">Failed to load.</p>'}}
 function backSrv(){curSrv=null;document.getElementById('srvList').style.display='';document.getElementById('srvDetail').style.display='none'}
 
 // ═══ SERVER MANAGEMENT ═══
@@ -195,7 +197,8 @@ function showSrvTab(tab,serverId){
   if(tab==='roles'&&serverId)loadSrvRoles(serverId);
   if(tab==='channels'&&serverId)loadSrvChannels(serverId);
   if(tab==='logging'&&serverId)loadSrvLogging(serverId);
-  if(tab==='audit'&&serverId)loadSrvAudit(serverId)
+  if(tab==='audit'&&serverId)loadSrvAudit(serverId);
+  if(tab==='greetings'&&serverId)loadSrvGreetings(serverId)
 }
 async function loadSrvRoles(id){try{const r=await fetch('/api/server/'+id+'/roles'),roles=await r.json();const el=document.getElementById('mgmtRoles');el.innerHTML=roles.slice(0,40).map(r=>'<div class="srv-card" style="cursor:default;padding:8px 12px;"><div style="width:10px;height:10px;border-radius:50%;background:'+(r.color||'rgba(255,255,255,0.1)')+';flex-shrink:0;"></div><div class="si"><h3>'+r.name+'</h3><p style="font-size:10px;">'+(r.managed?'Managed by integration':'ID: '+r.id)+'</p></div><span style="font-size:10px;color:var(--text-dim);">'+r.memberCount+' members</span></div>').join('')}catch{document.getElementById('mgmtRoles').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
 async function loadSrvChannels(id){try{const r=await fetch('/api/server/'+id+'/channels'),channels=await r.json();const el=document.getElementById('mgmtChannels');const typeColors={Text:'rgba(59,165,92,0.12)',Voice:'rgba(88,101,242,0.12)',Announcement:'rgba(241,196,15,0.12)',Forum:'rgba(241,196,15,0.12)',Unknown:'rgba(255,255,255,0.04)'};el.innerHTML=channels.slice(0,50).map(c=>'<div class="srv-card" style="cursor:default;padding:8px 12px;"><span class="tag '+(c.nsfw?'red':'green')+'" style="margin-right:8px;">#'+c.name+'</span><div class="si"><h3 style="font-size:12px;">'+c.type+(c.topic?' — '+c.topic:'')+'</h3></div>'+(c.memberCount!==null?'<span style="font-size:10px;color:var(--text-dim);">'+c.memberCount+' users</span>':'')+(c.bitrate?'<span style="font-size:10px;color:var(--text-dim);">'+(c.bitrate/1000)+'kbps</span>':'')+'</div>').join('')}catch{document.getElementById('mgmtChannels').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
@@ -232,6 +235,110 @@ async function loadBrand(){try{const r=await fetch('/api/status');if(r.ok){const
 
 function stRf(){if(rTimer)clearInterval(rTimer);rTimer=setInterval(()=>{loadOv();loadRm()},rInt*1000)}
 window.addEventListener('resize',()=>{rsBg();startBg(bgStyle)});
+// ═══ GREETINGS (Welcome / Goodbye) ═══
+
+function greetFieldsHtml(cfg,type,serverId,channels){
+  const typeLabel=type==='welcome'?'Welcome':'Goodbye';
+  var chOpts='<option value="">No channel</option>';
+  if(channels&&channels.length)channels.forEach(function(c){chOpts+='<option value="'+c.id+'"'+(c.id===cfg.channelId?' selected':'')+'>#'+c.name+'</option>'});
+  return '<div style="margin-bottom:16px;">'+
+    '<div class="tg-wr" onclick="toggleGreeting(\''+serverId+'\',\''+type+'\')"><div class="tg '+(cfg.enabled?'on':'')+'" id="tg_'+type+'_'+serverId+'"></div><div class="tg-lbl"><b>'+typeLabel+' Messages</b><small>Enable or disable '+typeLabel.toLowerCase()+' messages for this server</small></div></div>'+
+    '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Channel</label><select id="grCh_'+type+'_'+serverId+'" style="font-size:11px;">'+chOpts+'</select></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Plain Text <small style="color:var(--text-muted);">(above embed, placeholders: {user} {server} {membercount})</small></label><input type="text" id="grMsg_'+type+'_'+serverId+'" value="'+(cfg.content||'')+'" placeholder="e.g. Welcome {user}!" style="font-size:11px;"></div>'+
+      '<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:4px;"><label style="font-size:11px;color:var(--text-dim);font-weight:600;">Embed Settings</label></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Title</label><input type="text" id="grT_'+type+'_'+serverId+'" value="'+(cfg.embedTitle||'')+'" placeholder="e.g. 👋 Welcome!" style="font-size:11px;"></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Description</label><textarea id="grD_'+type+'_'+serverId+'" rows="2" placeholder="e.g. Welcome {user} to **{server}**!" style="font-size:11px;resize:vertical;">'+(cfg.embedDescription||'')+'</textarea></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Color <small style="color:var(--text-muted);">(hex)</small></label><div style="display:flex;gap:6px;align-items:center;"><input type="color" id="grCo_'+type+'_'+serverId+'" value="'+(cfg.embedColor||'#5865F2')+'" oninput="document.getElementById(\'grCoT_'+type+'_'+serverId+'\').value=this.value" style="width:32px;height:32px;border-radius:6px;border:1px solid var(--border);padding:2px;background:none;cursor:pointer;"><input type="text" id="grCoT_'+type+'_'+serverId+'" value="'+(cfg.embedColor||'#5865F2')+'" oninput="var c=this.value;/^#[0-9a-f]{6}$/i.test(c)&&(document.getElementById(\'grCo_'+type+'_'+serverId+'\').value=c)" placeholder="#5865F2" style="font-size:11px;width:100px;font-family:monospace;"></div></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Footer</label><input type="text" id="grF_'+type+'_'+serverId+'" value="'+(cfg.embedFooter||'')+'" placeholder="e.g. Member #{membercount}" style="font-size:11px;"></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Footer Icon URL</label><input type="url" id="grFI_'+type+'_'+serverId+'" value="'+(cfg.embedFooterIcon||'')+'" placeholder="https://...icon.png" style="font-size:11px;"></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Thumbnail URL</label><input type="url" id="grTh_'+type+'_'+serverId+'" value="'+(cfg.embedThumbnail||'')+'" placeholder="https://...image.png (square, top-right)" style="font-size:11px;"></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Image URL</label><input type="url" id="grIm_'+type+'_'+serverId+'" value="'+(cfg.embedImage||'')+'" placeholder="https://...image.gif (large banner)" style="font-size:11px;"></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Author Name</label><input type="text" id="grA_'+type+'_'+serverId+'" value="'+(cfg.embedAuthor||'')+'" placeholder="e.g. Server News" style="font-size:11px;"></div>'+
+      '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">Author Icon URL</label><input type="url" id="grAI_'+type+'_'+serverId+'" value="'+(cfg.embedAuthorIcon||'')+'" placeholder="https://...icon.png" style="font-size:11px;"></div>'+
+    '</div>'+
+    '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">'+
+      '<button class="btn btn-s" onclick="saveGreetingConfig(\''+serverId+'\',\''+type+'\')" style="padding:6px 14px;font-size:10px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:10px;height:10px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save '+typeLabel+'</button>'+
+      '<button class="btn btn-s" onclick="resetGreetingConfig(\''+serverId+'\',\''+type+'\')" style="padding:6px 14px;font-size:10px;background:rgba(237,66,69,0.1);color:#ed4245;">Reset '+typeLabel+'</button>'+
+    '</div></div>';
+}
+
+async function loadSrvGreetings(id){
+  const el=document.getElementById('mgmtGreetings');
+  if(!el)return;
+  el.innerHTML='<div class="loading"><div class="spin"></div></div>';
+  try{
+    const [gr,ch]=await Promise.all([
+      fetch('/api/server/'+id+'/greetings').then(function(r){return r.json()}),
+      fetch('/api/server/'+id+'/channels').then(function(r){return r.json()}).catch(function(){return []})
+    ]);
+    var w=gr.welcome||{},g=gr.goodbye||{};
+    var txtChs=ch.filter(function(c){return c.typeId===0||c.typeId===5});
+    el.innerHTML='<div style="display:flex;flex-direction:column;gap:20px;max-width:500px;">'+
+      '<div class="card" style="padding:14px;"><div style="font-size:13px;font-weight:600;color:#3ba55c;margin-bottom:8px;">👋 Welcome</div>'+greetFieldsHtml(w,'welcome',id,txtChs)+'</div>'+
+      '<div class="card" style="padding:14px;"><div style="font-size:13px;font-weight:600;color:#ed4245;margin-bottom:8px;">👋 Goodbye</div>'+greetFieldsHtml(g,'goodbye',id,txtChs)+'</div>'+
+      '<div class="card" style="padding:14px;">'+
+        '<div style="font-size:12px;font-weight:600;margin-bottom:6px;">📝 Available Placeholders</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:10px;color:var(--text-dim);">'+
+          '<code style="font-size:10px;">{user}</code><span>@Mentions the user</span>'+
+          '<code style="font-size:10px;">{username}</code><span>User\'s full tag</span>'+
+          '<code style="font-size:10px;">{server}</code><span>Server name</span>'+
+          '<code style="font-size:10px;">{membercount}</code><span>Total member count</span>'+
+          '<code style="font-size:10px;">{userid}</code><span>User\'s Discord ID</span>'+
+          '<code style="font-size:10px;">{serverid}</code><span>Server\'s ID</span>'+
+          '<code style="font-size:10px;">{age}</code><span>Account age</span>'+
+          '<code style="font-size:10px;">{created}</code><span>Account creation date</span>'+
+        '</div></div></div>';
+  }catch{el.innerHTML='<div class="empty"><p>Failed to load greetings config. Make sure the bot has Manage Server permission.</p></div>'}
+}
+
+async function toggleGreeting(serverId,type){
+  const tg=document.getElementById('tg_'+type+'_'+serverId);
+  if(!tg)return;
+  const enabled=!tg.classList.contains('on');
+  try{
+    const r=await fetch('/api/server/'+serverId+'/greetings/'+type,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled})});
+    const d=await r.json();
+    if(d.success)tg.classList.toggle('on',enabled);
+  }catch{}
+}
+
+async function saveGreetingConfig(serverId,type){
+  const config={
+    enabled:document.getElementById('tg_'+type+'_'+serverId)?.classList.contains('on')||false,
+    channelId:document.getElementById('grCh_'+type+'_'+serverId)?.value||null,
+    content:document.getElementById('grMsg_'+type+'_'+serverId)?.value||null,
+    embedTitle:document.getElementById('grT_'+type+'_'+serverId)?.value||null,
+    embedDescription:document.getElementById('grD_'+type+'_'+serverId)?.value||null,
+    embedColor:document.getElementById('grCoT_'+type+'_'+serverId)?.value||null,
+    embedFooter:document.getElementById('grF_'+type+'_'+serverId)?.value||null,
+    embedFooterIcon:document.getElementById('grFI_'+type+'_'+serverId)?.value||null,
+    embedThumbnail:document.getElementById('grTh_'+type+'_'+serverId)?.value||null,
+    embedImage:document.getElementById('grIm_'+type+'_'+serverId)?.value||null,
+    embedAuthor:document.getElementById('grA_'+type+'_'+serverId)?.value||null,
+    embedAuthorIcon:document.getElementById('grAI_'+type+'_'+serverId)?.value||null,
+  };
+  try{
+    const r=await fetch('/api/server/'+serverId+'/greetings/'+type,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)});
+    const d=await r.json();
+    if(d.success)showToast(type.charAt(0).toUpperCase()+type.slice(1)+' config saved!');
+    else showToast('Failed to save',true);
+  }catch{showToast('Failed to save',true)}
+}
+
+async function resetGreetingConfig(serverId,type){
+  if(!confirm('Reset '+type+' settings to defaults?'))return;
+  const defaults=type==='welcome'
+    ?{enabled:false,channelId:null,content:null,embedTitle:'👋 Welcome!',embedDescription:'Welcome {user} to **{server}**!',embedColor:'#5865F2',embedFooter:'Member #{membercount}',embedFooterIcon:null,embedThumbnail:null,embedImage:null,embedAuthor:null,embedAuthorIcon:null}
+    :{enabled:false,channelId:null,content:null,embedTitle:'👋 Goodbye!',embedDescription:'{user} has left **{server}**.',embedColor:'#E74C3C',embedFooter:'Member #{membercount}',embedFooterIcon:null,embedThumbnail:null,embedImage:null,embedAuthor:null,embedAuthorIcon:null};
+  try{
+    const r=await fetch('/api/server/'+serverId+'/greetings/'+type,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(defaults)});
+    const d=await r.json();
+    if(d.success){showToast(type+' reset!');loadSrvGreetings(serverId)}
+    else showToast('Failed',true);
+  }catch{showToast('Failed',true)}
+}
+
 window.addEventListener('beforeunload',()=>{if(bgAnimId)cancelAnimationFrame(bgAnimId)});
 
 checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');initDock();await loadOv();await loadAn();await loadServers();await loadAct();await loadRm();await loadSys();loadBrand();stRf()});
