@@ -150,20 +150,41 @@ function replacePlaceholders(text, member, type) {
     const guild = member.guild;
     const user = member.user;
     const memberCount = guild.memberCount;
+    const botCount = guild.members.cache.filter(function(m) { return m.user.bot; }).size;
+    const humanCount = memberCount - botCount;
     
     const replacements = {
+        // User
         '{user}': '<@' + user.id + '>',
         '{username}': user.tag,
+        '{name}': user.username,
+        '{displayname}': member.displayName || user.username,
+        '{mention}': '<@' + user.id + '>',
+        '{userid}': user.id,
+        '{discriminator}': user.discriminator,
+        '{avatar}': user.displayAvatarURL({ size: 128 }),
+        '{created}': '<t:' + Math.floor(user.createdTimestamp / 1000) + ':R>',
+        '{age}': formatUptime(Date.now() - user.createdTimestamp),
+        // Server
         '{server}': guild.name,
+        '{serverid}': guild.id,
+        '{servericon}': guild.iconURL({ size: 128 }) || '',
+        '{owner}': '<@' + guild.ownerId + '>',
+        '{ownerid}': guild.ownerId,
         '{membercount}': String(memberCount),
         '{members}': String(memberCount),
-        '{userid}': user.id,
-        '{serverid}': guild.id,
-        '{age}': formatUptime(Date.now() - user.createdTimestamp),
-        '{created}': '<t:' + Math.floor(user.createdTimestamp / 1000) + ':R>',
-        '{name}': user.username,
-        '{discriminator}': user.discriminator,
-        '{mention}': '<@' + user.id + '>',
+        '{botcount}': String(botCount),
+        '{humancount}': String(humanCount),
+        '{channelcount}': String(guild.channels.cache.size),
+        '{textchannelcount}': String(guild.channels.cache.filter(function(c) { return c.type === 0; }).size),
+        '{voicechannelcount}': String(guild.channels.cache.filter(function(c) { return c.type === 2; }).size),
+        '{rolecount}': String(guild.roles.cache.size),
+        '{boosts}': String(guild.premiumSubscriptionCount || 0),
+        '{boosttier}': String(guild.premiumTier),
+        // Date/time
+        '{date}': new Date().toLocaleDateString(),
+        '{time}': new Date().toLocaleTimeString(),
+        '{year}': String(new Date().getFullYear()),
     };
     
     // Type-specific placeholders
@@ -178,6 +199,7 @@ function replacePlaceholders(text, member, type) {
         replacements['{duration}'] = member.joinedAt
             ? formatUptime(Date.now() - member.joinedAt.getTime())
             : '*Unknown*';
+        replacements['{left}'] = '<t:' + Math.floor(Date.now() / 1000) + ':R>';
     }
     
     let result = text;
