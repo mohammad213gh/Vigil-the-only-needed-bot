@@ -242,8 +242,7 @@ function greetFieldsHtml(cfg,type,serverId,channels){
   var chOpts='<option value="">— No channel (disabled) —</option>';
   if(channels&&channels.length)channels.forEach(function(c){chOpts+='<option value="'+c.id+'"'+(c.id===cfg.channelId?' selected':'')+'>#'+c.name+'</option>'});
   var cId='gr_'+type+'_'+serverId;
-  return 
-  '<div style="margin-bottom:16px;">'+
+  return '<div style="margin-bottom:16px;">'+
     // Enable toggle
     '<div class="tg-wr" onclick="toggleGreeting(\''+serverId+'\',\''+type+'\')"><div class="tg '+(cfg.enabled?'on':'')+'" id="tg_'+type+'_'+serverId+'"></div><div class="tg-lbl"><b style="font-size:14px;">'+typeLabel+' Messages</b><small>When enabled, this message will be sent automatically when someone '+(type==='welcome'?'joins':'leaves')+' the server.</small></div></div>'+
     
