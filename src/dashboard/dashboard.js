@@ -242,74 +242,77 @@ function greetFieldsHtml(cfg,type,serverId,channels){
   var chOpts='<option value="">— No channel (disabled) —</option>';
   if(channels&&channels.length)channels.forEach(function(c){chOpts+='<option value="'+c.id+'"'+(c.id===cfg.channelId?' selected':'')+'>#'+c.name+'</option>'});
   var cId='gr_'+type+'_'+serverId;
-  return '<div style="margin-bottom:16px;">'+
+  return 
+  '<div style="margin-bottom:16px;">'+
     // Enable toggle
-    '<div class="tg-wr" onclick="toggleGreeting(\''+serverId+'\',\''+type+'\')"><div class="tg '+(cfg.enabled?'on':'')+'" id="tg_'+type+'_'+serverId+'"></div><div class="tg-lbl"><b>'+typeLabel+' Messages</b><small>When enabled, this message will be sent automatically when someone '+(type==='welcome'?'joins':'leaves')+' the server.</small></div></div>'+
+    '<div class="tg-wr" onclick="toggleGreeting(\''+serverId+'\',\''+type+'\')"><div class="tg '+(cfg.enabled?'on':'')+'" id="tg_'+type+'_'+serverId+'"></div><div class="tg-lbl"><b style="font-size:14px;">'+typeLabel+' Messages</b><small>When enabled, this message will be sent automatically when someone '+(type==='welcome'?'joins':'leaves')+' the server.</small></div></div>'+
     
     // ── EMBED PREVIEW ──
-    '<div style="margin:14px 0;position:relative;">'+
-      '<div style="font-size:10px;color:var(--text-dim);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">📋 Live Preview</div>'+
-      '<div id="pv_'+type+'_'+serverId+'" style="background:var(--bg);border-radius:8px;border:1px solid var(--border);overflow:hidden;font-size:12px;line-height:1.5;">'+
+    '<div style="margin:16px 0;">'+
+      '<div class="tw-h" style="font-size:12px;">📋 Live Preview</div>'+
+      '<div style="padding:14px;background:rgba(255,255,255,0.01);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);">'+
+      '<div id="pv_'+type+'_'+serverId+'" style="background:var(--bg);border-radius:8px;border:1px solid var(--border);overflow:hidden;font-size:13px;line-height:1.5;">'+
         // Colored left border
-        '<div style="padding:12px 14px;border-left:4px solid '+(cfg.embedColor||'#5865F2')+';position:relative;">'+
+        '<div style="padding:14px 16px;border-left:4px solid '+(cfg.embedColor||'#5865F2')+';position:relative;">'+
           // Author line
-          (cfg.embedAuthor?'<div id="pvA_'+type+'_'+serverId+'" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);margin-bottom:4px;">'+(cfg.embedAuthorIcon?'<img src="'+cfg.embedAuthorIcon+'" style="width:16px;height:16px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'">':'')+'<span>'+cfg.embedAuthor+'</span></div>':'')+
+          (cfg.embedAuthor?'<div id="pvA_'+type+'_'+serverId+'" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:6px;">'+(cfg.embedAuthorIcon?'<img src="'+cfg.embedAuthorIcon+'" style="width:18px;height:18px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'">':'')+'<span>'+cfg.embedAuthor+'</span></div>':'')+
           // Title
-          '<div id="pvT_'+type+'_'+serverId+'" style="font-weight:700;color:#fff;margin-bottom:4px;">'+(cfg.embedTitle||'✨ Welcome!')+'</div>'+
+          '<div id="pvT_'+type+'_'+serverId+'" style="font-weight:700;color:#fff;margin-bottom:6px;font-size:15px;">'+(cfg.embedTitle||'✨ Welcome!')+'</div>'+
           // Description
-          '<div id="pvD_'+type+'_'+serverId+'" style="color:var(--text-dim);font-size:11px;margin-bottom:6px;">'+(cfg.embedDescription||'Welcome {user} to **{server}**!').replace(/\*\*/g,'<b>').replace(/\*/g,'<i>')+'</div>'+
+          '<div id="pvD_'+type+'_'+serverId+'" style="color:var(--text-dim);font-size:13px;margin-bottom:8px;">'+(cfg.embedDescription||'Welcome {user} to **{server}**!').replace(/\*\*/g,'<b>').replace(/\*/g,'<i>')+'</div>'+
           // Thumbnail (right side)
-          (cfg.embedThumbnail?'<div style="position:absolute;top:12px;right:14px;"><img src="'+cfg.embedThumbnail+'" style="width:40px;height:40px;border-radius:4px;object-fit:cover;" onerror="this.style.display=\'none\'"></div>':'')+
-          // Image (if no thumbnail, show below desc)
-          (cfg.embedImage?'<div style="margin-top:4px;"><img src="'+cfg.embedImage+'" style="max-width:100%;max-height:100px;border-radius:4px;object-fit:cover;" onerror="this.style.display=\'none\'"></div>':'')+
+          (cfg.embedThumbnail?'<div style="position:absolute;top:14px;right:16px;"><img src="'+cfg.embedThumbnail+'" style="width:50px;height:50px;border-radius:6px;object-fit:cover;" onerror="this.style.display=\'none\'"></div>':'')+
+          // Image
+          (cfg.embedImage?'<div style="margin-top:6px;"><img src="'+cfg.embedImage+'" style="max-width:100%;max-height:140px;border-radius:6px;object-fit:cover;" onerror="this.style.display=\'none\'"></div>':'')+
           // Footer
-          (cfg.embedFooter?'<div id="pvF_'+type+'_'+serverId+'" style="font-size:10px;color:var(--text-muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;">'+(cfg.embedFooterIcon?'<img src="'+cfg.embedFooterIcon+'" style="width:14px;height:14px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'">':'')+'<span>'+cfg.embedFooter+'</span></div>':'')+
-        '</div></div></div>'+
+          (cfg.embedFooter?'<div id="pvF_'+type+'_'+serverId+'" style="font-size:11px;color:var(--text-muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">'+(cfg.embedFooterIcon?'<img src="'+cfg.embedFooterIcon+'" style="width:16px;height:16px;border-radius:50%;object-fit:cover;" onerror="this.style.display=\'none\'">':'')+'<span>'+cfg.embedFooter+'</span></div>':'')+
+        '</div></div></div></div>'+
     
     // ── EMBED DIAGRAM WITH ARROWS ──
-    '<div style="margin-bottom:12px;position:relative;">'+
-      '<div style="font-size:10px;color:var(--text-dim);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">📐 Embed Structure <small style="font-weight:400;text-transform:none;">— where each field appears</small></div>'+
-      '<div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:9px;line-height:1.6;font-family:monospace;position:relative;">'+
-        '<div style="color:var(--accent);font-weight:700;margin-bottom:2px;">AUTHOR <span style="color:var(--text-muted);font-weight:400;">← Author Name + Icon</span></div>'+
-        '<div style="color:#fff;font-weight:700;margin-bottom:2px;">TITLE <span style="color:var(--text-muted);font-weight:400;">← Embed Title</span></div>'+
-        '<div style="color:var(--text-dim);margin-bottom:6px;">Description text goes here... <span style="color:var(--text-muted);">← Description (main body)</span></div>'+
-        '<div style="display:flex;gap:4px;margin-bottom:4px;"><div style="flex:1;">'+
-          '<div style="background:rgba(237,66,69,0.08);border-left:2px solid #ed4245;padding:2px 4px;margin-bottom:2px;"><span style="color:#ed4245;">⬌</span> THUMBNAIL <span style="color:var(--text-muted);">← Top-right square</span></div>'+
-          '<div style="background:rgba(59,165,92,0.08);border-left:2px solid #3ba55c;padding:2px 4px;margin-bottom:2px;"><span style="color:#3ba55c;">⬌</span> IMAGE <span style="color:var(--text-muted);">← Large banner below text</span></div>'+
-        '</div></div>'+
-        '<div style="color:var(--text-muted);border-top:1px solid var(--border);padding-top:4px;margin-top:2px;font-size:8px;">FOOTER <span style="color:var(--text-muted);">← Bottom text + icon</span></div>'+
-      '</div></div>'+
+    '<div style="margin-bottom:16px;">'+
+      '<div class="tw-h" style="font-size:12px;">📐 Embed Structure <span style="font-weight:400;color:var(--text-muted);font-size:11px;">— where each field appears</span></div>'+
+      '<div style="padding:14px 16px;background:rgba(255,255,255,0.01);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);">'+
+      '<div style="font-size:13px;line-height:1.8;">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="color:var(--accent);font-weight:700;">AUTHOR</span><span style="color:var(--text-muted);">← Author Name + Icon</span></div>'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span style="color:#fff;font-weight:700;">TITLE</span><span style="color:var(--text-muted);">← Embed Title</span></div>'+
+        '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;"><span style="color:var(--text-dim);flex-shrink:0;">Description text...</span><span style="color:var(--text-muted);">← Description (main body)</span></div>'+
+        '<div style="display:flex;gap:12px;margin-bottom:4px;">'+
+          '<div style="display:flex;align-items:center;gap:6px;background:rgba(237,66,69,0.08);border-left:2px solid #ed4245;padding:3px 8px;border-radius:3px;"><span style="color:#ed4245;font-weight:600;">THUMBNAIL</span><span style="color:var(--text-muted);font-size:12px;">← Top-right square</span></div>'+
+          '<div style="display:flex;align-items:center;gap:6px;background:rgba(59,165,92,0.08);border-left:2px solid #3ba55c;padding:3px 8px;border-radius:3px;"><span style="color:#3ba55c;font-weight:600;">IMAGE</span><span style="color:var(--text-muted);font-size:12px;">← Large banner below text</span></div>'+
+        '</div>'+
+        '<div style="display:flex;align-items:center;gap:8px;padding-top:6px;border-top:1px solid var(--border);margin-top:4px;"><span style="color:var(--text-muted);font-weight:600;">FOOTER</span><span style="color:var(--text-muted);font-size:12px;">← Bottom text + icon</span></div>'+
+      '</div></div></div>'+
     
     // ── FIELDS ──
-    '<div style="display:flex;flex-direction:column;gap:8px;">'+
-      // Channel
+    '<div>'+
+      // Delivery
       '<div class="grp"><div class="grp-h">📍 Delivery</div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">📢 Channel <small style="color:var(--text-muted);font-weight:400;">— where the message will be sent</small></label><select id="grCh_'+type+'_'+serverId+'" style="font-size:11px;" onchange="updatePreview(\''+serverId+'\',\''+type+'\')">'+chOpts+'</select></div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">💬 Plain Text <small style="color:var(--text-muted);font-weight:400;">— appears above the embed (supports placeholders)</small></label><input type="text" id="grMsg_'+type+'_'+serverId+'" value="'+(cfg.content||'')+'" placeholder="e.g. Welcome {user}!" style="font-size:11px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
+        '<div class="grpf"><label>📢 Channel <small>— where the message will be sent</small></label><select id="grCh_'+type+'_'+serverId+'" onchange="updatePreview(\''+serverId+'\',\''+type+'\')">'+chOpts+'</select></div>'+
+        '<div class="grpf"><label>💬 Plain Text <small>— appears above the embed (supports placeholders)</small></label><input type="text" id="grMsg_'+type+'_'+serverId+'" value="'+(cfg.content||'')+'" placeholder="e.g. Welcome {user}!" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
       '</div>'+
       // Embed Header
       '<div class="grp"><div class="grp-h">📰 Embed Header</div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">👤 Author Name <small style="color:var(--text-muted);font-weight:400;">— small text at the top (leave empty to hide)</small></label><input type="text" id="grA_'+type+'_'+serverId+'" value="'+(cfg.embedAuthor||'')+'" placeholder="e.g. '+(type==='welcome'?'👋 Welcome Bot':'Server Team')+'" style="font-size:11px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">🖼️ Author Icon <small style="color:var(--text-muted);font-weight:400;">— small image next to author name</small></label><input type="url" id="grAI_'+type+'_'+serverId+'" value="'+(cfg.embedAuthorIcon||'')+'" placeholder="https://...icon.png" style="font-size:11px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">📌 Title <small style="color:var(--text-muted);font-weight:400;">— bold header text (shown in bold white)</small></label><input type="text" id="grT_'+type+'_'+serverId+'" value="'+(cfg.embedTitle||'')+'" placeholder="e.g. 👋 '+(type==='welcome'?'Welcome!':'Goodbye!')+'" style="font-size:11px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
+        '<div class="grpf"><label>👤 Author Name <small>— small text at the top (leave empty to hide)</small></label><input type="text" id="grA_'+type+'_'+serverId+'" value="'+(cfg.embedAuthor||'')+'" placeholder="e.g. '+(type==='welcome'?'👋 Welcome Bot':'Server Team')+'" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
+        '<div class="grpf"><label>🖼️ Author Icon <small>— small image next to author name</small></label><input type="url" id="grAI_'+type+'_'+serverId+'" value="'+(cfg.embedAuthorIcon||'')+'" placeholder="https://...icon.png" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
+        '<div class="grpf"><label>📌 Title <small>— bold header text (shown in bold white)</small></label><input type="text" id="grT_'+type+'_'+serverId+'" value="'+(cfg.embedTitle||'')+'" placeholder="e.g. 👋 '+(type==='welcome'?'Welcome!':'Goodbye!')+'" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
       '</div>'+
       // Embed Body
       '<div class="grp"><div class="grp-h">📝 Embed Body</div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">📄 Description <small style="color:var(--text-muted);font-weight:400;">— main message content (supports **bold**, *italic*, and placeholders)</small></label><textarea id="grD_'+type+'_'+serverId+'" rows="3" placeholder="e.g. Welcome {user} to **{server}**! We now have {membercount} members! " style="font-size:11px;resize:vertical;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')">'+(cfg.embedDescription||'')+'</textarea></div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">🎨 Color <small style="color:var(--text-muted);font-weight:400;">— thin colored bar on the left side of the embed</small></label><div style="display:flex;gap:6px;align-items:center;"><input type="color" id="grCo_'+type+'_'+serverId+'" value="'+(cfg.embedColor||'#5865F2')+'" oninput="document.getElementById(\'grCoT_'+type+'_'+serverId+'\').value=this.value;updatePreview(\''+serverId+'\',\''+type+'\')" style="width:32px;height:32px;border-radius:6px;border:1px solid var(--border);padding:2px;background:none;cursor:pointer;"><input type="text" id="grCoT_'+type+'_'+serverId+'" value="'+(cfg.embedColor||'#5865F2')+'" oninput="var c=this.value;/^#[0-9a-f]{6}$/i.test(c)&&(document.getElementById(\'grCo_'+type+'_'+serverId+'\').value=c,updatePreview(\''+serverId+'\',\''+type+'\'))" placeholder="#5865F2" style="font-size:11px;width:100px;font-family:monospace;"></div></div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">🖼️ Thumbnail <small style="color:var(--text-muted);font-weight:400;">— square image in the top-right corner</small></label><input type="url" id="grTh_'+type+'_'+serverId+'" value="'+(cfg.embedThumbnail||'')+'" placeholder="https://...image.png" style="font-size:11px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">🖼️ Image <small style="color:var(--text-muted);font-weight:400;">— large banner image below the description</small></label><input type="url" id="grIm_'+type+'_'+serverId+'" value="'+(cfg.embedImage||'')+'" placeholder="https://...banner.gif" style="font-size:11px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
+        '<div class="grpf"><label>📄 Description <small>— main message content (supports **bold**, *italic*, and placeholders)</small></label><textarea id="grD_'+type+'_'+serverId+'" rows="3" placeholder="e.g. Welcome {user} to **{server}**! We now have {membercount} members!" oninput="updatePreview(\''+serverId+'\',\''+type+'\')">'+(cfg.embedDescription||'')+'</textarea></div>'+
+        '<div class="grpf"><label>🎨 Color <small>— thin colored bar on the left side of the embed</small></label><div class="color-row"><input type="color" id="grCo_'+type+'_'+serverId+'" value="'+(cfg.embedColor||'#5865F2')+'" oninput="document.getElementById(\'grCoT_'+type+'_'+serverId+'\').value=this.value;updatePreview(\''+serverId+'\',\''+type+'\')"><input type="text" id="grCoT_'+type+'_'+serverId+'" value="'+(cfg.embedColor||'#5865F2')+'" oninput="var c=this.value;/^#[0-9a-f]{6}$/i.test(c)&&(document.getElementById(\'grCo_'+type+'_'+serverId+'\').value=c,updatePreview(\''+serverId+'\',\''+type+'\'))" placeholder="#5865F2"></div></div>'+
+        '<div class="grpf"><label>🖼️ Thumbnail <small>— square image in the top-right corner</small></label><input type="url" id="grTh_'+type+'_'+serverId+'" value="'+(cfg.embedThumbnail||'')+'" placeholder="https://...image.png" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
+        '<div class="grpf"><label>🖼️ Image <small>— large banner image below the description</small></label><input type="url" id="grIm_'+type+'_'+serverId+'" value="'+(cfg.embedImage||'')+'" placeholder="https://...banner.gif" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
       '</div>'+
       // Embed Footer
       '<div class="grp"><div class="grp-h">🔻 Embed Footer</div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">📝 Footer Text <small style="color:var(--text-muted);font-weight:400;">— small text at the very bottom (leave empty to hide)</small></label><input type="text" id="grF_'+type+'_'+serverId+'" value="'+(cfg.embedFooter||'')+'" placeholder="e.g. Member #{membercount}" style="font-size:11px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
-        '<div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">🖼️ Footer Icon <small style="color:var(--text-muted);font-weight:400;">— small image next to footer text</small></label><input type="url" id="grFI_'+type+'_'+serverId+'" value="'+(cfg.embedFooterIcon||'')+'" placeholder="https://...icon.png" style="font-size:11px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
+        '<div class="grpf"><label>📝 Footer Text <small>— small text at the very bottom (leave empty to hide)</small></label><input type="text" id="grF_'+type+'_'+serverId+'" value="'+(cfg.embedFooter||'')+'" placeholder="e.g. Member #{membercount}" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
+        '<div class="grpf"><label>🖼️ Footer Icon <small>— small image next to footer text</small></label><input type="url" id="grFI_'+type+'_'+serverId+'" value="'+(cfg.embedFooterIcon||'')+'" placeholder="https://...icon.png" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"></div>'+
       '</div>'+
     '</div>'+
     // Buttons
-    '<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">'+
-      '<button class="btn btn-s" onclick="saveGreetingConfig(\''+serverId+'\',\''+type+'\')" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> 💾 Save '+typeLabel+' Settings</button>'+
-      '<button class="btn btn-s" onclick="resetGreetingConfig(\''+serverId+'\',\''+type+'\')" style="padding:7px 16px;font-size:11px;background:rgba(237,66,69,0.1);color:#ed4245;">↺ Reset '+typeLabel+'</button>'+
+    '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">'+
+      '<button class="btn" onclick="saveGreetingConfig(\''+serverId+'\',\''+type+'\')" style="padding:10px 22px;font-size:13px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> 💾 Save '+typeLabel+' Settings</button>'+
+      '<button class="btn btn-s" onclick="resetGreetingConfig(\''+serverId+'\',\''+type+'\')" style="padding:10px 18px;font-size:13px;background:rgba(237,66,69,0.12);color:#ed4245;border-color:rgba(237,66,69,0.2);">↺ Reset '+typeLabel+'</button>'+
     '</div></div>';
 }
 
@@ -324,53 +327,53 @@ async function loadSrvGreetings(id){
     ]);
     var w=gr.welcome||{},g=gr.goodbye||{};
     var txtChs=ch.filter(function(c){return c.typeId===0||c.typeId===5});
-    el.innerHTML='<div style="display:flex;flex-direction:column;gap:20px;max-width:500px;">'+
-      '<div class="card" style="padding:14px;"><div style="font-size:13px;font-weight:600;color:#3ba55c;margin-bottom:8px;">👋 Welcome</div>'+greetFieldsHtml(w,'welcome',id,txtChs)+'</div>'+
-      '<div class="card" style="padding:14px;"><div style="font-size:13px;font-weight:600;color:#ed4245;margin-bottom:8px;">👋 Goodbye</div>'+greetFieldsHtml(g,'goodbye',id,txtChs)+'</div>'+
-      '<div class="card" style="padding:14px;">'+
-        '<div style="font-size:12px;font-weight:600;margin-bottom:6px;">📝 Available Placeholders</div>'+          '<div style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:10px;color:var(--text-dim);">'+
-              // User
-              '<div style="grid-column:1/-1;font-weight:600;color:var(--accent);margin-top:4px;font-size:9px;letter-spacing:0.5px;">USER</div>'+
-              '<code style="font-size:10px;">{user}</code><span>@Mentions the user</span>'+
-              '<code style="font-size:10px;">{username}</code><span>Username#0000</span>'+
-              '<code style="font-size:10px;">{name}</code><span>Just the username (no discriminator)</span>'+
-              '<code style="font-size:10px;">{displayname}</code><span>Server nickname (or username)</span>'+
-              '<code style="font-size:10px;">{mention}</code><span>Same as {user} — @mention</span>'+
-              '<code style="font-size:10px;">{userid}</code><span>User\'s Discord ID</span>'+
-              '<code style="font-size:10px;">{discriminator}</code><span>#0000 discriminator</span>'+
-              '<code style="font-size:10px;">{avatar}</code><span>User\'s avatar URL</span>'+
-              '<code style="font-size:10px;">{created}</code><span>Account creation date (relative)</span>'+
-              '<code style="font-size:10px;">{age}</code><span>How old the account is (e.g. 2y 3m)</span>'+
+    el.innerHTML='<div style="display:flex;flex-direction:column;gap:24px;">'+
+      '<div class="tw" style="border-color:rgba(59,165,92,0.15);"><div class="tw-h" style="border-bottom-color:rgba(59,165,92,0.1);color:#3ba55c;font-size:14px;">👋 Welcome</div>'+greetFieldsHtml(w,'welcome',id,txtChs)+'</div>'+
+      '<div class="tw" style="border-color:rgba(237,66,69,0.15);"><div class="tw-h" style="border-bottom-color:rgba(237,66,69,0.1);color:#ed4245;font-size:14px;">👋 Goodbye</div>'+greetFieldsHtml(g,'goodbye',id,txtChs)+'</div>'+
+      '<div class="tw"><div class="tw-h" style="font-size:13px;">📝 Available Placeholders</div>'+
+      '<div style="padding:14px;">'+
+        '<div style="display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:12px;color:var(--text-dim);">'+
+              '<div style="grid-column:1/-1;font-weight:700;color:var(--accent);margin-top:6px;padding-bottom:3px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">👤 User</div>'+
+              '<code style="font-size:12px;">{user}</code><span>@Mentions the user</span>'+
+              '<code style="font-size:12px;">{username}</code><span>Username#0000</span>'+
+              '<code style="font-size:12px;">{name}</code><span>Just the username (no discriminator)</span>'+
+              '<code style="font-size:12px;">{displayname}</code><span>Server nickname (or username)</span>'+
+              '<code style="font-size:12px;">{mention}</code><span>Same as {user} — @mention</span>'+
+              '<code style="font-size:12px;">{userid}</code><span>User\'s Discord ID</span>'+
+              '<code style="font-size:12px;">{discriminator}</code><span>#0000 discriminator</span>'+
+              '<code style="font-size:12px;">{avatar}</code><span>User\'s avatar URL</span>'+
+              '<code style="font-size:12px;">{created}</code><span>Account creation date (relative)</span>'+
+              '<code style="font-size:12px;">{age}</code><span>How old the account is (e.g. 2y 3m)</span>'+
               // Server
-              '<div style="grid-column:1/-1;font-weight:600;color:var(--accent);margin-top:4px;font-size:9px;letter-spacing:0.5px;">SERVER</div>'+
-              '<code style="font-size:10px;">{server}</code><span>Server name</span>'+
-              '<code style="font-size:10px;">{serverid}</code><span>Server ID</span>'+
-              '<code style="font-size:10px;">{servericon}</code><span>Server icon URL</span>'+
-              '<code style="font-size:10px;">{owner}</code><span>@Mentions the server owner</span>'+
-              '<code style="font-size:10px;">{ownerid}</code><span>Server owner\'s ID</span>'+
-              '<code style="font-size:10px;">{membercount}</code><span>Total members (bots + humans)</span>'+
-              '<code style="font-size:10px;">{members}</code><span>Same as {membercount}</span>'+
-              '<code style="font-size:10px;">{humancount}</code><span>Human members only</span>'+
-              '<code style="font-size:10px;">{botcount}</code><span>Bots only</span>'+
-              '<code style="font-size:10px;">{channelcount}</code><span>Total channels</span>'+
-              '<code style="font-size:10px;">{textchannelcount}</code><span>Text channels only</span>'+
-              '<code style="font-size:10px;">{voicechannelcount}</code><span>Voice channels only</span>'+
-              '<code style="font-size:10px;">{rolecount}</code><span>Total roles</span>'+
-              '<code style="font-size:10px;">{boosts}</code><span>Server boost count</span>'+
-              '<code style="font-size:10px;">{boosttier}</code><span>Boost tier (0-3)</span>'+
+              '<div style="grid-column:1/-1;font-weight:700;color:var(--accent);margin-top:6px;padding-bottom:3px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">🏠 Server</div>'+
+              '<code style="font-size:12px;">{server}</code><span>Server name</span>'+
+              '<code style="font-size:12px;">{serverid}</code><span>Server ID</span>'+
+              '<code style="font-size:12px;">{servericon}</code><span>Server icon URL</span>'+
+              '<code style="font-size:12px;">{owner}</code><span>@Mentions the server owner</span>'+
+              '<code style="font-size:12px;">{ownerid}</code><span>Server owner\'s ID</span>'+
+              '<code style="font-size:12px;">{membercount}</code><span>Total members (bots + humans)</span>'+
+              '<code style="font-size:12px;">{members}</code><span>Same as {membercount}</span>'+
+              '<code style="font-size:12px;">{humancount}</code><span>Human members only</span>'+
+              '<code style="font-size:12px;">{botcount}</code><span>Bots only</span>'+
+              '<code style="font-size:12px;">{channelcount}</code><span>Total channels</span>'+
+              '<code style="font-size:12px;">{textchannelcount}</code><span>Text channels only</span>'+
+              '<code style="font-size:12px;">{voicechannelcount}</code><span>Voice channels only</span>'+
+              '<code style="font-size:12px;">{rolecount}</code><span>Total roles</span>'+
+              '<code style="font-size:12px;">{boosts}</code><span>Server boost count</span>'+
+              '<code style="font-size:12px;">{boosttier}</code><span>Boost tier (0-3)</span>'+
               // Date/Time
-              '<div style="grid-column:1/-1;font-weight:600;color:var(--accent);margin-top:4px;font-size:9px;letter-spacing:0.5px;">DATE / TIME</div>'+
-              '<code style="font-size:10px;">{date}</code><span>Today\'s date (e.g. 7/21/2026)</span>'+
-              '<code style="font-size:10px;">{time}</code><span>Current time (e.g. 3:45 PM)</span>'+
-              '<code style="font-size:10px;">{year}</code><span>Current year (e.g. 2026)</span>'+
+              '<div style="grid-column:1/-1;font-weight:700;color:var(--accent);margin-top:6px;padding-bottom:3px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">📅 Date / Time</div>'+
+              '<code style="font-size:12px;">{date}</code><span>Today\'s date (e.g. 7/21/2026)</span>'+
+              '<code style="font-size:12px;">{time}</code><span>Current time (e.g. 3:45 PM)</span>'+
+              '<code style="font-size:12px;">{year}</code><span>Current year (e.g. 2026)</span>'+
               // Type-specific
-              '<div style="grid-column:1/-1;font-weight:600;color:var(--accent);margin-top:4px;font-size:9px;letter-spacing:0.5px;">WELCOME-ONLY</div>'+
-              '<code style="font-size:10px;">{joined}</code><span>When they joined (relative time)</span>'+
-              '<code style="font-size:10px;">{created_relative}</code><span>Account creation (relative)</span>'+
-              '<div style="grid-column:1/-1;font-weight:600;color:var(--accent);margin-top:4px;font-size:9px;letter-spacing:0.5px;">GOODBYE-ONLY</div>'+
-              '<code style="font-size:10px;">{joined}</code><span>When they originally joined</span>'+
-              '<code style="font-size:10px;">{duration}</code><span>How long they were in the server</span>'+
-              '<code style="font-size:10px;">{left}</code><span>When they left (relative time)</span>'+
+              '<div style="grid-column:1/-1;font-weight:700;color:#3ba55c;margin-top:6px;padding-bottom:3px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">👋 Welcome-only</div>'+
+              '<code style="font-size:12px;">{joined}</code><span>When they joined (relative time)</span>'+
+              '<code style="font-size:12px;">{created_relative}</code><span>Account creation (relative)</span>'+
+              '<div style="grid-column:1/-1;font-weight:700;color:#ed4245;margin-top:6px;padding-bottom:3px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">👋 Goodbye-only</div>'+
+              '<code style="font-size:12px;">{joined}</code><span>When they originally joined</span>'+
+              '<code style="font-size:12px;">{duration}</code><span>How long they were in the server</span>'+
+              '<code style="font-size:12px;">{left}</code><span>When they left (relative time)</span>'+
             '</div></div></div>';
   }catch{el.innerHTML='<div class="empty"><p>Failed to load greetings config. Make sure the bot has Manage Server permission.</p></div>'}
 }

@@ -304,6 +304,22 @@ select option{background:#0e0e16;color:#e8e8ee}
 .dock-preview .dp-item{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-dim);transition:all 0.2s}
 .dock-preview .dp-item.active{color:var(--accent);background:rgba(var(--accent-rgb),0.08)}
 
+/* ═══ Greetings Form Fields ═══ */
+.grp-h{font-size:13px;font-weight:700;color:#fff;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.grpf{margin-bottom:12px}
+.grpf label{display:block;font-size:12px;color:var(--text);margin-bottom:4px;font-weight:500}
+.grpf small{color:var(--text-muted);font-weight:400;font-size:11px}
+.grpf input,.grpf select,.grpf textarea{width:100%;max-width:460px;padding:9px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:13px;outline:none;transition:all 0.15s;font-family:inherit;box-sizing:border-box}
+.grpf select{-webkit-appearance:none;appearance:none;padding-right:30px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:12px}
+.grpf textarea{resize:vertical;min-height:60px}
+.grpf input:focus,.grpf select:focus,.grpf textarea:focus{border-color:var(--accent);box-shadow:0 0 14px rgba(var(--accent-rgb),0.06)}
+.grpf .color-row{display:flex;gap:8px;align-items:center}
+.grpf .color-row input[type=color]{width:36px;height:36px;border-radius:6px;border:1px solid var(--border);padding:2px;background:none;cursor:pointer;flex-shrink:0}
+.grpf .color-row input[type=text]{width:120px;font-family:monospace}
+body.light-mode .grpf input,body.light-mode .grpf select,body.light-mode .grpf textarea{background:rgba(255,255,255,0.7)!important;color:#1a1a2e!important}
+body.light-mode .grpf select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.25)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")!important}
+body.light-mode .grp-h{color:#1a1a2e!important}
+
 /* Responsive */
 @media(max-width:768px){.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;border-radius:0;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.sidebar.hidden{transform:translateX(-100%)}.main{padding:16px}.dock-item{width:44px;height:44px}.dock-item svg{width:20px;height:20px}.dock{padding:8px 14px 6px;gap:0;border-radius:20px}.dock-item{margin:0 4px}.grid-4{grid-template-columns:1fr 1fr}.grid-3,.grid-2{grid-template-columns:1fr}}
 @media(max-width:480px){.grid-4{grid-template-columns:1fr}.main{padding:12px}.dock-item{width:38px;height:38px;margin:0 3px}.dock-item svg{width:17px;height:17px}.dock{gap:0;padding:6px 10px 4px}.dock-sep{height:22px}}
