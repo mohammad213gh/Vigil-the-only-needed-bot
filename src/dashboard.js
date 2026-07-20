@@ -3,7 +3,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const { formatUptime, formatNumber } = require('./helpers');
-const { getBotConfig, getGuildConfig, updateGuildConfig } = require('./config');
+const { getBotConfig, getGuildConfig, updateGuildConfig, getWelcomeConfig, getGoodbyeConfig, updateWelcomeConfig } = require('./config');
 const { getDb } = require('./db');
 const { getGuildStats } = require('./stats');
 const { getReactionRoles } = require('./reactionRoles');
@@ -494,6 +494,39 @@ function createDashboard() {
         if (!prefix || prefix.length > 5) return res.status(400).json({ error: 'Prefix must be 1-5 characters' });
         updateGuildConfig(guild.id, (cfg) => { cfg.prefix = prefix; return cfg; });
         res.json({ success: true, prefix });
+    });
+
+    // ── Welcome/Goodbye Config ──
+    app.get('/api/server/:id/greetings', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        res.json({
+            welcome: getWelcomeConfig(guild.id),
+            goodbye: getGoodbyeConfig(guild.id),
+        });
+    });
+
+    app.post('/api/server/:id/greetings/:type', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const type = req.params.type;
+        if (type !== 'welcome' && type !== 'goodbye') return res.status(400).json({ error: 'Type must be welcome or goodbye' });
+        
+        updateWelcomeConfig(guild.id, type, (cfg) => {
+            // Update only the fields that were sent
+            const allowedFields = ['enabled', 'channelId', 'content', 'embedTitle', 'embedDescription', 'embedColor', 'embedFooter', 'embedFooterIcon', 'embedThumbnail', 'embedImage', 'embedAuthor', 'embedAuthorIcon'];
+            for (const field of allowedFields) {
+                if (req.body[field] !== undefined) {
+                    cfg[field] = req.body[field];
+                }
+            }
+            return cfg;
+        });
+        
+        const result = type === 'welcome' ? getWelcomeConfig(guild.id) : getGoodbyeConfig(guild.id);
+        res.json({ success: true, config: result });
     });
 
     // ── Server Detail ──

@@ -323,7 +323,21 @@ const commandDefs = [
         .addBooleanOption(opt =>
             opt.setName('anonymous')
                 .setDescription('Hide who voted for what')
-                .setRequired(false)),
+                .setRequired(false))
+        .addStringOption(opt =>
+            opt.setName('duration')
+                .setDescription('How long the poll runs before auto-ending')
+                .setRequired(false)
+                .addChoices(
+                    { name: '5 minutes', value: '5m' },
+                    { name: '15 minutes', value: '15m' },
+                    { name: '30 minutes', value: '30m' },
+                    { name: '1 hour', value: '1h' },
+                    { name: '6 hours', value: '6h' },
+                    { name: '24 hours', value: '24h' },
+                    { name: '3 days', value: '3d' },
+                    { name: '7 days', value: '7d' },
+                )),
     new SlashCommandBuilder()
         .setName('announce')
         .setDescription('Send an announcement to a channel')
@@ -701,6 +715,188 @@ const commandDefs = [
             opt.setName('new_prefix')
                 .setDescription('New prefix (leave empty to see current)')
                 .setRequired(false)),
+
+    // ── Welcome / Goodbye (owner only) ──
+    new SlashCommandBuilder()
+        .setName('welcome')
+        .setDescription('Configure welcome messages')
+        .addSubcommand(sub =>
+            sub.setName('channel')
+                .setDescription('Set the welcome channel')
+                .addChannelOption(opt =>
+                    opt.setName('channel')
+                        .setDescription('Channel for welcome messages (leave empty to disable)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('toggle')
+                .setDescription('Enable or disable welcome messages')
+                .addBooleanOption(opt =>
+                    opt.setName('enabled')
+                        .setDescription('Enable or disable')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('message')
+                .setDescription('Set a plain text message above the embed (supports placeholders)')
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('Plain text message (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('title')
+                .setDescription('Set the embed title')
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('Embed title (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('description')
+                .setDescription('Set the embed description')
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('Embed description (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('color')
+                .setDescription('Set the embed color (hex)')
+                .addStringOption(opt =>
+                    opt.setName('hex')
+                        .setDescription('Hex color (e.g. #5865F2 or "reset" for default)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('footer')
+                .setDescription('Set the embed footer')
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('Footer text (or "clear" to remove)')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('icon')
+                        .setDescription('Optional footer icon URL')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('thumbnail')
+                .setDescription('Set the embed thumbnail image')
+                .addStringOption(opt =>
+                    opt.setName('url')
+                        .setDescription('Image URL (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('image')
+                .setDescription('Set the embed main image')
+                .addStringOption(opt =>
+                    opt.setName('url')
+                        .setDescription('Image URL (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('author')
+                .setDescription('Set the embed author')
+                .addStringOption(opt =>
+                    opt.setName('name')
+                        .setDescription('Author name (or "clear" to remove)')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('icon')
+                        .setDescription('Optional author icon URL')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('show')
+                .setDescription('Show current welcome settings'))
+        .addSubcommand(sub =>
+            sub.setName('test')
+                .setDescription('Test the welcome message'))
+        .addSubcommand(sub =>
+            sub.setName('reset')
+                .setDescription('Reset all welcome settings to defaults')),
+    new SlashCommandBuilder()
+        .setName('goodbye')
+        .setDescription('Configure goodbye messages')
+        .addSubcommand(sub =>
+            sub.setName('channel')
+                .setDescription('Set the goodbye channel')
+                .addChannelOption(opt =>
+                    opt.setName('channel')
+                        .setDescription('Channel for goodbye messages (leave empty to disable)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('toggle')
+                .setDescription('Enable or disable goodbye messages')
+                .addBooleanOption(opt =>
+                    opt.setName('enabled')
+                        .setDescription('Enable or disable')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('message')
+                .setDescription('Set a plain text message above the embed (supports placeholders)')
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('Plain text message (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('title')
+                .setDescription('Set the embed title')
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('Embed title (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('description')
+                .setDescription('Set the embed description')
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('Embed description (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('color')
+                .setDescription('Set the embed color (hex)')
+                .addStringOption(opt =>
+                    opt.setName('hex')
+                        .setDescription('Hex color (e.g. #E74C3C or "reset" for default)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('footer')
+                .setDescription('Set the embed footer')
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('Footer text (or "clear" to remove)')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('icon')
+                        .setDescription('Optional footer icon URL')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('thumbnail')
+                .setDescription('Set the embed thumbnail image')
+                .addStringOption(opt =>
+                    opt.setName('url')
+                        .setDescription('Image URL (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('image')
+                .setDescription('Set the embed main image')
+                .addStringOption(opt =>
+                    opt.setName('url')
+                        .setDescription('Image URL (or "clear" to remove)')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('author')
+                .setDescription('Set the embed author')
+                .addStringOption(opt =>
+                    opt.setName('name')
+                        .setDescription('Author name (or "clear" to remove)')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('icon')
+                        .setDescription('Optional author icon URL')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('show')
+                .setDescription('Show current goodbye settings'))
+        .addSubcommand(sub =>
+            sub.setName('test')
+                .setDescription('Test the goodbye message'))
+        .addSubcommand(sub =>
+            sub.setName('reset')
+                .setDescription('Reset all goodbye settings to defaults')),
 
     // ── Reaction Roles (owner only) ──
     new SlashCommandBuilder()

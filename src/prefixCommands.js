@@ -775,7 +775,7 @@ handlers.perm = async (message) => {
         const user = message.mentions.users.first();
         const command = message.args[2];
         if (!user || !command) return message.reply('⚠️ Usage: `' + message.prefix + 'perm revoke @user <command|all>`');
-        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth'];
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth', 'welcome', 'goodbye'];
         if (command === 'all') {
             for (const cmd of grantableCmds) revokePermission(guild.id, cmd, user.id);
             return message.reply('✅ Revoked **all** permissions from ' + user);
@@ -1172,7 +1172,171 @@ async function handlePrefixMessage(message, prefix) {
     message.restArgs = parts.slice(1);
 
     // Check permission for owner-only prefix commands
-    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'server_leave', 'shutdown'];
+// ─── Welcome / Goodbye (Prefix) ───
+
+handlers.welcome = async (message) => {
+    if (!checkOwnerOrPerm(message, 'welcome')) return;
+    const sub = message.args[0];
+    const { getWelcomeConfig, updateWelcomeConfig } = require('./config');
+    const { buildGreetingEmbed, buildConfigEmbed } = require('./commands/greetings');
+    const type = 'welcome';
+    const typeLabel = 'Welcome';
+
+    if (!sub) {
+        const cfg = getWelcomeConfig(message.guild.id);
+        const embed = buildConfigEmbed(cfg, type, message.guild);
+        return message.reply({ embeds: [embed] });
+    }
+
+    if (sub === 'channel') {
+        const channel = message.mentions.channels.first();
+        updateWelcomeConfig(message.guild.id, type, (cfg) => {
+            cfg.channelId = channel ? channel.id : null;
+            if (channel) cfg.enabled = true;
+            return cfg;
+        });
+        message.reply(channel ? '✅ ' + typeLabel + ' channel set to ' + channel : '🗑️ ' + typeLabel + ' channel cleared.');
+    } else if (sub === 'toggle') {
+        const enabled = message.args[1] !== 'off' && message.args[1] !== 'false';
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.enabled = enabled; return cfg; });
+        message.reply(enabled ? '✅ ' + typeLabel + ' enabled.' : '❌ ' + typeLabel + ' disabled.');
+    } else if (sub === 'message') {
+        const text = message.restArgs.slice(1).join(' ');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.content = text || null; return cfg; });
+        message.reply(text ? '✅ ' + typeLabel + ' plain text set.' : '🗑️ ' + typeLabel + ' plain text cleared.');
+    } else if (sub === 'title') {
+        const text = message.restArgs.slice(1).join(' ');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedTitle = text || null; return cfg; });
+        message.reply(text ? '✅ ' + typeLabel + ' embed title set.' : '🗑️ ' + typeLabel + ' embed title cleared.');
+    } else if (sub === 'description') {
+        const text = message.restArgs.slice(1).join(' ');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedDescription = text || null; return cfg; });
+        message.reply(text ? '✅ ' + typeLabel + ' embed description set.' : '🗑️ ' + typeLabel + ' embed description cleared.');
+    } else if (sub === 'color') {
+        const hex = message.args[1];
+        const pc = parseInt(hex?.replace('#', ''), 16);
+        if (!hex || isNaN(pc) || pc < 0 || pc > 0xFFFFFF) return message.reply('⚠️ Invalid hex color. Use like #5865F2');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedColor = hex; return cfg; });
+        message.reply('🎨 ' + typeLabel + ' color set to ' + hex);
+    } else if (sub === 'footer') {
+        const text = message.restArgs.slice(1).join(' ');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedFooter = text || null; return cfg; });
+        message.reply(text ? '✅ ' + typeLabel + ' footer set.' : '🗑️ ' + typeLabel + ' footer cleared.');
+    } else if (sub === 'thumbnail') {
+        const url = message.args[1];
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedThumbnail = url || null; return cfg; });
+        message.reply(url ? '✅ ' + typeLabel + ' thumbnail set.' : '🗑️ ' + typeLabel + ' thumbnail cleared.');
+    } else if (sub === 'image') {
+        const url = message.args[1];
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedImage = url || null; return cfg; });
+        message.reply(url ? '✅ ' + typeLabel + ' image set.' : '🗑️ ' + typeLabel + ' image cleared.');
+    } else if (sub === 'test') {
+        const cfg = getWelcomeConfig(message.guild.id);
+        if (!cfg.channelId) return message.reply('⚠️ No ' + typeLabel.toLowerCase() + ' channel set.');
+        const channel = message.guild.channels.cache.get(cfg.channelId);
+        if (!channel) return message.reply('⚠️ ' + typeLabel + ' channel no longer exists.');
+        const testMember = message.guild.members.me;
+        const content = cfg.content ? require('./helpers').replacePlaceholders(cfg.content, testMember, type) : '';
+        const embed = buildGreetingEmbed(cfg, testMember, type);
+        try {
+            await channel.send({ content: content || undefined, embeds: [embed] });
+            message.reply('✅ Test ' + typeLabel.toLowerCase() + ' sent to ' + channel);
+        } catch (err) {
+            message.reply('⚠️ Failed: ' + err.message);
+        }
+    } else if (sub === 'reset') {
+        updateWelcomeConfig(message.guild.id, type, (cfg) => {
+            Object.assign(cfg, { enabled: false, channelId: null, content: null, embedTitle: '👋 Welcome!', embedDescription: 'Welcome {user} to **{server}**!', embedColor: '#5865F2', embedFooter: 'Member #{membercount}', embedFooterIcon: null, embedThumbnail: null, embedImage: null, embedAuthor: null, embedAuthorIcon: null });
+            return cfg;
+        });
+        message.reply('🔄 ' + typeLabel + ' settings reset to defaults.');
+    } else {
+        message.reply('⚠️ Subcommands: channel, toggle, message, title, description, color, footer, thumbnail, image, test, reset');
+    }
+};
+
+handlers.goodbye = async (message) => {
+    if (!checkOwnerOrPerm(message, 'goodbye')) return;
+    const sub = message.args[0];
+    const { getGoodbyeConfig, updateWelcomeConfig } = require('./config');
+    const { buildGreetingEmbed, buildConfigEmbed } = require('./commands/greetings');
+    const type = 'goodbye';
+    const typeLabel = 'Goodbye';
+
+    if (!sub) {
+        const cfg = getGoodbyeConfig(message.guild.id);
+        const embed = buildConfigEmbed(cfg, type, message.guild);
+        return message.reply({ embeds: [embed] });
+    }
+
+    if (sub === 'channel') {
+        const channel = message.mentions.channels.first();
+        updateWelcomeConfig(message.guild.id, type, (cfg) => {
+            cfg.channelId = channel ? channel.id : null;
+            if (channel) cfg.enabled = true;
+            return cfg;
+        });
+        message.reply(channel ? '✅ ' + typeLabel + ' channel set to ' + channel : '🗑️ ' + typeLabel + ' channel cleared.');
+    } else if (sub === 'toggle') {
+        const enabled = message.args[1] !== 'off' && message.args[1] !== 'false';
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.enabled = enabled; return cfg; });
+        message.reply(enabled ? '✅ ' + typeLabel + ' enabled.' : '❌ ' + typeLabel + ' disabled.');
+    } else if (sub === 'message') {
+        const text = message.restArgs.slice(1).join(' ');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.content = text || null; return cfg; });
+        message.reply(text ? '✅ ' + typeLabel + ' plain text set.' : '🗑️ ' + typeLabel + ' plain text cleared.');
+    } else if (sub === 'title') {
+        const text = message.restArgs.slice(1).join(' ');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedTitle = text || null; return cfg; });
+        message.reply(text ? '✅ ' + typeLabel + ' embed title set.' : '🗑️ ' + typeLabel + ' embed title cleared.');
+    } else if (sub === 'description') {
+        const text = message.restArgs.slice(1).join(' ');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedDescription = text || null; return cfg; });
+        message.reply(text ? '✅ ' + typeLabel + ' embed description set.' : '🗑️ ' + typeLabel + ' embed description cleared.');
+    } else if (sub === 'color') {
+        const hex = message.args[1];
+        const pc = parseInt(hex?.replace('#', ''), 16);
+        if (!hex || isNaN(pc) || pc < 0 || pc > 0xFFFFFF) return message.reply('⚠️ Invalid hex color. Use like #E74C3C');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedColor = hex; return cfg; });
+        message.reply('🎨 ' + typeLabel + ' color set to ' + hex);
+    } else if (sub === 'footer') {
+        const text = message.restArgs.slice(1).join(' ');
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedFooter = text || null; return cfg; });
+        message.reply(text ? '✅ ' + typeLabel + ' footer set.' : '🗑️ ' + typeLabel + ' footer cleared.');
+    } else if (sub === 'thumbnail') {
+        const url = message.args[1];
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedThumbnail = url || null; return cfg; });
+        message.reply(url ? '✅ ' + typeLabel + ' thumbnail set.' : '🗑️ ' + typeLabel + ' thumbnail cleared.');
+    } else if (sub === 'image') {
+        const url = message.args[1];
+        updateWelcomeConfig(message.guild.id, type, (cfg) => { cfg.embedImage = url || null; return cfg; });
+        message.reply(url ? '✅ ' + typeLabel + ' image set.' : '🗑️ ' + typeLabel + ' image cleared.');
+    } else if (sub === 'test') {
+        const cfg = getGoodbyeConfig(message.guild.id);
+        if (!cfg.channelId) return message.reply('⚠️ No ' + typeLabel.toLowerCase() + ' channel set.');
+        const channel = message.guild.channels.cache.get(cfg.channelId);
+        if (!channel) return message.reply('⚠️ ' + typeLabel + ' channel no longer exists.');
+        const testMember = message.guild.members.me;
+        const content = cfg.content ? require('./helpers').replacePlaceholders(cfg.content, testMember, type) : '';
+        const embed = buildGreetingEmbed(cfg, testMember, type);
+        try {
+            await channel.send({ content: content || undefined, embeds: [embed] });
+            message.reply('✅ Test ' + typeLabel.toLowerCase() + ' sent to ' + channel);
+        } catch (err) {
+            message.reply('⚠️ Failed: ' + err.message);
+        }
+    } else if (sub === 'reset') {
+        updateWelcomeConfig(message.guild.id, type, (cfg) => {
+            Object.assign(cfg, { enabled: false, channelId: null, content: null, embedTitle: '👋 Goodbye!', embedDescription: '{user} has left **{server}**.', embedColor: '#E74C3C', embedFooter: 'Member #{membercount}', embedFooterIcon: null, embedThumbnail: null, embedImage: null, embedAuthor: null, embedAuthorIcon: null });
+            return cfg;
+        });
+        message.reply('🔄 ' + typeLabel + ' settings reset to defaults.');
+    } else {
+        message.reply('⚠️ Subcommands: channel, toggle, message, title, description, color, footer, thumbnail, image, test, reset');
+    }
+};
+
+    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'server_leave', 'shutdown', 'welcome', 'goodbye'];
     if (ownerOnlyCmds.includes(cmdName)) {
         if (!checkOwnerOrPerm(message, cmdName)) return true;
     }

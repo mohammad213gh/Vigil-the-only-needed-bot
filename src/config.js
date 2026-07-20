@@ -3,6 +3,57 @@ const { getDb } = require('./db');
 
 // ──────────────────── Default Config ────────────────────
 
+const WELCOME_DEFAULTS = {
+    enabled: false,
+    channelId: null,
+    content: null,
+    embedTitle: '👋 Welcome!',
+    embedDescription: 'Welcome {user} to **{server}**!',
+    embedColor: '#5865F2',
+    embedFooter: 'Member #{membercount}',
+    embedFooterIcon: null,
+    embedThumbnail: null,
+    embedImage: null,
+    embedAuthor: null,
+    embedAuthorIcon: null,
+};
+
+const GOODBYE_DEFAULTS = {
+    enabled: false,
+    channelId: null,
+    content: null,
+    embedTitle: '👋 Goodbye!',
+    embedDescription: '{user} has left **{server}**.',
+    embedColor: '#E74C3C',
+    embedFooter: 'Member #{membercount}',
+    embedFooterIcon: null,
+    embedThumbnail: null,
+    embedImage: null,
+    embedAuthor: null,
+    embedAuthorIcon: null,
+};
+
+function getWelcomeConfig(guildId) {
+    const g = getGuildConfig(guildId);
+    return { ...WELCOME_DEFAULTS, ...(g.welcomeConfig?.welcome || {}) };
+}
+
+function getGoodbyeConfig(guildId) {
+    const g = getGuildConfig(guildId);
+    return { ...GOODBYE_DEFAULTS, ...(g.welcomeConfig?.goodbye || {}) };
+}
+
+function updateWelcomeConfig(guildId, type, updater) {
+    return updateGuildConfig(guildId, (g) => {
+        const wc = g.welcomeConfig || {};
+        const cfg = type === 'welcome' ? { ...WELCOME_DEFAULTS, ...(wc.welcome || {}) } : { ...GOODBYE_DEFAULTS, ...(wc.goodbye || {}) };
+        const updated = updater(cfg);
+        wc[type] = updated;
+        g.welcomeConfig = wc;
+        return g;
+    });
+}
+
 function createDefaultConfig() {
     const cats = {};
     const channels = {};
@@ -16,6 +67,7 @@ function createDefaultConfig() {
         trackedChannels: [],
         logCategories: cats,
         prefix: ';',
+        welcomeConfig: {},
     };
 }
 
@@ -27,6 +79,7 @@ function parseGuildRow(row) {
         logCategories: JSON.parse(row.log_categories || '{}'),
         trackedChannels: JSON.parse(row.tracked_channels || '[]'),
         prefix: row.prefix || ';',
+        welcomeConfig: JSON.parse(row.welcome_config || '{}'),
     };
 }
 
@@ -58,9 +111,9 @@ function getGuildConfig(guildId) {
     // Create default
     const def = createDefaultConfig();
     db.prepare(`
-        INSERT INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories, prefix)
-        VALUES (?, ?, ?, ?, ?, ?)
-    `).run(guildId, null, '[]', JSON.stringify(def.logChannels), JSON.stringify(def.logCategories), ';');
+        INSERT INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories, prefix, welcome_config)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(guildId, null, '[]', JSON.stringify(def.logChannels), JSON.stringify(def.logCategories), ';', '{}');
     return def;
 }
 
@@ -72,7 +125,8 @@ function updateGuildConfigRaw(guildId, g) {
             tracked_channels = ?,
             log_channels = ?,
             log_categories = ?,
-            prefix = ?
+            prefix = ?,
+            welcome_config = ?
         WHERE guild_id = ?
     `).run(
         g.logChannelId || null,
@@ -80,6 +134,7 @@ function updateGuildConfigRaw(guildId, g) {
         JSON.stringify(g.logChannels || {}),
         JSON.stringify(g.logCategories || {}),
         g.prefix || ';',
+        JSON.stringify(g.welcomeConfig || {}),
         guildId
     );
 }
@@ -118,8 +173,8 @@ function saveConfig(config) {
     // Save from the old nested format back into SQLite
     const db = getDb();
     const upsert = db.prepare(`
-        INSERT OR REPLACE INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories, prefix)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT OR REPLACE INTO guild_config (guild_id, default_channel, tracked_channels, log_channels, log_categories, prefix, welcome_config)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     const tx = db.transaction(() => {
         for (const [key, val] of Object.entries(config)) {
@@ -136,7 +191,8 @@ function saveConfig(config) {
                     JSON.stringify(val.trackedChannels || []),
                     JSON.stringify(val.logChannels || {}),
                     JSON.stringify(val.logCategories || {}),
-                    val.prefix || ';'
+                    val.prefix || ';',
+                    JSON.stringify(val.welcomeConfig || {})
                 );
             }
         }
@@ -184,4 +240,7 @@ module.exports = {
     getBotConfig,
     saveBotConfig,
     createDefaultConfig,
+    getWelcomeConfig,
+    getGoodbyeConfig,
+    updateWelcomeConfig,
 };

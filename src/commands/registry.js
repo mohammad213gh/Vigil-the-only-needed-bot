@@ -29,6 +29,9 @@ const { executeReactionRole } = require('./reactionRoles');
 // ── Owner ──
 const { executeDashboard, executeDashAccess, executeServerLeave, executeShutdown } = require('./owner');
 
+// ── Welcome/Goodbye ──
+const { executeWelcome, executeGoodbye } = require('./greetings');
+
 // ──────────────────── Registry Map ────────────────────
 
 const commandRegistry = {
@@ -95,6 +98,10 @@ const commandRegistry = {
 
     // Reaction Roles
     reactionrole: executeReactionRole,
+
+    // Welcome/Goodbye
+    welcome: executeWelcome,
+    goodbye: executeGoodbye,
 
     // Owner
     dashboard: executeDashboard,

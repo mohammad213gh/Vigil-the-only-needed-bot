@@ -143,6 +143,50 @@ function getLeadingOption(voteCounts) {
     return leading;
 }
 
+// ──────────────────── Welcome/Goodbye Placeholders ────────────────────
+
+function replacePlaceholders(text, member, type) {
+    if (!text) return text;
+    const guild = member.guild;
+    const user = member.user;
+    const memberCount = guild.memberCount;
+    
+    const replacements = {
+        '{user}': '<@' + user.id + '>',
+        '{username}': user.tag,
+        '{server}': guild.name,
+        '{membercount}': String(memberCount),
+        '{members}': String(memberCount),
+        '{userid}': user.id,
+        '{serverid}': guild.id,
+        '{age}': formatUptime(Date.now() - user.createdTimestamp),
+        '{created}': '<t:' + Math.floor(user.createdTimestamp / 1000) + ':R>',
+        '{name}': user.username,
+        '{discriminator}': user.discriminator,
+        '{mention}': '<@' + user.id + '>',
+    };
+    
+    // Type-specific placeholders
+    if (type === 'welcome') {
+        replacements['{joined}'] = '<t:' + Math.floor(Date.now() / 1000) + ':R>';
+        replacements['{created_relative}'] = '<t:' + Math.floor(user.createdTimestamp / 1000) + ':R>';
+    }
+    if (type === 'goodbye') {
+        replacements['{joined}'] = member.joinedAt
+            ? '<t:' + Math.floor(member.joinedAt.getTime() / 1000) + ':R>'
+            : '*Unknown*';
+        replacements['{duration}'] = member.joinedAt
+            ? formatUptime(Date.now() - member.joinedAt.getTime())
+            : '*Unknown*';
+    }
+    
+    let result = text;
+    for (const [key, value] of Object.entries(replacements)) {
+        result = result.split(key).join(value);
+    }
+    return result;
+}
+
 module.exports = {
     truncate,
     reverseText,
@@ -157,4 +201,7 @@ module.exports = {
     randomItem,
     randomInt,
     fetchAuditLogExecutor,
+    makePollBar,
+    getLeadingOption,
+    replacePlaceholders,
 };

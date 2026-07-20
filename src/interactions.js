@@ -154,6 +154,9 @@ async function handleConfirmPurge(interaction, parts) {
         return interaction.update({ content: '❌ This channel is not a text channel.', components: [], embeds: [] });
     }
 
+    // Defer first so the interaction is acknowledged before potentially slow DB ops
+    await interaction.deferUpdate();
+
     try {
         const fetched = await interaction.channel.bulkDelete(amount, true);
         const embed = new EmbedBuilder()
@@ -162,9 +165,21 @@ async function handleConfirmPurge(interaction, parts) {
             .setDescription('Deleted **' + fetched.size + '** message(s) in ' + interaction.channel)
             .setFooter({ text: 'By ' + interaction.user.tag })
             .setTimestamp();
-        await interaction.update({ embeds: [embed], components: [] });
+
+        // Try to edit the confirmation message — it might have been bulk-deleted
+        try {
+            await interaction.editReply({ embeds: [embed], components: [] });
+        } catch {
+            // Original message was deleted by bulkDelete, send a fresh one
+            await interaction.channel.send({ embeds: [embed] });
+        }
     } catch (err) {
-        await interaction.update({ content: '❌ Failed to purge: ' + err.message, components: [], embeds: [] });
+        const errMsg = '❌ Failed to purge: ' + err.message;
+        try {
+            await interaction.editReply({ content: errMsg, components: [], embeds: [] });
+        } catch {
+            await interaction.channel.send({ content: errMsg });
+        }
     }
 }
 

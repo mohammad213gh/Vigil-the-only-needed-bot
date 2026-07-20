@@ -1,5 +1,29 @@
-    const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const { logError } = require('../logError');
+const { getWelcomeConfig, getGoodbyeConfig } = require('../config');
+const { buildGreetingEmbed } = require('../commands/greetings');
+const { replacePlaceholders } = require('../helpers');
+
+// ─── Send custom welcome/goodbye message ───
+
+async function sendGreeting(member, type) {
+    if (member.user.bot) return;
+    const guild = member.guild;
+    
+    const cfg = type === 'welcome' ? getWelcomeConfig(guild.id) : getGoodbyeConfig(guild.id);
+    if (!cfg.enabled || !cfg.channelId) return;
+
+    const channel = guild.channels.cache.get(cfg.channelId);
+    if (!channel) return;
+
+    try {
+        const messageContent = cfg.content ? replacePlaceholders(cfg.content, member, type) : '';
+        const embed = buildGreetingEmbed(cfg, member, type);
+        await channel.send({ content: messageContent || undefined, embeds: [embed] });
+    } catch (err) {
+        logError(err, 'events', 'sendGreeting/' + type);
+    }
+}
 
     module.exports = [
         {
@@ -9,6 +33,11 @@ const { logError } = require('../logError');
                 const isBot = member.user.bot;
                 
                 if (!isBot) deps.recordJoin(member.guild.id);
+
+                // ── Send welcome message ──
+                if (!isBot) {
+                    await sendGreeting(member, 'welcome');
+                }
 
                 const daysSinceCreation = Math.floor((Date.now() - member.user.createdTimestamp) / 86400000);
                 const isNewAccount = daysSinceCreation < 7;
@@ -68,6 +97,9 @@ const { logError } = require('../logError');
 
                 deps.recordLeave(member.guild.id);
 
+                // ── Send goodbye message ──
+                await sendGreeting(member, 'goodbye');
+
                 const daysSinceCreation = Math.floor((Date.now() - member.user.createdTimestamp) / 86400000);
                 const membershipDuration = member.joinedAt
                     ? deps.formatUptime(Date.now() - member.joinedAt.getTime())
@@ -108,3 +140,5 @@ const { logError } = require('../logError');
             },
         },
     ];
+
+

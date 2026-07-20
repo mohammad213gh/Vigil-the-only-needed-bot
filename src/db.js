@@ -143,6 +143,11 @@ function initSchema() {
     try {
         db.exec('ALTER TABLE guild_config ADD COLUMN prefix TEXT NOT NULL DEFAULT \';\'');
     } catch {}
+
+    // Add welcome_config column if not exists
+    try {
+        db.exec('ALTER TABLE guild_config ADD COLUMN welcome_config TEXT NOT NULL DEFAULT \'{}\'');
+    } catch {}
 }
 
 // ──────────────────── Migration from JSON Files ────────────────────
