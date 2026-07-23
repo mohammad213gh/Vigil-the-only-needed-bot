@@ -8,6 +8,7 @@ const CATEGORIES = [
         emoji: 'ℹ️',
         public: true,
         commands: [
+            { name: 'help', desc: 'Show all commands or get help with a specific one' },
             { name: 'ping', desc: "Check the bot's latency" },
             { name: 'status', desc: "Show the bot's status and stats" },
             { name: 'botinfo', desc: 'Show information about this bot' },

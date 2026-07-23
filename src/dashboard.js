@@ -668,6 +668,7 @@ function createDashboard() {
     // ── Commands Explorer ──
     const COMMANDS_DATA = [
         { category:'Info', owner:false, commands:[
+            { name:'help', description:'Show all available commands or get help with a specific one', usage:'/help [command] [category]' },
             { name:'ping', description:"Check the bot's latency", usage:'/ping' },
             { name:'status', description:"Show the bot's status, resources, and stats", usage:'/status' },
             { name:'botinfo', description:'Show information about this bot', usage:'/botinfo' },
