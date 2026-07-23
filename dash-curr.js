@@ -1,228 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/dashboard.css">
-</head>
-<body>
-<canvas id="bgCanvas"></canvas>
-<div class="bg-overlay" id="bgOverlay"></div>
-<div class="ambient" id="ambient"></div>
 
-<div class="app">
-  <!-- ═══ NOTCH NAVBAR ═══ -->
-  <header class="notch-nav" id="notchNav">
-    <!-- Left Flexible Spacer -->
-    <div class="notch-side notch-left"></div>
-
-    <!-- Notch Container -->
-    <div class="notch-body">
-      <!-- Left Corner -->
-      <div class="notch-corner notch-corner-l">
-        <svg class="notch-corner-svg" viewBox="0 0 50 68"><path d="M0 39.5C25 39.5 25 63.5 50 63.5" fill="none" stroke="currentColor" stroke-opacity="0.04" stroke-width="0.5"/><path d="M0 36.5C25 36.5 25 60.5 50 60.5" fill="none" stroke="currentColor" stroke-opacity="0.04" stroke-width="0.5"/></svg>
-      </div>
-
-      <!-- Center Content -->
-      <div class="notch-center">
-        <!-- Desktop Left Nav -->
-        <nav class="notch-nav-left">
-          <button class="notch-link active" data-sec="overview" onclick="showSec('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></button>
-          <button class="notch-link" data-sec="analytics" onclick="showSec('analytics')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span>Analytics</span></button>
-          <button class="notch-link" data-sec="servers" onclick="showSec('servers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><span>Servers</span></button>
-        </nav>
-
-        <!-- Center Logo -->
-        <div class="notch-logo" id="notchLogo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="4"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M9 21V9"/></svg>
-        </div>
-
-        <!-- Desktop Right Nav -->
-        <nav class="notch-nav-right">
-          <button class="notch-link" data-sec="activity" onclick="showSec('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Activity</span></button>
-          <button class="notch-link" data-sec="reminders" onclick="showSec('reminders')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><span>Reminders</span></button>
-          <button class="notch-link" data-sec="system" onclick="showSec('system')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span>System</span></button>
-          <button class="notch-link" data-sec="settings" onclick="showSec('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Customize</span></button>
-        </nav>
-
-        <!-- Desktop Actions -->
-        <div class="notch-actions">
-          <button class="notch-action-btn" onclick="toggleTheme()" id="ntThemeBtn" title="Toggle theme">
-            <svg id="ntThemeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          </button>
-          <button class="notch-action-btn notch-logout" onclick="logout()" title="Sign out">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-          </button>
-        </div>
-
-        <!-- Mobile Menu Button -->
-        <button class="notch-mobile-btn" id="notchMobileBtn" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="notch-hamburger"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="notch-close" style="display:none;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-
-      <!-- Right Corner -->
-      <div class="notch-corner notch-corner-r">
-        <svg class="notch-corner-svg" viewBox="0 0 50 68"><path d="M0 63.5C25 63.5 25 39.5 50 39.5" fill="none" stroke="currentColor" stroke-opacity="0.04" stroke-width="0.5"/><path d="M0 60.5C25 60.5 25 36.5 50 36.5" fill="none" stroke="currentColor" stroke-opacity="0.04" stroke-width="0.5"/></svg>
-      </div>
-    </div>
-
-    <!-- Right Flexible Spacer -->
-    <div class="notch-side notch-right"></div>
-  </header>
-
-  <!-- Mobile Menu Dropdown -->
-  <div class="notch-mobile-menu" id="notchMobileMenu">
-    <button class="notch-mobile-link active" data-sec="overview" onclick="showSec('overview');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview</button>
-    <button class="notch-mobile-link" data-sec="analytics" onclick="showSec('analytics');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</button>
-    <button class="notch-mobile-link" data-sec="servers" onclick="showSec('servers');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Servers</button>
-    <button class="notch-mobile-link" data-sec="activity" onclick="showSec('activity');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
-    <button class="notch-mobile-link" data-sec="reminders" onclick="showSec('reminders');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg>Reminders</button>
-    <button class="notch-mobile-link" data-sec="system" onclick="showSec('system');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>System</button>
-    <button class="notch-mobile-link" data-sec="settings" onclick="showSec('settings');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Customize</button>
-    <div class="notch-mobile-divider"></div>
-    <button class="notch-mobile-link" onclick="toggleTheme()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><span id="ntMobileThemeLabel">Light Mode</span></button>
-    <button class="notch-mobile-link" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
-  </div>
-
-  <main class="main" id="main">
-    <!-- ═══ OVERVIEW ═══ -->
-    <div class="section active" id="sec-overview">
-      <h1 class="pg-title" id="dashTitlePg">Overview</h1>
-      <p class="pg-sub">Real-time bot status and metrics.</p>
-      <div class="grid grid-4" id="ovCards"></div>
-      <div class="grid grid-3" style="margin-top:4px;">
-        <div class="card sr"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><div class="lbl">Pending Reminders</div><div class="val" id="ovReminders">0</div><div class="sub">Across all users</div></div>
-        <div class="card sr"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><div class="lbl">Total Growth</div><div class="val" id="ovGrowth">-</div><div class="sub">Net member change</div><div class="mgc" id="ovMiniChart"></div></div>
-        <div class="card sr"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><div class="lbl">Active Servers</div><div class="val" id="ovServers">0</div><div class="sub">Connected</div></div>
-      </div>
-    </div>
-
-    <!-- ═══ ANALYTICS ═══ -->
-    <div class="section" id="sec-analytics">
-      <h1 class="pg-title">Analytics</h1>
-      <p class="pg-sub">Member growth and server statistics.</p>
-      <div class="grid grid-2">
-        <div class="tw sr"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Member Growth (30 days)</div><div style="padding:16px;"><div id="growthChart" style="width:100%;height:120px;"></div></div></div>
-        <div class="card sr">
-          <div class="lbl" style="margin-bottom:8px;">Totals</div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <div class="card-stat"><div class="ico" style="background:rgba(59,165,92,0.12);color:#3ba55c;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg></div><div class="info"><div class="l">Total Joins</div><div class="v"><span class="cnt" id="anJoins">0</span></div></div></div>
-            <div class="card-stat"><div class="ico" style="background:rgba(237,66,69,0.12);color:#ed4245;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 9 23 13"/></svg></div><div class="info"><div class="l">Total Leaves</div><div class="v"><span class="cnt" id="anLeaves">0</span></div></div></div>
-            <div class="card-stat"><div class="ico" style="background:rgba(var(--accent-rgb),0.12);color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="info"><div class="l">Net Growth</div><div class="v"><span class="cnt" id="anNet">0</span></div></div></div>
-          </div>
-          <div class="exp-wrap"><button class="btn btn-s" onclick="exportStats()" style="padding:6px 14px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══ SERVERS ═══ -->
-    <div class="section" id="sec-servers">
-      <h1 class="pg-title">Servers</h1>
-      <p class="pg-sub">All servers the bot is connected to.</p>
-      <div class="srv-search"><input type="text" id="srvSearch" placeholder="Search servers..." oninput="filterServers()"><select id="srvSort" onchange="loadServers()"><option value="members">Members</option><option value="name">Name</option><option value="boosts">Boosts</option></select></div>
-      <div id="srvList" class="srv-list"></div>
-      <div id="srvDetail" style="display:none;"></div>
-    </div>
-
-    <!-- ═══ ACTIVITY ═══ -->
-    <div class="section" id="sec-activity">
-      <h1 class="pg-title">Activity</h1>
-      <p class="pg-sub">Recent events across all servers.</p>
-      <div id="actFeed" class="sr"></div>
-    </div>
-
-    <!-- ═══ REMINDERS ═══ -->
-    <div class="section" id="sec-reminders">
-      <h1 class="pg-title">Reminders</h1>
-      <p class="pg-sub">All pending reminders.</p>
-      <div id="rmdList"></div>
-    </div>
-
-    <!-- ═══ SYSTEM ═══ -->
-    <div class="section" id="sec-system">
-      <h1 class="pg-title">System</h1>
-      <p class="pg-sub">Server infrastructure and resource usage.</p>
-      <div class="grid grid-2 sr"><div class="card"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><div class="lbl">Host</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;" id="sysHost"></div></div><div class="card"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><div class="lbl">Memory</div><div style="margin-top:8px;" id="sysMem"></div></div></div>
-    </div>
-
-    <!-- ═══ SETTINGS ═══ -->
-    <div class="section" id="sec-settings">
-      <h1 class="pg-title">Customize</h1>
-      <p class="pg-sub">Make the dashboard yours.</p>
-      <div style="max-width:540px;">
-        <div class="stg"><label>Theme Presets</label><div class="thm-grid" id="themeGrid"></div></div>
-        <div class="stg"><label>Accent Color</label><div class="stg-inl"><input type="color" id="dashColor" value="#5865F2" oninput="previewColor(this.value)"><span style="font-size:12px;color:var(--text-dim);font-family:monospace;" id="colorVal">#5865F2</span></div></div>
-        <div class="stg"><label>Dashboard Title</label><input type="text" id="dashTitle" placeholder="Dashboard" oninput="previewTitle(this.value)"></div>
-        
-        <div class="stg"><label>Bot Avatar</label>
-          <div class="stg-inl" style="margin-bottom:6px;"><input type="url" id="dashAvatarUrl" placeholder="https://cdn.discordapp.com/...avatar.png" style="flex:1;"><button class="btn btn-s" onclick="showToast('Avatar URL saved with settings')" style="padding:9px 14px;font-size:11px;">Set</button></div>
-          <div class="stg-hint">Paste a direct image URL for the bot avatar display.</div></div>
-
-        <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Background Effect</label>
-          <div class="bg-style-grid" id="bgStyleGrid"></div></div>
-        
-        <div class="stg"><label>Custom Background</label>
-          <div class="stg-inl" style="margin-bottom:6px;"><select id="bgType" onchange="toggleBgType()"><option value="none">Disabled</option><option value="url">From URL</option><option value="upload">Upload</option></select></div>
-          <div id="bgUrlWrap" style="display:none;margin-bottom:6px;"><div style="display:flex;gap:6px;"><input type="url" id="dashBgUrl" placeholder="https://...jpg" style="flex:1;"><button class="btn btn-s" onclick="previewBg()" style="padding:9px 14px;font-size:11px;">Preview</button></div></div>
-          <div id="bgUploadWrap" style="display:none;margin-bottom:6px;"><input type="file" id="bgFileInput" accept="image/*" onchange="uploadBgFile(this)"></div>
-          <div class="bg-pv" id="bgPreview">No background set.</div>
-        </div>
-        <div class="stg"><label>Background Blur</label><select id="dashBgBlur" onchange="previewBgBlur(this.value)"><option value="0">None</option><option value="sm">Light</option><option value="md" selected>Medium</option><option value="lg">Heavy</option></select></div>
-        
-        <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Card Style</label>
-          <select id="dashCardStyle"><option value="glass">Glass</option><option value="solid">Solid</option><option value="border">Border Only</option></select></div>
-        <div class="stg"><label>Layout Density</label>
-          <select id="dashDensity"><option value="compact">Compact</option><option value="normal" selected>Normal</option><option value="comfortable">Comfortable</option></select></div>
-
-        <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Animation Preset</label>
-          <select id="dashAnimPreset"><option value="subtle">Subtle</option><option value="smooth" selected>Smooth</option><option value="energetic">Energetic</option></select>
-          <div class="stg-hint">Controls animation speed and intensity across the dashboard.</div></div>
-        <div class="stg"><label>Animation Speed</label>
-          <select id="dashAnimSpeed"><option value="0.5">0.5x Slow</option><option value="0.75">0.75x Relaxed</option><option value="1" selected>1x Normal</option><option value="1.25">1.25x Fast</option><option value="1.5">1.5x Turbo</option></select></div>
-
-        <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Bot Presence</label>
-          <div class="stg-inl" style="margin-bottom:6px;"><select id="botPresenceType" style="flex:0 0 120px;"><option value="playing">Playing</option><option value="watching">Watching</option><option value="listening">Listening to</option><option value="competing">Competing in</option></select><input type="text" id="botPresenceText" placeholder="e.g. with code..." style="flex:1;"></div>
-          <button class="btn btn-s" onclick="updateBotPresence()" style="padding:7px 16px;font-size:11px;">Update Presence</button>
-          <div class="stg-hint">Changes the bot's Discord activity status immediately.</div></div>
-        
-        <div class="stg"><label>Bot Username</label>
-          <div class="stg-inl"><input type="text" id="botNameInput" placeholder="New bot name..." maxlength="32" style="flex:1;"><button class="btn btn-s" onclick="updateBotName()" style="padding:7px 16px;font-size:11px;">Rename</button></div>
-          <div class="stg-hint">Discord limits username changes to 2 per hour.</div></div>
-        
-        <div class="stg"><label>Bot Avatar</label>
-          <div class="stg-inl"><input type="url" id="botAvatarInput" placeholder="https://cdn.discordapp.com/..." style="flex:1;"><button class="btn btn-s" onclick="updateBotAvatar()" style="padding:7px 16px;font-size:11px;">Set Avatar</button></div>
-          <div class="stg-hint">Paste a direct image URL (must end in .png/.jpg/.gif).</div></div>
-
-        <div class="stg"><label>Card Glow Effect</label>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" id="glowToggle"></div><div class="tg-lbl">Mouse-tracking card border glow</div></div></div>
-        <div class="stg"><label>Ambient Light</label>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" id="ambientToggle"></div><div class="tg-lbl">Mouse-following radial light</div></div></div>
-
-        <div class="stg"><label>Dashboard Theme</label><div class="tg-wr" onclick="toggleTheme()"><div class="tg on" id="themeToggle"></div><div class="tg-lbl">Dark Mode<small>Switch between light and dark dashboard theme</small></div></div></div>
-
-        <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Refresh Interval</label><select id="dashRefresh"><option value="3">3s</option><option value="5" selected>5s</option><option value="10">10s</option><option value="30">30s</option><option value="60">60s</option></select></div>
-        
-        <div class="stg"><label>Visible Sections</label>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" data-w="status"></div><div class="tg-lbl">Status & Stats</div></div>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" data-w="analytics"></div><div class="tg-lbl">Analytics<small>Growth charts</small></div></div>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" data-w="activity"></div><div class="tg-lbl">Activity<small>Recent events</small></div></div>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" data-w="system"></div><div class="tg-lbl">System<small>Host & memory</small></div></div>
-        </div>
-        
-        <button class="btn" onclick="saveSettings()" style="margin-top:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save All Settings</button>
-      </div>
-    </div>
-  </main>
-</div>
-<div class="toast" id="toast">Saved!</div>
-<div id="bugBadge" style="position:fixed;bottom:14px;right:14px;z-index:59;font-size:9px;color:rgba(255,255,255,0.06);font-family:'Inter',sans-serif;letter-spacing:0.2px;pointer-events:none;transition:color 0.3s">Bugs? DM .nlux.</div>
-
-<script src="/static/dashboard.js"></script>
-<script>
 // ═══ BACKGROUND ENGINES ═══
 const bgCanvas=document.getElementById('bgCanvas'),bgCtx=bgCanvas.getContext('2d');
 let bgEngine=null,bgStyle='dots',bgAnimId=null;
@@ -248,6 +24,19 @@ const ENGINES={dots:engDots,shapes:engShapes,glitch:engGlitch,liquid:engLiquid,g
 function startBg(style){if(bgAnimId){cancelAnimationFrame(bgAnimId);bgAnimId=null}bgStyle=style||'dots';const fn=ENGINES[bgStyle];if(!fn){bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);return}rsBg();bgEngine=fn();!function l(){bgEngine();bgAnimId=requestAnimationFrame(l)}()}
 function switchBg(style){bgStyle=style;startBg(style)}
 
+// ═══ DOCK MAGNIFICATION ═══
+let dockItems=[];
+function initDock(){dockItems=document.querySelectorAll('.dock-item');dockMagnify()}
+function dockMagnify(){const dock=document.getElementById('dock');if(!dock||!dockItems.length)return;const rect=dock.getBoundingClientRect();const mx=bgMouse.x;const itemW=52;
+dockItems.forEach(item=>{const ir=item.getBoundingClientRect(),ic=ir.left+ir.width/2,dist=Math.abs(mx-ic),maxDist=200,scale=Math.max(1,1+(1-Math.min(dist/maxDist,1))*0.4);item.style.transform=`scale(${scale})`;if(scale>1.15)item.style.zIndex='10';else item.style.zIndex='';// Dynamic margin to prevent overlap
+const extraMargin=(itemW*(scale-1))/2;item.style.marginLeft=6+extraMargin+'px';item.style.marginRight=6+extraMargin+'px'})}
+function dockReset(){dockItems.forEach(item=>{item.style.transform='scale(1)';item.style.zIndex='';item.style.marginLeft='6px';item.style.marginRight='6px'})}
+document.addEventListener('mousemove',e=>{
+  if(!dockItems.length)return;
+  if(e.clientY>window.innerHeight-140)dockMagnify();
+  else dockReset()
+});
+
 // ═══ AMBIENT + CARD GLOW ═══
 document.addEventListener('mousemove',e=>{
   document.documentElement.style.setProperty('--mx',e.clientX/window.innerWidth);
@@ -257,6 +46,15 @@ document.addEventListener('mousemove',e=>{
     c.style.setProperty('--glow-int',i.toFixed(3));c.style.setProperty('--glow-ang',a2.toFixed(1)+'deg')
   })
 });
+
+// ═══ SIDEBAR ═══
+let sbPinned=false;
+function showSidebar(){if(!sbPinned)document.getElementById('sidebar').classList.remove('hidden')}
+function hideSidebar(){if(!sbPinned)setTimeout(()=>{if(!document.getElementById('sidebar').matches(':hover'))document.getElementById('sidebar').classList.add('hidden')},200)}
+document.getElementById('sidebar').addEventListener('mouseenter',showSidebar);
+document.getElementById('sidebar').addEventListener('mouseleave',hideSidebar);
+document.addEventListener('mousemove',e=>{if(!sbPinned&&e.clientX<16)showSidebar()});
+function togglePin(){sbPinned=!sbPinned;const sb=document.getElementById('sidebar'),pin=document.getElementById('sbPin');if(sbPinned){sb.classList.remove('hidden');pin.classList.add('pinned');document.documentElement.classList.add('sb-pinned')}else{pin.classList.remove('pinned');document.documentElement.classList.remove('sb-pinned');hideSidebar()}}
 
 // ═══ SCROLL REVEAL ═══
 const srObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');srObs.unobserve(e.target)}})},{threshold:0.1});
@@ -283,12 +81,12 @@ async function checkAuth(){try{const r=await fetch('/api/status');if(r.status===
 async function logout(){await fetch('/api/logout',{method:'POST'});window.location.href='/login'}
 function showSec(n){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.notch-link').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.notch-mobile-link').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.dock-item').forEach(s=>s.classList.remove('active'));
   const sec=document.getElementById('sec-'+n);sec.classList.add('active');
   sec.classList.remove('sec-enter');void sec.offsetWidth;sec.classList.add('sec-enter');
-  const nav=document.querySelector('.notch-link[data-sec="'+n+'"]');if(nav)nav.classList.add('active');
-  const mnav=document.querySelector('.notch-mobile-link[data-sec="'+n+'"]');if(mnav)mnav.classList.add('active');
+  const nav=document.querySelector('[data-sec="'+n+'"]');if(nav)nav.classList.add('active');
+  const dnav=document.querySelector('.dock-item[data-sec="'+n+'"]');if(dnav)dnav.classList.add('active');
   setTimeout(()=>{document.querySelectorAll('#sec-'+n+' .sr').forEach(el=>srObs.observe(el))},50)
 }
 
@@ -296,7 +94,7 @@ function showSec(n){
 async function loadCfg(){try{const r=await fetch('/api/dash/config');cfg=await r.json();applyCfg(cfg)}catch{}}
 function applyCfg(c){
   if(c.accentColor){const h=c.accentColor.replace('#',''),r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);document.documentElement.style.setProperty('--accent',c.accentColor);document.documentElement.style.setProperty('--accent-rgb',r+','+g+','+b);document.getElementById('dashColor').value=c.accentColor;document.getElementById('colorVal').textContent=c.accentColor}
-  if(c.title){document.getElementById('dashTitle').value=c.title;document.getElementById('dashTitlePg').textContent=c.title}
+  if(c.title){document.getElementById('dashTitle').value=c.title;document.getElementById('dashTitlePg').textContent=c.title;document.getElementById('dashTitleSidebar').textContent=c.title}
   if(c.refreshInterval){document.getElementById('dashRefresh').value=c.refreshInterval;rInt=c.refreshInterval;if(rTimer){clearInterval(rTimer);stRf()}}
   if(c.showWidgets)document.querySelectorAll('.tg').forEach(t=>{const w=t.dataset.w;if(w&&c.showWidgets[w]===false)t.classList.remove('on')});
   if(c.cardStyle){document.getElementById('dashCardStyle').value=c.cardStyle;document.querySelectorAll('.card').forEach(ca=>{ca.classList.toggle('card-solid',c.cardStyle==='solid');ca.classList.toggle('card-border',c.cardStyle==='border')})}
@@ -307,19 +105,20 @@ function applyCfg(c){
   if(c.backgroundStyle){bgStyle=c.backgroundStyle;document.querySelectorAll('.bg-style-opt').forEach(e=>e.classList.toggle('active',e.dataset.bg===c.backgroundStyle));if(!document.getElementById('sec-settings').classList.contains('active'))switchBg(c.backgroundStyle)}
   if(c.darkMode===false){darkMode=false;applyTheme(false)}else{darkMode=true;applyTheme(true)}
   // New settings
-  if(c.botAvatarUrl){document.getElementById('dashAvatarUrl').value=c.botAvatarUrl}
+  if(c.botAvatarUrl){document.getElementById('dashAvatarUrl').value=c.botAvatarUrl;previewAvatar(c.botAvatarUrl)}
   if(c.animationPreset){document.getElementById('dashAnimPreset').value=c.animationPreset;const speeds={subtle:0.7,smooth:1,energetic:1.3};const dur=speeds[c.animationPreset]||1;document.documentElement.style.setProperty('--anim-speed',dur)}
   if(c.animationSpeed){document.getElementById('dashAnimSpeed').value=c.animationSpeed;document.documentElement.style.setProperty('--anim-speed',c.animationSpeed)}
+  if(c.dockEnabled!==undefined){document.body.classList.toggle('dock-enabled',c.dockEnabled);const dt=document.getElementById('dockToggle');if(c.dockEnabled)dt.classList.add('on');else dt.classList.remove('on')}
   if(c.cardGlow===false)document.querySelectorAll('.card').forEach(ca=>{ca.style.setProperty('--glow-int','0')});
   if(c.ambientLight===false)document.getElementById('ambient').style.display='none';else document.getElementById('ambient').style.display=''
 }
 function previewColor(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);document.documentElement.style.setProperty('--accent',h);document.documentElement.style.setProperty('--accent-rgb',r+','+g+','+b);document.getElementById('dashColor').value=h;document.getElementById('colorVal').textContent=h}
-function previewTitle(v){document.getElementById('dashTitlePg').textContent=v||'Overview'}
-function applyTheme(isDark){document.body.classList.toggle('light-mode',!isDark);darkMode=isDark;const lb=document.getElementById('themeLabel'),ti=document.getElementById('themeIcon'),tg=document.getElementById('themeToggle'),nti=document.getElementById('ntThemeIcon'),ntl=document.getElementById('ntMobileThemeLabel');if(lb)lb.textContent=isDark?'Light Mode':'Dark Mode';if(ti)ti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(tg)tg.classList.toggle('on',isDark);if(nti)nti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(ntl)ntl.textContent=isDark?'Light Mode':'Dark Mode'}
+function previewTitle(v){document.getElementById('dashTitlePg').textContent=v||'Overview';document.getElementById('dashTitleSidebar').textContent=v||'Dashboard'}
+function applyTheme(isDark){document.body.classList.toggle('light-mode',!isDark);darkMode=isDark;const lb=document.getElementById('themeLabel'),ti=document.getElementById('themeIcon'),tg=document.getElementById('themeToggle');if(lb)lb.textContent=isDark?'Light Mode':'Dark Mode';if(ti)ti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(tg)tg.classList.toggle('on',isDark)}
 function toggleTheme(){applyTheme(!darkMode)}
-function toggleMobileMenu(){const menu=document.getElementById('notchMobileMenu'),btn=document.getElementById('notchMobileBtn');if(!menu||!btn)return;menu.classList.toggle('open');btn.querySelector('.notch-hamburger').style.display=menu.classList.contains('open')?'none':'';btn.querySelector('.notch-close').style.display=menu.classList.contains('open')?'':'none'}
 function applyPreset(idx){const t=THEMES[idx];previewColor(t.color);document.getElementById('themeGrid').querySelectorAll('.thm-pick').forEach((e,i)=>e.classList.toggle('active',i===idx))}
 function toggleBgType(){const t=document.getElementById('bgType').value;document.getElementById('bgUrlWrap').style.display=t==='url'?'':'none';document.getElementById('bgUploadWrap').style.display=t==='upload'?'':'none'}
+function previewAvatar(url){const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');if(url&&url.startsWith('http')){img.src=url;img.style.display='block';def.style.display='none'}else{img.style.display='none';def.style.display='flex'}}
 function previewBgBlur(v){const bg=document.getElementById('bgOverlay');bg.className='bg-overlay active'+(v&&v!=='0'?' blur-'+v:'')}
 function previewBg(){const url=document.getElementById('dashBgUrl').value,blur=document.getElementById('dashBgBlur').value;if(url&&url.startsWith('http')){document.getElementById('bgPreview').style.backgroundImage='url('+url+')';document.getElementById('bgPreview').className='bg-pv loaded';const bg=document.getElementById('bgOverlay');bg.style.backgroundImage='url('+url+')';bg.className='bg-overlay active'+(blur&&blur!=='0'?' blur-'+blur:'')}else{document.getElementById('bgPreview').style.backgroundImage='';document.getElementById('bgPreview').className='bg-pv';document.getElementById('bgPreview').textContent='No background set.'}}
 async function uploadBgFile(inp){const file=inp.files[0];if(!file)return;const fd=new FormData();fd.append('background',file);try{const r=await fetch('/api/upload',{method:'POST',body:fd}),d=await r.json();if(d.success){document.getElementById('dashBgUrl').value=d.url;document.getElementById('bgPreview').style.backgroundImage='url('+d.url+')';document.getElementById('bgPreview').className='bg-pv loaded';const bg=document.getElementById('bgOverlay');bg.style.backgroundImage='url('+d.url+')';bg.className='bg-overlay active'+(document.getElementById('dashBgBlur').value!=='0'?' blur-'+document.getElementById('dashBgBlur').value:'');document.getElementById('bgType').value='upload';showToast('Uploaded!')}else showToast('Upload failed',true)}catch{showToast('Upload failed',true)}}
@@ -352,7 +151,7 @@ async function loadOv(){
       document.getElementById('sDot').className='sl-dot on';document.getElementById('sTxt').textContent='Online';
       if(s.version)document.getElementById('sbVersion').textContent='v'+s.version;
       // Set bot avatar from status if no custom avatar configured
-      
+      if(!cfg.botAvatarUrl&&s.avatar){const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');img.src=s.avatar;img.style.display='block';def.style.display='none'}
       const sv=s.servers||0,rmC=rm.length,ng=ag.netGrowth||0;
       animCount(document.getElementById('ovServers'),sv);animCount(document.getElementById('ovReminders'),rmC);
       const ovG=document.getElementById('ovGrowth');ovG.textContent=(ng>=0?'+':'')+ng;ovG.style.color=ng>=0?'#3ba55c':'#ed4245';
@@ -361,7 +160,7 @@ async function loadOv(){
         '<div class="card sr"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div class="lbl">Uptime</div><div class="val">'+s.uptime+'</div><div class="sub">Since last restart</div></div>'+
         '<div class="card sr"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><div class="lbl">Servers</div><div class="val">'+sv+'</div><div class="sub">'+s.users+' total users</div></div>'+
         '<div class="card sr"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><div class="lbl">Memory</div><div class="val">'+s.memory+' MB</div><div class="sub">Node '+s.nodeVersion+'</div></div>';
-      if(ag.timeline&&ag.timeline.length>1){const tl=ag.timeline.slice(-14),mx=Math.max(...tl.map(d=>Math.abs(d.net)),1);const mw=tl.length*14+16,mh=50,cx=8,cw2=tl.length*14,ch2=38;const lc=tl[tl.length-1];const trendColor=lc&&lc.net>=0?'#3ba55c':'#ed4245';const mpts=tl.map((d,i)=>{const x=cx+(i/(tl.length-1||1))*cw2,y=cx+ch2/2-(d.net/mx)*(ch2/2-4);return x+','+y;}).join(' ');const marea=tl.map((d,i)=>{const x=cx+(i/(tl.length-1||1))*cw2,y=cx+ch2/2-(d.net/mx)*(ch2/2-2);return x+','+y;}).join(' ')+' '+cx+','+(cx+ch2)+' '+(cx+cw2)+','+(cx+ch2);const mDots=tl.map((d,i)=>{const x=cx+(i/(tl.length-1||1))*cw2,y=cx+ch2/2-(d.net/mx)*(ch2/2-2),c=d.net>=0?'#3ba55c':'#ed4245';return '<circle cx="'+x+'" cy="'+y+'" r="2" fill="'+c+'" stroke="var(--bg)" stroke-width="1.5"><title>'+d.date.slice(5)+': '+(d.net>=0?'+':'')+d.net+'</title></circle>';}).join('');document.getElementById('ovMiniChart').innerHTML='<svg viewBox="0 0 '+mw+' '+mh+'" style="width:100%;height:100%;"><defs><linearGradient id="mFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+trendColor+'" stop-opacity="0.15"/><stop offset="100%" stop-color="'+trendColor+'" stop-opacity="0.01"/></linearGradient></defs><polygon points="'+marea+'" fill="url(#mFill)"/><polyline points="'+mpts+'" fill="none" stroke="'+trendColor+'" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'+mDots+'</svg>'}
+      if(ag.timeline&&ag.timeline.length>1){const tl=ag.timeline.slice(-14),mx=Math.max(...tl.map(d=>Math.abs(d.net)),1);const mw=tl.length*14+16,mh=50,cx=8,cw2=tl.length*14,ch2=38;const mpts=tl.map((d,i)=>{const x=cx+(i/(tl.length-1||1))*cw2,y=cx+ch2/2-(d.net/mx)*(ch2/2-4);return x+','+y;}).join(' ');const marea=tl.map((d,i)=>{const x=cx+(i/(tl.length-1||1))*cw2,y=cx+ch2/2-(d.net/mx)*(ch2/2-2);return x+','+y;}).join(' ')+' '+cx+','+(cx+ch2)+' '+(cx+cw2)+','+(cx+ch2);const mDots=tl.map((d,i)=>{const x=cx+(i/(tl.length-1||1))*cw2,y=cx+ch2/2-(d.net/mx)*(ch2/2-2),c=d.net>=0?'#3ba55c':'#ed4245';return '<circle cx="'+x+'" cy="'+y+'" r="2" fill="'+c+'" stroke="var(--bg)" stroke-width="1.5"><title>'+d.date.slice(5)+': '+(d.net>=0?'+':'')+d.net+'</title></circle>';}).join('');document.getElementById('ovMiniChart').innerHTML='<svg viewBox="0 0 '+mw+' '+mh+'" style="width:100%;height:100%;"><defs><linearGradient id="mFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity="0.15"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0.01"/></linearGradient></defs><polygon points="'+marea+'" fill="url(#mFill)"/><polyline points="'+mpts+'" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'+mDots+'</svg>'}
       setTimeout(()=>{document.querySelectorAll('#sec-overview .sr').forEach(el=>srObs.observe(el))},50);
     }
   }catch{}
@@ -379,16 +178,12 @@ async function showSrv(id){curSrv=id;document.getElementById('srvList').style.di
       '<button class="mgmt-tab" data-tab="channels" onclick="showSrvTab(\'channels\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Channels</button>'+
       '<button class="mgmt-tab" data-tab="logging" onclick="showSrvTab(\'logging\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Logging</button>'+
       '<button class="mgmt-tab" data-tab="audit" onclick="showSrvTab(\'audit\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Audit Log</button>'+
-      '<button class="mgmt-tab" data-tab="insights" onclick="showSrvTab(\'insights\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Insights</button>'+
-      '<button class="mgmt-tab" data-tab="messages" onclick="showSrvTab(\'messages\',\''+id+'\')" style="flex:1;padding:7px 12px;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,0.3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.15s;">Message Search</button>'+
       '</div></div>'+
       '<div class="mgmt-panel" data-panel="overview"><div class="grid grid-2">'+(d.logging&&d.logging.perCategory?'<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>Logging</div><table class="tbl"><tr><th>Category</th><th>Channel</th><th>Status</th></tr>'+Object.entries(d.logging.perCategory).map(([cat,info])=>'<tr><td style="text-transform:capitalize;">'+cat+'</td><td>'+(info.channel?'<code>#'+info.channel+'</code>':'<span style="color:var(--text-muted);">Default</span>')+'</td><td><span class="tag '+(info.enabled?'green':'red')+'\">'+(info.enabled?'On':'Off')+'</span></td></tr>').join('')+'</table></div>':'')+'</div></div>'+
       '<div class="mgmt-panel" data-panel="roles" style="display:none;"><div id="mgmtRoles"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="channels" style="display:none;"><div id="mgmtChannels"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="logging" style="display:none;"><div id="mgmtLogging"><div class="loading"><div class="spin"></div></div></div></div>'+
-      '<div class="mgmt-panel" data-panel="audit" style="display:none;"><div id="mgmtAudit"><div class="loading"><div class="spin"></div></div></div></div>'+
-      '<div class="mgmt-panel" data-panel="insights" style="display:none;"><div id="mgmtInsights"><div class="loading"><div class="spin"></div></div></div></div>'+
-      '<div class="mgmt-panel" data-panel="messages" style="display:none;"><div id="mgmtMessages"><div class="loading"><div class="spin"></div></div></div></div>'}catch{dt.innerHTML='<p style="color:#ed4245;padding:16px;">Failed to load.</p>'}}
+      '<div class="mgmt-panel" data-panel="audit" style="display:none;"><div id="mgmtAudit"><div class="loading"><div class="spin"></div></div></div></div>'}catch{dt.innerHTML='<p style="color:#ed4245;padding:16px;">Failed to load.</p>'}}
 function backSrv(){curSrv=null;document.getElementById('srvList').style.display='';document.getElementById('srvDetail').style.display='none'}
 
 // ═══ SERVER MANAGEMENT ═══
@@ -400,9 +195,7 @@ function showSrvTab(tab,serverId){
   if(tab==='roles'&&serverId)loadSrvRoles(serverId);
   if(tab==='channels'&&serverId)loadSrvChannels(serverId);
   if(tab==='logging'&&serverId)loadSrvLogging(serverId);
-  if(tab==='audit'&&serverId)loadSrvAudit(serverId);
-  if(tab==='insights'&&serverId)loadSrvInsights(serverId);
-  if(tab==='messages'&&serverId)loadSrvMessages(serverId)
+  if(tab==='audit'&&serverId)loadSrvAudit(serverId)
 }
 async function loadSrvRoles(id){try{const r=await fetch('/api/server/'+id+'/roles'),roles=await r.json();const el=document.getElementById('mgmtRoles');el.innerHTML=roles.slice(0,40).map(r=>'<div class="srv-card" style="cursor:default;padding:8px 12px;"><div style="width:10px;height:10px;border-radius:50%;background:'+(r.color||'rgba(255,255,255,0.1)')+';flex-shrink:0;"></div><div class="si"><h3>'+r.name+'</h3><p style="font-size:10px;">'+(r.managed?'Managed by integration':'ID: '+r.id)+'</p></div><span style="font-size:10px;color:var(--text-dim);">'+r.memberCount+' members</span></div>').join('')}catch{document.getElementById('mgmtRoles').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
 async function loadSrvChannels(id){try{const r=await fetch('/api/server/'+id+'/channels'),channels=await r.json();const el=document.getElementById('mgmtChannels');const typeColors={Text:'rgba(59,165,92,0.12)',Voice:'rgba(88,101,242,0.12)',Announcement:'rgba(241,196,15,0.12)',Forum:'rgba(241,196,15,0.12)',Unknown:'rgba(255,255,255,0.04)'};el.innerHTML=channels.slice(0,50).map(c=>'<div class="srv-card" style="cursor:default;padding:8px 12px;"><span class="tag '+(c.nsfw?'red':'green')+'" style="margin-right:8px;">#'+c.name+'</span><div class="si"><h3 style="font-size:12px;">'+c.type+(c.topic?' — '+c.topic:'')+'</h3></div>'+(c.memberCount!==null?'<span style="font-size:10px;color:var(--text-dim);">'+c.memberCount+' users</span>':'')+(c.bitrate?'<span style="font-size:10px;color:var(--text-dim);">'+(c.bitrate/1000)+'kbps</span>':'')+'</div>').join('')}catch{document.getElementById('mgmtChannels').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
@@ -418,15 +211,6 @@ async function clearTrackedChannels(serverId){try{await fetch('/api/server/'+ser
 
 async function loadSrvAudit(id){const el=document.getElementById('mgmtAudit');try{const[rd,rs]=await Promise.all([fetch('/api/server/'+id+'/audit'),fetch('/api/server/'+id)]),audit=await rd.json(),server=await rs.json();if(!audit||!audit.length)return el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>No recent audit log entries.</p><p style="font-size:10px;color:var(--text-muted);margin-top:6px;">The bot may lack the \'View Audit Log\' permission.</p></div>';el.innerHTML=audit.map(function(e){var time=Math.floor((Date.now()-e.createdTimestamp)/1000),timeStr=time<60?time+'s ago':time<3600?Math.floor(time/60)+'m ago':time<86400?Math.floor(time/3600)+'h ago':Math.floor(time/86400)+'d ago';var actNames={1:'Server Updated',10:'Channel Created',11:'Channel Updated',12:'Channel Deleted',13:'Channel Permission Update',14:'Channel Overwrite Delete',20:'Member Kicked',21:'Member Prune',22:'Member Banned',23:'Member Unbanned',24:'Member Updated',25:'Member Role Updated',26:'Member Move',27:'Member Disconnect',28:'Bot Added',30:'Role Created',31:'Role Updated',32:'Role Deleted',40:'Invite Created',41:'Invite Deleted',42:'Invite Updated',50:'Webhook Created',51:'Webhook Updated',52:'Webhook Deleted',60:'Emoji Created',61:'Emoji Updated',62:'Emoji Deleted',70:'Message Deleted',71:'Message Bulk Delete',72:'Message Pin',73:'Message Unpin',80:'Integration Created',81:'Integration Updated',82:'Integration Deleted',90:'Sticker Created',91:'Sticker Updated',92:'Sticker Deleted',100:'Stage Started',101:'Stage Ended',102:'Stage Updated',110:'Thread Created',111:'Thread Updated',112:'Thread Deleted',120:'Scheduled Event Created',121:'Scheduled Event Updated',122:'Scheduled Event Deleted',130:'Auto Mod Block',140:'Auto Mod Rule Created',141:'Auto Mod Rule Updated',142:'Auto Mod Rule Deleted',143:'Auto Mod Flag Message',144:'Auto Mod Timeout'};var actionName=actNames[e.action]||e.actionType||'Action';return'<div class="act-item"><img src="'+(e.executorAvatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" style="width:24px;height:24px;border-radius:6px;flex-shrink:0;"><div class="a-tx"><strong>'+(e.executorTag||'Unknown')+'</strong> &#8209; '+actionName+(e.reason?'<br><span style="font-size:10px;color:var(--text-dim);">Reason: '+e.reason+'</span>':'')+'</div><div class="a-tm">'+timeStr+'</div></div>'}).join('')}catch{el.innerHTML='<div class="empty"><p>Failed to load audit log.</p></div>'}}
 
-// ═══ Server Insights ═══
-async function loadSrvInsights(id){try{const r=await fetch('/api/insights/'+id),d=await r.json();if(!d)return;document.getElementById('mgmtInsights').innerHTML='<div class="grid grid-2"><div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Top Users by Messages</div><div style="padding:8px;">'+(d.topUsers.length?d.topUsers.map(function(u,i){return'<div class="act-item"><img src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" style="width:24px;height:24px;border-radius:6px;flex-shrink:0;"><div class="a-tx"><strong>'+(u.tag||u.userId)+'</strong></div><div class="a-tm">'+u.total+' msgs</div></div>'}).join(''):'<div class="empty" style="padding:16px;"><p>Not enough data yet.</p></div>')+'</div></div><div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Top Channels</div><div style="padding:8px;">'+(d.topChannels.length?d.topChannels.map(function(c,i){return'<div class="act-item"><div style="width:24px;height:24px;border-radius:6px;background:rgba(88,101,242,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent);font-size:10px;font-weight:700;">#'+(i+1)+'</div><div class="a-tx"><strong>#'+c.name+'</strong></div><div class="a-tm">'+c.total+' msgs</div></div>'}).join(''):'<div class="empty" style="padding:16px;"><p>Not enough data yet.</p></div>')+'</div></div></div>'}catch{document.getElementById('mgmtInsights').innerHTML='<div class="empty"><p>Failed to load insights.</p></div>'}}
-
-// ═══ Message Search ═══
-var msgSearchTimeout=null;
-function onMsgSearchInput(id){if(msgSearchTimeout)clearTimeout(msgSearchTimeout);msgSearchTimeout=setTimeout(function(){loadSrvMessages(id)},300)}
-function msgSearchFilterChange(id){loadSrvMessages(id)}
-async function loadSrvMessages(id){var el=document.getElementById('mgmtMessages');var q=document.getElementById('msgSearchInput')?.value||'';var action=document.getElementById('msgSearchFilter')?.value||'all';el.innerHTML='<div class="loading"><div class="spin"></div></div>';try{var url='/api/server/'+id+'/messages?limit=50';if(action!=='all')url+='&action='+action;if(q)url+='&q='+encodeURIComponent(q);var r=await fetch(url),msgs=await r.json();var html='<div style="display:flex;gap:6px;margin-bottom:10px;padding:10px;"><input type="text" id="msgSearchInput" placeholder="Search message content..." value="'+q.replace(/"/g,'&quot;')+'" oninput="onMsgSearchInput(\''+id+'\')" style="flex:1;padding:8px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:12px;outline:none;font-family:inherit;"><select id="msgSearchFilter" onchange="msgSearchFilterChange(\''+id+'\')" style="padding:8px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:11px;font-family:inherit;"><option value="all">All</option><option value="deleted"'+(action==='deleted'?' selected':'')+'>Deleted</option><option value="edited"'+(action==='edited'?' selected':'')+'>Edited</option></select></div>';if(!msgs||!msgs.length){html+='<div class="empty"><p>No messages found.</p></div>';el.innerHTML=html;return}html+=msgs.map(function(m){var time=new Date(m.loggedAt);var timeStr=time.toLocaleDateString()+' '+time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});var actionBadge=m.action==='deleted'?'<span class="tag red">🗑️ Deleted</span>':'<span class="tag yellow">✏️ Edited</span>';var content=m.content?m.content.slice(0,300):'(no content)';if(q&&content.toLowerCase().includes(q.toLowerCase())){var idx=content.toLowerCase().indexOf(q.toLowerCase());var before=content.slice(0,idx);var match=content.slice(idx,idx+q.length);var after=content.slice(idx+q.length);content=before+'<mark style="background:rgba(88,101,242,0.25);color:#fff;padding:0 2px;border-radius:2px;">'+match+'</mark>'+after}return'<div class="rmd" style="flex-wrap:wrap;"><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><strong style="font-size:12px;">'+m.authorTag+'</strong> '+actionBadge+' <span style="font-size:10px;color:var(--text-dim);">#'+m.channelName+'</span></div><div style="font-size:11px;color:var(--text);word-break:break-all;">'+content+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">'+timeStr+'</div></div></div>'}).join('');el.innerHTML=html}catch{document.getElementById('mgmtMessages').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
-
 async function loadAct(){const el=document.getElementById('actFeed');try{const r=await fetch('/api/activity'),a=await r.json();if(!a.length||a.length<2)return el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>Activity will appear as people join.</p></div>';const items=a.slice(-20).filter(x=>x.type).reverse();el.innerHTML=items.map(x=>{const c=x.type==='join'?'#3ba55c':'#ed4245',b=x.type==='join'?'rgba(59,165,92,0.12)':'rgba(237,66,69,0.12)';return'<div class="act-item"><div class="a-ico" style="background:'+b+'"><svg viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg></div><div class="a-tx">Member '+(x.type==='join'?'joined':'left')+' <strong>'+x.guildName+'</strong></div><div class="a-tm">now</div></div>'}).join('')}catch{el.innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
 async function loadRm(){const el=document.getElementById('rmdList');try{const r=await fetch('/api/reminders'),rm=await r.json();if(!rm.length)return el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><p>No pending reminders.</p></div>';el.innerHTML=rm.map(r=>{const t=r.remindAt-Date.now(),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000);return'<div class="rmd"><span class="rmd-tm">'+(t>0?(m>0?m+'m ':'')+s+'s':'Due')+'</span><span class="rmd-tx">'+r.text+'</span></div>'}).join('')}catch{el.innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
 async function loadSys(){try{const r=await fetch('/api/system'),s=await r.json();document.getElementById('sysHost').innerHTML='<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span style="color:var(--text-dim);">Platform</span><span>'+s.platform+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span style="color:var(--text-dim);">Node</span><span>'+s.nodeVersion+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span style="color:var(--text-dim);">CPU</span><span>'+s.cpuCores+' cores</span></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span style="color:var(--text-dim);">Uptime</span><span>'+s.uptime+'</span></div>';// Cap RAM display (containers report host memory, use process values)
@@ -437,7 +221,8 @@ document.getElementById('sysMem').innerHTML='<div style="margin-bottom:10px;"><d
 // ═══ BOT CUSTOMIZATION ═══
 async function updateBotPresence(){const type=document.getElementById('botPresenceType').value,text=document.getElementById('botPresenceText').value;if(!text)return showToast('Enter a presence text',true);try{const r=await fetch('/api/bot/presence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,text})}),d=await r.json();d.success?showToast('Presence updated!'):showToast(d.error||'Failed',true)}catch{showToast('Failed to update',true)}}
 async function updateBotName(){const name=document.getElementById('botNameInput').value;if(!name)return showToast('Enter a name',true);if(name.length>32)return showToast('Max 32 characters',true);try{const r=await fetch('/api/bot/name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}),d=await r.json();if(d.success){showToast('Username changed!');document.getElementById('botNameInput').value=''}else showToast(d.error||'Failed',true)}catch{showToast('Failed to rename',true)}}
-async function updateBotAvatar(){const url=document.getElementById('botAvatarInput').value;if(!url)return showToast('Enter an image URL',true);try{const r=await fetch('/api/bot/avatar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})}),d=await r.json();if(d.success){showToast('Avatar changed!');document.getElementById('botAvatarInput').value=''}else showToast(d.error||'Failed',true)}catch{showToast('Failed to set avatar',true)}}
+async function updateBotAvatar(){const url=document.getElementById('botAvatarInput').value;if(!url)return showToast('Enter an image URL',true);try{const r=await fetch('/api/bot/avatar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})}),d=await r.json();if(d.success){showToast('Avatar changed!');document.getElementById('botAvatarInput').value='';// Refresh sidebar avatar
+const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');img.src=d.avatar;img.style.display='block';def.style.display='none'}else showToast(d.error||'Failed',true)}catch{showToast('Failed to set avatar',true)}}
 
 // ═══ BUGS BADGE THEME ═══
 (function(){const b=document.getElementById('bugBadge');if(b){const o=new MutationObserver(()=>{b.style.color=document.body.classList.contains('light-mode')?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.06)'});o.observe(document.body,{attributes:true,attributeFilter:['class']})}})();
@@ -446,35 +231,7 @@ async function updateBotAvatar(){const url=document.getElementById('botAvatarInp
 async function loadBrand(){try{const r=await fetch('/api/status');if(r.ok){const d=await r.json();if(d.brandName)document.getElementById('brandFt').textContent='Powered by '+d.brandName}}catch{}}
 
 function stRf(){if(rTimer)clearInterval(rTimer);rTimer=setInterval(()=>{loadOv();loadRm()},rInt*1000)}
-
-// ═══ SSE: Real-time updates ═══
-let sseSource=null;
-function initSSE(){
-  if(sseSource)try{sseSource.close()}catch{}
-  if(typeof EventSource==='undefined')return;
-  try{
-    sseSource=new EventSource('/api/events');
-    sseSource.onmessage=function(e){
-      try{
-        var ev=JSON.parse(e.data);
-        if(ev.type==='msg_deleted'||ev.type==='msg_edited'){
-          showToast(ev.type==='msg_deleted'?'✉️ Message deleted by '+ev.data.authorTag:'✏️ Message edited by '+ev.data.authorTag);
-        }
-        if(ev.type==='member_join'||ev.type==='member_leave'){
-          loadOv();loadAn();
-        }
-      }catch{}
-    };
-    sseSource.onerror=function(){
-      // Reconnect after 5s
-      setTimeout(initSSE,5000);
-    };
-  }catch{}
-}
 window.addEventListener('resize',()=>{rsBg();startBg(bgStyle)});
 window.addEventListener('beforeunload',()=>{if(bgAnimId)cancelAnimationFrame(bgAnimId)});
 
-checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadRm();await loadSys();loadBrand();stRf();initSSE()});
-</script>
-</body>
-</html>
+checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');initDock();await loadOv();await loadAn();await loadServers();await loadAct();await loadRm();await loadSys();loadBrand();stRf()});
