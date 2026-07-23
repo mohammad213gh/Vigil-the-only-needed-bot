@@ -77,6 +77,9 @@ const CATEGORIES = [
             { name: 'clearwarnings', desc: 'Clear all warnings for a member' },
             { name: 'lock', desc: 'Lock a channel' },
             { name: 'unlock', desc: 'Unlock a channel' },
+            { name: 'history', desc: 'View moderation history for a user' },
+            { name: 'case', desc: 'View details of a specific moderation case' },
+            { name: 'reason', desc: 'Update the reason for a moderation case' },
         ],
     },
     {
