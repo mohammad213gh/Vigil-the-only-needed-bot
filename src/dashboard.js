@@ -611,6 +611,30 @@ function createDashboard() {
         });
     });
 
+    // ── Command Usage Stats ──
+    app.get('/api/stats/commands', requireAuth, (req, res) => {
+        if (!client) return res.json({ top: [], total: 0, users: 0 });
+        const db = getDb();
+        try {
+            // Overall top commands across all servers
+            const top = db.prepare('SELECT command, COUNT(*) as count, COUNT(DISTINCT guild_id) as servers FROM command_usage GROUP BY command ORDER BY count DESC LIMIT 20').all();
+            const total = db.prepare('SELECT COUNT(*) as total FROM command_usage').get();
+            const users = db.prepare('SELECT COUNT(DISTINCT user_id) as users FROM command_usage').get();
+            // Per-server breakdown for top 5 servers by usage
+            const perServer = db.prepare('SELECT guild_id, command, COUNT(*) as count FROM command_usage GROUP BY guild_id, command ORDER BY count DESC LIMIT 30').all();
+            const enriched = perServer.map(r => ({
+                guildName: client.guilds.cache.get(r.guild_id)?.name || r.guild_id,
+                command: r.command, count: r.count,
+            }));
+            res.json({
+                top: top.map(r => ({ command: r.command, count: r.count, servers: r.servers })),
+                perServer: enriched,
+                total: total ? total.total : 0,
+                users: users ? users.users : 0,
+            });
+        } catch { res.json({ top: [], total: 0, users: 0 }); }
+    });
+
     // ── Export Stats ──
     app.get('/api/stats/export', requireAuth, (req, res) => {
         if (!client) return res.json({});

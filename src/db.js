@@ -195,6 +195,16 @@ function initSchema() {
             PRIMARY KEY (guild_id, filter_type, pattern)
         );
 
+        CREATE TABLE IF NOT EXISTS command_usage (
+            guild_id TEXT NOT NULL,
+            command TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            used_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_cmd_usage_guild ON command_usage(guild_id, command);
+        CREATE INDEX IF NOT EXISTS idx_cmd_usage_time ON command_usage(used_at);
+
         CREATE INDEX IF NOT EXISTS idx_activity_guild ON activity_counts(guild_id, message_count DESC);
     `);
 

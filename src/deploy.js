@@ -136,7 +136,10 @@ const commandDefs = [
                 .setDescription('Show live server stats'))
         .addSubcommand(sub =>
             sub.setName('growth')
-                .setDescription('Show member growth over time')),
+                .setDescription('Show member growth over time'))
+        .addSubcommand(sub =>
+            sub.setName('commands')
+                .setDescription('Show command usage statistics')),
 
     // ── Role management (owner only) ──
     new SlashCommandBuilder()

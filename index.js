@@ -180,6 +180,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
         try {
             await handler(interaction);
+            // Track command usage (fire-and-forget)
+            try {
+                const { getDb } = require('./src/db');
+                const db = getDb();
+                db.prepare('INSERT INTO command_usage (guild_id, command, user_id, used_at) VALUES (?, ?, ?, ?)')
+                    .run(interaction.guild.id, commandName, interaction.user.id, Date.now());
+            } catch {}
         } catch (err) {
             console.error('[Command Error] ' + commandName + ':', err);
             const errorMsg = getFriendlyError(err, commandName);

@@ -151,6 +151,43 @@ async function executeStats(interaction) {
     const sub = interaction.options.getSubcommand();
     const guild = interaction.guild;
 
+    if (sub === 'commands') {
+        const { getDb } = require('../db');
+        const db = getDb();
+
+        // Top commands in this server
+        const topCmds = db.prepare('SELECT command, COUNT(*) as count FROM command_usage WHERE guild_id = ? GROUP BY command ORDER BY count DESC LIMIT 15').all(guild.id);
+        const totalCmds = db.prepare('SELECT COUNT(*) as total FROM command_usage WHERE guild_id = ?').get(guild.id);
+        const uniqueUsers = db.prepare('SELECT COUNT(DISTINCT user_id) as users FROM command_usage WHERE guild_id = ?').get(guild.id);
+
+        const total = totalCmds ? totalCmds.total : 0;
+        const users = uniqueUsers ? uniqueUsers.users : 0;
+
+        let desc = '';
+        if (topCmds.length === 0) {
+            desc = '*No command usage data yet. Commands are tracked from now on.*';
+        } else {
+            const maxCount = topCmds[0].count;
+            desc = topCmds.map(c => {
+                const barLen = Math.round((c.count / maxCount) * 20);
+                const bar = '▰'.repeat(barLen) + '▱'.repeat(Math.max(0, 20 - barLen));
+                return '`/' + c.command + '` ' + bar + ' **' + c.count + '**';
+            }).join('\n');
+        }
+
+        const embed = new EmbedBuilder()
+            .setColor(0x00BFFF)
+            .setAuthor({ name: guild.name, iconURL: guild.iconURL() })
+            .setTitle('📊 Command Usage')
+            .setDescription('Total: **' + total + '** command uses • **' + users + '** unique users')
+            .addFields({ name: 'Most Used Commands', value: desc })
+            .setFooter({ text: 'Requested by ' + interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
+            .setTimestamp();
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+        return;
+    }
+
     if (sub === 'server') {
         const channels = guild.channels.cache;
         const bots = guild.members.cache.filter(m => m.user.bot).size;
