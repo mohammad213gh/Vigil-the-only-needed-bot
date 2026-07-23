@@ -4,6 +4,9 @@
 
 // ── Info ──
 const { executePing, executeStatus, executeBotInfo, executeUserInfo, executeAvatar, executeStats } = require('./info');
+const { executeHelp } = require('./help');
+
+
 
 // ── Fun ──
 const { executeWorldCup, execute8Ball, executeCoinflip, executeDice, executeRPS, executeJoke, executeFact, executeAdvice, executeQuote, executeReverse, executeMock, executeRandom } = require('./fun');
@@ -36,6 +39,7 @@ const { executeWelcome, executeGoodbye } = require('./greetings');
 
 const commandRegistry = {
     // Info
+    help: executeHelp,
     ping: executePing,
     status: executeStatus,
     botinfo: executeBotInfo,
@@ -112,7 +116,7 @@ const commandRegistry = {
 
 // Commands that anyone can use (no owner guard)
 const publicCommands = [
-    'ping', 'worldcup', '8ball', 'coinflip', 'dice', 'rps',
+    'help', 'ping', 'worldcup', '8ball', 'coinflip', 'dice', 'rps',
     'joke', 'fact', 'advice', 'quote', 'reverse', 'mock', 'random',
     'remindme', 'reminders',
 ];

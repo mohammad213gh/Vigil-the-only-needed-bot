@@ -5,6 +5,29 @@ const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 const commandDefs = [
     // ── Info (public) ──
     new SlashCommandBuilder()
+        .setName('help')
+        .setDescription('Show all available commands or get help with a specific one')
+        .addStringOption(opt =>
+            opt.setName('command')
+                .setDescription('Get details for a specific command (e.g. "ping", "ban", "poll")')
+                .setRequired(false))
+        .addStringOption(opt =>
+            opt.setName('category')
+                .setDescription('Browse commands by category')
+                .setRequired(false)
+                .addChoices(
+                    { name: 'Info', value: 'info' },
+                    { name: 'Fun', value: 'fun' },
+                    { name: 'Reminders', value: 'reminders' },
+                    { name: 'Admin', value: 'admin' },
+                    { name: 'Moderation', value: 'moderation' },
+                    { name: 'Config', value: 'config' },
+                    { name: 'Permissions', value: 'permissions' },
+                    { name: 'Reaction Roles', value: 'reactionroles' },
+                    { name: 'Welcome / Goodbye', value: 'welcome' },
+                    { name: 'Owner', value: 'owner' },
+                )),
+    new SlashCommandBuilder()
         .setName('ping')
         .setDescription("Check the bot's latency"),
     new SlashCommandBuilder()
