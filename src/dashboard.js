@@ -665,6 +665,88 @@ function createDashboard() {
         });
     });
 
+    // ── Commands Explorer ──
+    const COMMANDS_DATA = [
+        { category:'Info', owner:false, commands:[
+            { name:'ping', description:"Check the bot's latency", usage:'/ping' },
+            { name:'status', description:"Show the bot's status, resources, and stats", usage:'/status' },
+            { name:'botinfo', description:'Show information about this bot', usage:'/botinfo' },
+            { name:'userinfo', description:"Get info about a user", usage:'/userinfo [user]' },
+            { name:'avatar', description:"Get a user's avatar", usage:'/avatar [user]' },
+            { name:'stats', description:'View server statistics (server/growth)', usage:'/stats server|growth' },
+        ]},
+        { category:'Fun', owner:false, commands:[
+            { name:'worldcup', description:'Predict a World Cup match score between two countries', usage:'/worldcup <team1> <team2>' },
+            { name:'8ball', description:'Ask the magic 8-ball a question', usage:'/8ball <question>' },
+            { name:'coinflip', description:'Flip a coin', usage:'/coinflip' },
+            { name:'dice', description:'Roll a dice', usage:'/dice [sides]' },
+            { name:'rps', description:'Play rock-paper-scissors', usage:'/rps <rock|paper|scissors>' },
+            { name:'joke', description:'Get a random joke', usage:'/joke' },
+            { name:'fact', description:'Get a random interesting fact', usage:'/fact' },
+            { name:'advice', description:'Get a random piece of advice', usage:'/advice' },
+            { name:'quote', description:'Get a random inspirational quote', usage:'/quote' },
+            { name:'reverse', description:'Reverse some text', usage:'/reverse <text>' },
+            { name:'mock', description:'Mock some text (Spongebob case)', usage:'/mock <text>' },
+            { name:'random', description:'Generate a random number', usage:'/random <min> <max>' },
+        ]},
+        { category:'Reminders', owner:false, commands:[
+            { name:'remindme', description:'Set a reminder (you will be DMed)', usage:'/remindme <time> <text>' },
+            { name:'reminders', description:'Manage your reminders (list/cancel)', usage:'/reminders list|cancel' },
+        ]},
+        { category:'Admin', owner:true, commands:[
+            { name:'role', description:'Manage roles (add/remove/list)', usage:'/role add|remove|list <user> [role]' },
+            { name:'purge', description:'Bulk delete messages (1-100)', usage:'/purge <amount>' },
+            { name:'slowmode', description:'Set channel slowmode (0-21600s)', usage:'/slowmode <seconds> [channel]' },
+            { name:'nickname', description:"Change a user's nickname", usage:'/nickname <user> <nickname>' },
+            { name:'say', description:'Make the bot say something', usage:'/say <channel> <message>' },
+            { name:'embed', description:'Send an embedded message', usage:'/embed <channel> <title> [description] [color]' },
+            { name:'deploy', description:'Re-register all slash commands', usage:'/deploy' },
+            { name:'track', description:'Manage tracked channels (add/remove/list)', usage:'/track add|remove|list [channel]' },
+            { name:'poll', description:'Create a poll', usage:'/poll <question> <opt1> <opt2> [opt3] [opt4]' },
+            { name:'announce', description:'Send an announcement to a channel', usage:'/announce <channel> <title> <message>' },
+        ]},
+        { category:'Moderation', owner:true, commands:[
+            { name:'kick', description:'Kick a member from the server', usage:'/kick <user> [reason]' },
+            { name:'ban', description:'Ban a member from the server', usage:'/ban <user> [reason]' },
+            { name:'unban', description:'Unban a user by their ID', usage:'/unban <user_id>' },
+            { name:'timeout', description:'Timeout a member (60s-7d)', usage:'/timeout <user> <duration> [reason]' },
+            { name:'untimeout', description:'Remove a timeout from a member', usage:'/untimeout <user>' },
+            { name:'warn', description:'Warn a member', usage:'/warn <user> [reason]' },
+            { name:'warnings', description:'View warnings for a member', usage:'/warnings <user>' },
+            { name:'clearwarnings', description:'Clear all warnings for a member', usage:'/clearwarnings <user>' },
+            { name:'lock', description:'Lock a channel', usage:'/lock [channel]' },
+            { name:'unlock', description:'Unlock a channel', usage:'/unlock [channel]' },
+        ]},
+        { category:'Config', owner:true, commands:[
+            { name:'log', description:'Configure logging (channel/toggle/list)', usage:'/log channel|toggle|list' },
+            { name:'embedconfig', description:'Configure embed appearance (footer/color/show)', usage:'/embedconfig footer|color|show' },
+            { name:'presence', description:"Set the bot's activity status", usage:'/presence <type> <text>' },
+            { name:'botavatar', description:"Change the bot's avatar", usage:'/botavatar <url>' },
+            { name:'botname', description:"Change the bot's username", usage:'/botname <name>' },
+            { name:'prefix', description:'View or change the command prefix', usage:'/prefix [new_prefix]' },
+        ]},
+        { category:'Permissions', owner:true, commands:[
+            { name:'perm', description:'Manage user permissions for commands (grant/revoke/list/user)', usage:'/perm grant|revoke|list|user' },
+        ]},
+        { category:'Reaction Roles', owner:true, commands:[
+            { name:'reactionrole', description:'Manage self-assignable reaction roles (add/remove/list)', usage:'/reactionrole add|remove|list' },
+        ]},
+        { category:'Welcome / Goodbye', owner:true, commands:[
+            { name:'welcome', description:'Configure welcome messages (channel/toggle/message/title/description/color/footer/thumbnail/image/author/show/test/reset)', usage:'/welcome <subcommand> [options]' },
+            { name:'goodbye', description:'Configure goodbye messages (same subcommands as welcome)', usage:'/goodbye <subcommand> [options]' },
+        ]},
+        { category:'Owner', owner:true, commands:[
+            { name:'dashboard', description:'Get the link to the web dashboard', usage:'/dashboard' },
+            { name:'dashaccess', description:'Manage who can access the dashboard (add/remove/list)', usage:'/dashaccess add|remove|list <user>' },
+            { name:'server_leave', description:'Force the bot to leave a server by ID', usage:'/server_leave <server_id>' },
+            { name:'shutdown', description:'Turn off the bot gracefully', usage:'/shutdown' },
+        ]},
+    ];
+
+    app.get('/api/commands', requireAuth, (req, res) => {
+        res.json(COMMANDS_DATA);
+    });
+
     // ── SSE: Real-time events ──
     const sseClients = new Set();
     app.get('/api/events', requireAuth, (req, res) => {

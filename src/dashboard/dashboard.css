@@ -59,6 +59,46 @@ body::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hover)}
 .notch-mobile-link.active svg{opacity:1}
 .notch-mobile-divider{height:1px;background:var(--border);margin:6px 0}
 
+/* ═══ COMMANDS EXPLORER ═══ */
+.cmd-filter{display:flex;gap:8px;margin-bottom:16px}
+.cmd-filter input{flex:1;padding:10px 14px;background:rgba(255,255,255,0.02);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;transition:all 0.15s;font-family:inherit}
+.cmd-filter input:focus{border-color:var(--accent);box-shadow:0 0 16px rgba(var(--accent-rgb),0.06)}
+.cmd-filter input::placeholder{color:var(--text-muted)}
+.cmd-filter select{padding:8px 30px 8px 12px;background:rgba(255,255,255,0.02);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;background-size:12px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+.cmd-cat{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;transition:all 0.2s}
+.cmd-cat:hover{border-color:rgba(var(--accent-rgb),0.15)}
+.cmd-cat-h{display:flex;align-items:center;gap:8px;padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);transition:background 0.15s;user-select:none}
+.cmd-cat-h:hover{background:rgba(255,255,255,0.02)}
+.cmd-cat-h svg{width:14px;height:14px;color:var(--text-dim);transition:transform 0.2s;flex-shrink:0}
+.cmd-cat.collapsed .cmd-cat-h svg{transform:rotate(-90deg)}
+.cmd-cat.collapsed .cmd-items{display:none}
+.cmd-cat-h .cmd-count{margin-left:auto;font-size:10px;color:var(--text-muted);font-weight:500}
+.cmd-cat-h .cmd-bdg{font-size:8px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.4px;margin-left:8px}
+.cmd-bdg.public{background:rgba(59,165,92,0.1);color:#3ba55c}
+.cmd-bdg.owner{background:rgba(237,66,69,0.1);color:#ed4245}
+.cmd-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:4px;padding:4px 12px 12px}
+.cmd-item{display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-xs);transition:all 0.15s}
+.cmd-item:hover{border-color:rgba(var(--accent-rgb),0.15);background:rgba(var(--accent-rgb),0.02);transform:translateY(-1px)}
+.cmd-name{font-size:11px;font-weight:700;color:var(--accent);font-family:'SF Mono','Fira Code','Consolas',monospace;padding:0;background:none;border:none}
+.cmd-desc{font-size:11px;color:var(--text-dim);line-height:1.3}
+.cmd-usage{font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;margin-top:2px}
+.cmd-usage svg{width:10px;height:10px;flex-shrink:0;opacity:0.3}
+body.light-mode .cmd-filter input,body.light-mode .cmd-filter select{background:rgba(255,255,255,0.7)!important;color:#1a1a2e!important}
+body.light-mode .cmd-cat{background:rgba(255,255,255,0.6)}
+body.light-mode .cmd-cat:hover{border-color:rgba(0,0,0,0.1)}
+body.light-mode .cmd-item{background:rgba(255,255,255,0.5);border-color:rgba(0,0,0,0.06)}
+body.light-mode .cmd-item:hover{background:rgba(255,255,255,0.7)}
+body.light-mode .cmd-name{color:var(--accent)}
+body.light-mode .cmd-filter select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.25)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")!important}
+
+/* ═══ EMPTY STATE ACTIONABLE CTAS ═══ */
+.empty{text-align:center;padding:36px 20px;color:var(--text-dim)}
+.empty svg{width:32px;height:32px;opacity:0.1;margin-bottom:10px}
+.empty p{font-size:13px;margin-bottom:2px}
+.empty .empty-act{font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.4}
+.empty .empty-act code{font-size:10px;padding:2px 6px;background:rgba(var(--accent-rgb),0.08);border-radius:4px;color:var(--accent);font-family:'SF Mono','Fira Code','Consolas',monospace}
+body.light-mode .empty-act code{background:rgba(var(--accent-rgb),0.06)}
+
 /* ═══ LIGHT MODE NOTCH ═══ */
 body.light-mode .notch-side,body.light-mode .notch-body,body.light-mode .notch-corner-l,body.light-mode .notch-corner-r,body.light-mode .notch-center,body.light-mode .notch-mobile-menu{background:#f5f5fa}
 body.light-mode .notch-side,body.light-mode .notch-body,body.light-mode .notch-corner-l,body.light-mode .notch-corner-r{border-bottom-color:rgba(0,0,0,0.04)}
