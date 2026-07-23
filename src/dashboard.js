@@ -717,6 +717,9 @@ function createDashboard() {
             { name:'clearwarnings', description:'Clear all warnings for a member', usage:'/clearwarnings <user>' },
             { name:'lock', description:'Lock a channel', usage:'/lock [channel]' },
             { name:'unlock', description:'Unlock a channel', usage:'/unlock [channel]' },
+            { name:'history', description:'View moderation history for a user', usage:'/history <user>' },
+            { name:'case', description:'View details of a specific moderation case', usage:'/case <id>' },
+            { name:'reason', description:'Update the reason for a moderation case', usage:'/reason <id> <text>' },
         ]},
         { category:'Config', owner:true, commands:[
             { name:'log', description:'Configure logging (channel/toggle/list)', usage:'/log channel|toggle|list' },
