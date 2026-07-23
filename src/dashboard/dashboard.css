@@ -157,7 +157,7 @@ body.light-mode .srv-search select,.light-mode .stg select{background-size:12px!
 .sk{background:rgba(255,255,255,0.02);border-radius:var(--radius-sm);padding:18px 22px;margin-bottom:10px;position:relative;overflow:hidden}
 .sk-line{height:12px;border-radius:6px;background:rgba(255,255,255,0.04);margin-bottom:8px;position:relative;overflow:hidden}
 .sk-line::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent);animation:skShimmer 1.5s ease-in-out infinite}
-.sk-line.w60{width:60%}.sk-line.w40{width:40%}.sk-line.w80{width:80%}.sk-line.h16{height:16px}.sk-line.h24{height:24px}
+.sk-line.w60{width:60%}.sk-line.w40{width:40%}.sk-line.w80{width:80%}.sk-line.w50{width:50%}.sk-line.w70{width:70%}.sk-line.w30{width:30%}.sk-line.w25{width:25%}.sk-line.h14{height:14px}.sk-line.h16{height:16px}.sk-line.h20{height:20px}.sk-line.h24{height:24px}
 @keyframes skShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 
 .loading{text-align:center;padding:50px 20px;color:var(--text-dim)}
