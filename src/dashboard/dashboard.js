@@ -302,7 +302,6 @@ function greetFieldsHtml(cfg,type,serverId,channels){
 }
 
 async function loadSrvGreetings(id){const el=document.getElementById('mgmtGreetings');showSkeleton(el,'greetings',2);
-  const el=document.getElementById('mgmtGreetings');
   if(!el)return;
   el.innerHTML='<div class="loading"><div class="spin"></div></div>';
   try{
