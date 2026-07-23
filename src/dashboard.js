@@ -698,7 +698,7 @@ function createDashboard() {
             { name:'botinfo', description:'Show information about this bot', usage:'/botinfo' },
             { name:'userinfo', description:"Get info about a user", usage:'/userinfo [user]' },
             { name:'avatar', description:"Get a user's avatar", usage:'/avatar [user]' },
-            { name:'stats', description:'View server statistics (server/growth)', usage:'/stats server|growth' },
+            { name:'stats', description:'View server, growth, or command usage statistics', usage:'/stats server|growth|commands' },
         ]},
         { category:'Fun', owner:false, commands:[
             { name:'worldcup', description:'Predict a World Cup match score between two countries', usage:'/worldcup <team1> <team2>' },

@@ -5,6 +5,7 @@ const { formatUptime, formatNumber, truncate } = require('../helpers');
 const { WS_STATUS } = require('../constants');
 const { getGuildConfig } = require('../config');
 const { getGuildStats } = require('../stats');
+const { getDb } = require('../db');
 const { CATEGORY_EMOJIS } = require('../constants');
 
 async function executePing(interaction) {
@@ -152,7 +153,6 @@ async function executeStats(interaction) {
     const guild = interaction.guild;
 
     if (sub === 'commands') {
-        const { getDb } = require('../db');
         const db = getDb();
 
         // Top commands in this server

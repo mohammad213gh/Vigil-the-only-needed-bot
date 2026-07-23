@@ -14,7 +14,7 @@ const CATEGORIES = [
             { name: 'botinfo', desc: 'Show information about this bot' },
             { name: 'userinfo', desc: "Get info about a user" },
             { name: 'avatar', desc: "Get a user's avatar" },
-            { name: 'stats', desc: 'View server/growth statistics' },
+            { name: 'stats', desc: 'View server/growth/command usage statistics' },
         ],
     },
     {
