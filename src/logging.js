@@ -7,10 +7,26 @@ function setLoggerClient(c) {
     client = c;
 }
 
+function applyGuildEmbedColor(embed, guildId) {
+    try {
+        const guildConfig = getGuildConfig(guildId);
+        if (guildConfig.embedColor) {
+            // Only override if embed doesn't already have a specific color set
+            // (embeds with 0xE74C3C for kick/ban, 0xF1C40F for warn, etc. keep their color)
+            const current = embed.data.color;
+            if (!current || current === 0x5865F2) {
+                embed.setColor(guildConfig.embedColor);
+            }
+        }
+    } catch {}
+    return embed;
+}
+
 async function sendLog(embed, category, channelId, guildId) {
     if (!client || !guildId) return;
 
     const guildConfig = getGuildConfig(guildId);
+    embed = applyGuildEmbedColor(embed, guildId);
 
     // Check category toggle
     if (category && guildConfig.logCategories[category] === false) return;

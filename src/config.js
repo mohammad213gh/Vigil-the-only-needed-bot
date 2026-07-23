@@ -67,6 +67,7 @@ function createDefaultConfig() {
         trackedChannels: [],
         logCategories: cats,
         prefix: ';',
+        embedColor: null,
         welcomeConfig: {},
     };
 }

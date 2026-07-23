@@ -732,8 +732,14 @@ function createDashboard() {
         { category:'Permissions', owner:true, commands:[
             { name:'perm', description:'Manage user permissions for commands (grant/revoke/list/user)', usage:'/perm grant|revoke|list|user' },
         ]},
+        { category:'Role Menus', owner:true, commands:[
+            { name:'rolemenu', description:'Manage self-assignable role menus with dropdown select menus', usage:'/rolemenu create|add|remove|publish|list' },
+        ]},
         { category:'Reaction Roles', owner:true, commands:[
             { name:'reactionrole', description:'Manage self-assignable reaction roles (add/remove/list)', usage:'/reactionrole add|remove|list' },
+        ]},
+        { category:'Auto-Mod', owner:true, commands:[
+            { name:'automod', description:'Configure auto-moderation rules (spam/mentions/words/links/caps)', usage:'/automod config|list|filter|filters' },
         ]},
         { category:'Welcome / Goodbye', owner:true, commands:[
             { name:'welcome', description:'Configure welcome messages (channel/toggle/message/title/description/color/footer/thumbnail/image/author/show/test/reset)', usage:'/welcome <subcommand> [options]' },

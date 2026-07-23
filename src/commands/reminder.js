@@ -43,7 +43,7 @@ async function executeRemindMe(interaction) {
         timestamp: true,
     });
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function executeReminders(interaction) {

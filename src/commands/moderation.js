@@ -293,7 +293,7 @@ async function executeWarnings(interaction) {
         .setFooter({ text: guild.name, iconURL: guild.iconURL() })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function executeClearWarnings(interaction) {

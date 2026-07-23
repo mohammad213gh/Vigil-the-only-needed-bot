@@ -85,6 +85,7 @@ async function executeLog(interaction) {
 
 async function executeEmbedConfig(interaction) {
     const sub = interaction.options.getSubcommand();
+    const guild = interaction.guild;
 
     if (sub === 'footer') {
         const text = interaction.options.getString('text') || null;
@@ -115,11 +116,11 @@ async function executeEmbedConfig(interaction) {
         const hexRaw = interaction.options.getString('hex');
 
         if (hexRaw.toLowerCase() === 'clear' || hexRaw.toLowerCase() === 'reset') {
-            saveBotConfig({ embedColor: null });
+            updateGuildConfig(guild.id, (cfg) => { cfg.embedColor = null; return cfg; });
             const embed = makeEmbed({
                 color: 0x5865F2,
                 title: '\uD83C\uDFA8 Embed Color Reset',
-                description: 'Default embed color restored to Discord Blurple.',
+                description: '**' + guild.name + '** embed color restored to default.',
                 footer: { text: 'Changed by ' + interaction.user.tag },
                 timestamp: true,
             });
@@ -136,12 +137,12 @@ async function executeEmbedConfig(interaction) {
             return interaction.reply({ content: '\u26A0\uFE0F Invalid hex color! Use format like `#5865F2` or `FF5733`.', ephemeral: true });
         }
 
-        saveBotConfig({ embedColor: color });
+        updateGuildConfig(guild.id, (cfg) => { cfg.embedColor = color; return cfg; });
 
         const embed = makeEmbed({
             color: color,
             title: '\uD83C\uDFA8 Embed Color Updated',
-            description: 'Default embed color set to `#' + color.toString(16).toUpperCase().padStart(6, '0') + '`',
+            description: '**' + guild.name + '** log embed color set to `#' + color.toString(16).toUpperCase().padStart(6, '0') + '`',
             footer: { text: 'Changed by ' + interaction.user.tag },
             timestamp: true,
         });

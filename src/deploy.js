@@ -23,6 +23,8 @@ const commandDefs = [
                     { name: 'Moderation', value: 'moderation' },
                     { name: 'Config', value: 'config' },
                     { name: 'Permissions', value: 'permissions' },
+                    { name: 'Role Menus', value: 'rolemenus' },
+                    { name: 'Auto-Mod', value: 'automod' },
                     { name: 'Reaction Roles', value: 'reactionroles' },
                     { name: 'Welcome / Goodbye', value: 'welcome' },
                     { name: 'Owner', value: 'owner' },
@@ -760,6 +762,148 @@ const commandDefs = [
     new SlashCommandBuilder()
         .setName('shutdown')
         .setDescription('Turn off the bot gracefully (owner only)'),
+
+    // ── Role Menus (owner only) ──
+    new SlashCommandBuilder()
+        .setName('rolemenu')
+        .setDescription('Manage self-assignable role menus with dropdown select menus')
+        .addSubcommand(sub =>
+            sub.setName('create')
+                .setDescription('Create a new role menu in a channel')
+                .addChannelOption(opt =>
+                    opt.setName('channel')
+                        .setDescription('Channel to send the role menu to')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('title')
+                        .setDescription('Title for the role menu embed')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('add')
+                .setDescription('Add a role to an existing role menu')
+                .addStringOption(opt =>
+                    opt.setName('message_id')
+                        .setDescription('The message ID of the role menu')
+                        .setRequired(true))
+                .addRoleOption(opt =>
+                    opt.setName('role')
+                        .setDescription('The role to add')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('label')
+                        .setDescription('Display label for this role')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('emoji')
+                        .setDescription('Emoji to show next to the role')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('remove')
+                .setDescription('Remove a role from a role menu')
+                .addStringOption(opt =>
+                    opt.setName('message_id')
+                        .setDescription('The message ID of the role menu')
+                        .setRequired(true))
+                .addRoleOption(opt =>
+                    opt.setName('role')
+                        .setDescription('The role to remove')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('publish')
+                .setDescription('Publish the role menu with the dropdown')
+                .addStringOption(opt =>
+                    opt.setName('message_id')
+                        .setDescription('The message ID of the role menu')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List all role menus in this server')),
+
+    // ── Auto-Mod (owner only) ──
+    new SlashCommandBuilder()
+        .setName('automod')
+        .setDescription('Configure auto-moderation rules')
+        .addSubcommand(sub =>
+            sub.setName('config')
+                .setDescription('Configure an automod rule')
+                .addStringOption(opt =>
+                    opt.setName('rule')
+                        .setDescription('Rule to configure')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: 'Spam', value: 'spam' },
+                            { name: 'Mass mentions', value: 'mentions' },
+                            { name: 'Banned words', value: 'words' },
+                            { name: 'Links', value: 'links' },
+                            { name: 'Excessive caps', value: 'caps' },
+                        ))
+                .addBooleanOption(opt =>
+                    opt.setName('enabled')
+                        .setDescription('Enable or disable this rule')
+                        .setRequired(false))
+                .addIntegerOption(opt =>
+                    opt.setName('threshold')
+                        .setDescription('Threshold (messages/mentions/caps %)')
+                        .setRequired(false))
+                .addIntegerOption(opt =>
+                    opt.setName('time_window')
+                        .setDescription('Time window in seconds (for spam)')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('action')
+                        .setDescription('Action to take when rule is triggered')
+                        .setRequired(false)
+                        .addChoices(
+                            { name: 'Warn', value: 'warn' },
+                            { name: 'Delete message', value: 'delete' },
+                            { name: 'Timeout', value: 'timeout' },
+                            { name: 'Kick', value: 'kick' },
+                        ))
+                .addIntegerOption(opt =>
+                    opt.setName('duration')
+                        .setDescription('Timeout duration in seconds (only for timeout action)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List all automod rules and filters'))
+        .addSubcommand(sub =>
+            sub.setName('filter')
+                .setDescription('Add or remove a word/link filter')
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Filter type')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: 'Banned words', value: 'words' },
+                            { name: 'Link allowlist', value: 'links' },
+                        ))
+                .addStringOption(opt =>
+                    opt.setName('pattern')
+                        .setDescription('Word or domain to filter')
+                        .setRequired(true))
+                .addBooleanOption(opt =>
+                    opt.setName('remove')
+                        .setDescription('Remove this pattern instead of adding')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('action')
+                        .setDescription('Action (only for words, links always delete)')
+                        .setRequired(false)
+                        .addChoices(
+                            { name: 'Delete', value: 'delete' },
+                            { name: 'Warn', value: 'warn' },
+                        )))
+        .addSubcommand(sub =>
+            sub.setName('filters')
+                .setDescription('List all filters of a type')
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Filter type')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: 'Banned words', value: 'words' },
+                            { name: 'Link allowlist', value: 'links' },
+                        ))),
 
     // ── Prefix ──
     new SlashCommandBuilder()

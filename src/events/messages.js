@@ -3,6 +3,7 @@ const { getGuildConfig } = require('../config');
 const { handlePrefixMessage } = require('../prefixCommands');
 
 const { getDb } = require('../db');
+const { checkMessage } = require('../automod');
 
 // ──────────────────── Track message activity for insights ────────────────────
 function trackActivity(guildId, userId, channelId) {
@@ -34,6 +35,9 @@ module.exports = [
 
             // Track activity for server insights
             trackActivity(message.guild.id, message.author.id, message.channelId);
+
+            // Auto-mod check (async, non-blocking — runs in background)
+            checkMessage(message, message.guild.id).catch(() => {});
 
             // Fast-path: check common prefixes first (; / ! .) before hitting DB
             const content = message.content;

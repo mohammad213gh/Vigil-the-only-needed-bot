@@ -8,7 +8,7 @@ const { getGuildStats } = require('../stats');
 const { CATEGORY_EMOJIS } = require('../constants');
 
 async function executePing(interaction) {
-    const sent = await interaction.reply({ content: 'Pinging...', fetchReply: true });
+    const sent = await interaction.reply({ content: 'Pinging...', ephemeral: true, fetchReply: true });
     const rtt = sent.createdTimestamp - interaction.createdTimestamp;
     await interaction.editReply({
         content: [
@@ -67,7 +67,7 @@ async function executeStatus(interaction) {
         .setFooter({ text: guild.name, iconURL: guild.iconURL() })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function executeBotInfo(interaction) {
@@ -90,7 +90,7 @@ async function executeBotInfo(interaction) {
         .setFooter({ text: guild.name, iconURL: guild.iconURL() })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function executeUserInfo(interaction) {
@@ -130,7 +130,7 @@ async function executeUserInfo(interaction) {
     embed.setFooter({ text: 'Requested by ' + interaction.user.tag })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function executeAvatar(interaction) {
@@ -144,7 +144,7 @@ async function executeAvatar(interaction) {
         .setFooter({ text: 'Requested by ' + interaction.user.tag })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], ephemeral: true });
 }
 
 async function executeStats(interaction) {
@@ -201,7 +201,7 @@ async function executeStats(interaction) {
             .setFooter({ text: 'Requested by ' + interaction.user.tag, iconURL: interaction.user.displayAvatarURL() })
             .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
     if (sub === 'growth') {

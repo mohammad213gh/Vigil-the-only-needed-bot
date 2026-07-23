@@ -441,7 +441,13 @@ async function handlePollVoters(interaction) {
 
 // ──────────────────── Select Menu Handler ────────────────────
 
+const { handleRoleMenuSelect } = require('./commands/roleMenu');
+
 async function handleSelectMenu(interaction) {
+    const parts = interaction.customId.split('_');
+    if (parts[0] === 'rm') {
+        return handleRoleMenuSelect(interaction);
+    }
     await interaction.reply({ content: 'Select menu received.', ephemeral: true });
 }
 

@@ -38,6 +38,12 @@ const { executeDashboard, executeDashAccess, executeServerLeave, executeShutdown
 // ── Welcome/Goodbye ──
 const { executeWelcome, executeGoodbye } = require('./greetings');
 
+// ── Role Menus ──
+const { executeRoleMenu } = require('./roleMenu');
+
+// ── Auto-Mod ──
+const { executeAutoMod } = require('./automod');
+
 // ──────────────────── Registry Map ────────────────────
 
 const commandRegistry = {
@@ -118,6 +124,12 @@ const commandRegistry = {
     dashaccess: executeDashAccess,
     server_leave: executeServerLeave,
     shutdown: executeShutdown,
+
+    // Role Menus
+    rolemenu: executeRoleMenu,
+
+    // Auto-Mod
+    automod: executeAutoMod,
 };
 
 // Commands that anyone can use (no owner guard)

@@ -104,11 +104,27 @@ const CATEGORIES = [
         ],
     },
     {
+        name: 'Role Menus',
+        emoji: '📋',
+        public: false,
+        commands: [
+            { name: 'rolemenu', desc: 'Create and manage dropdown role menus' },
+        ],
+    },
+    {
         name: 'Reaction Roles',
         emoji: '🌟',
         public: false,
         commands: [
             { name: 'reactionrole', desc: 'Manage self-assignable roles' },
+        ],
+    },
+    {
+        name: 'Auto-Mod',
+        emoji: '🤖',
+        public: false,
+        commands: [
+            { name: 'automod', desc: 'Configure spam/word/mention/link/caps filters' },
         ],
     },
     {

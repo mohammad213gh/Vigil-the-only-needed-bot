@@ -157,6 +157,44 @@ function initSchema() {
             next_case INTEGER NOT NULL DEFAULT 1
         );
 
+        CREATE TABLE IF NOT EXISTS role_menus (
+            guild_id TEXT NOT NULL,
+            message_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            title TEXT,
+            created_at INTEGER NOT NULL,
+            PRIMARY KEY (guild_id, message_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS role_menu_options (
+            message_id TEXT NOT NULL,
+            role_id TEXT NOT NULL,
+            label TEXT NOT NULL,
+            emoji TEXT,
+            description TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (message_id, role_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS automod_rules (
+            guild_id TEXT NOT NULL,
+            rule_type TEXT NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            threshold INTEGER NOT NULL DEFAULT 5,
+            time_window INTEGER NOT NULL DEFAULT 10,
+            action TEXT NOT NULL DEFAULT 'warn',
+            duration INTEGER,
+            PRIMARY KEY (guild_id, rule_type)
+        );
+
+        CREATE TABLE IF NOT EXISTS automod_filters (
+            guild_id TEXT NOT NULL,
+            filter_type TEXT NOT NULL,
+            pattern TEXT NOT NULL,
+            action TEXT NOT NULL DEFAULT 'delete',
+            PRIMARY KEY (guild_id, filter_type, pattern)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_activity_guild ON activity_counts(guild_id, message_count DESC);
     `);
 
