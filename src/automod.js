@@ -71,6 +71,19 @@ function removeAutoModFilter(guildId, filterType, pattern) {
 
 const spamTracker = new Map(); // guildId_userId → [timestamps]
 
+// Periodic cleanup of stale spam entries (every 5 minutes)
+setInterval(() => {
+    const cutoff = Date.now() - 120000; // 2 minutes
+    for (const [key, timestamps] of spamTracker.entries()) {
+        while (timestamps.length > 0 && timestamps[0] < cutoff) {
+            timestamps.shift();
+        }
+        if (timestamps.length === 0) {
+            spamTracker.delete(key);
+        }
+    }
+}, 300000).unref();
+
 function checkSpam(guildId, userId, threshold, timeWindow) {
     const key = guildId + '_' + userId;
     const now = Date.now();

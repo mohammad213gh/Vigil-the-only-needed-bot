@@ -207,6 +207,11 @@ function initSchema() {
     try {
         db.exec('ALTER TABLE guild_config ADD COLUMN welcome_config TEXT NOT NULL DEFAULT \'{}\'');
     } catch {}
+
+    // Add embed_color column if not exists
+    try {
+        db.exec('ALTER TABLE guild_config ADD COLUMN embed_color TEXT');
+    } catch {}
 }
 
 // ──────────────────── Migration from JSON Files ────────────────────
