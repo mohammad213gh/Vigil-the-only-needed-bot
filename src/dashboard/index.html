@@ -94,7 +94,7 @@
     <!-- ═══ OVERVIEW ═══ -->
     <div class="section active" id="sec-overview">
       <h1 class="pg-title" id="dashTitlePg">Overview</h1>
-      <p class="pg-sub">Real-time bot status and metrics.</p>
+      <p class="pg-sub">Real-time bot status and metrics. <span class="rfsh-tm" id="rfsh-overview"></span></p>
       <div class="grid grid-4" id="ovCards"></div>
       <div class="grid grid-3" style="margin-top:4px;">
         <div class="card sr"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><div class="lbl">Pending Reminders</div><div class="val" id="ovReminders">0</div><div class="sub">Across all users</div></div>
@@ -106,7 +106,7 @@
     <!-- ═══ ANALYTICS ═══ -->
     <div class="section" id="sec-analytics">
       <h1 class="pg-title">Analytics</h1>
-      <p class="pg-sub">Member growth and server statistics.</p>
+      <p class="pg-sub">Member growth and server statistics. <span class="rfsh-tm" id="rfsh-analytics"></span></p>
       <div class="grid grid-2">
         <div class="tw sr"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Member Growth (30 days)</div><div style="padding:16px;"><div id="growthChart" style="width:100%;height:120px;"></div></div></div>
         <div class="card sr">
@@ -119,12 +119,13 @@
           <div class="exp-wrap"><button class="btn btn-s" onclick="exportStats()" style="padding:6px 14px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button></div>
         </div>
       </div>
+      <div class="tw sr" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg>Command Usage (top 10)</div><div style="padding:16px;"><div id="cmdUsageChart" style="width:100%;"></div></div></div>
     </div>
 
     <!-- ═══ SERVERS ═══ -->
     <div class="section" id="sec-servers">
       <h1 class="pg-title">Servers</h1>
-      <p class="pg-sub">All servers the bot is connected to.</p>
+      <p class="pg-sub">All servers the bot is connected to. <span class="rfsh-tm" id="rfsh-servers"></span></p>
       <div class="srv-search"><input type="text" id="srvSearch" placeholder="Search servers..." oninput="filterServers()"><select id="srvSort" onchange="loadServers()"><option value="members">Members</option><option value="name">Name</option><option value="boosts">Boosts</option></select></div>
       <div id="srvList" class="srv-list"></div>
       <div id="srvDetail" style="display:none;"></div>
@@ -133,14 +134,14 @@
     <!-- ═══ ACTIVITY ═══ -->
     <div class="section" id="sec-activity">
       <h1 class="pg-title">Activity</h1>
-      <p class="pg-sub">Recent events across all servers.</p>
+      <p class="pg-sub">Recent events across all servers. <span class="rfsh-tm" id="rfsh-activity"></span></p>
       <div id="actFeed" class="sr"></div>
     </div>
 
     <!-- ═══ REMINDERS ═══ -->
     <div class="section" id="sec-reminders">
       <h1 class="pg-title">Reminders</h1>
-      <p class="pg-sub">All pending reminders.</p>
+      <p class="pg-sub">All pending reminders. <span class="rfsh-tm" id="rfsh-reminders"></span></p>
       <div id="rmdList"></div>
     </div>
 
@@ -149,6 +150,13 @@
       <h1 class="pg-title">System</h1>
       <p class="pg-sub">Server infrastructure and resource usage.</p>
       <div class="grid grid-2 sr"><div class="card"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><div class="lbl">Host</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;" id="sysHost"></div></div><div class="card"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><div class="lbl">Memory</div><div style="margin-top:8px;" id="sysMem"></div></div></div>
+      <div class="stg" style="margin-top:20px;"><label>Config Export</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-s" onclick="exportConfig()" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export All Settings</button>
+          <button class="btn btn-s" onclick="exportBotConfig()" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Export Bot Config</button>
+        </div>
+        <div class="stg-hint">Download dashboard settings or bot configuration as JSON files.</div>
+      </div>
     </div>
 
     <!-- ═══ COMMANDS ═══ -->
