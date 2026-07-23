@@ -24,19 +24,6 @@ const ENGINES={dots:engDots,shapes:engShapes,glitch:engGlitch,liquid:engLiquid,g
 function startBg(style){if(bgAnimId){cancelAnimationFrame(bgAnimId);bgAnimId=null}bgStyle=style||'dots';const fn=ENGINES[bgStyle];if(!fn){bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);return}rsBg();bgEngine=fn();!function l(){bgEngine();bgAnimId=requestAnimationFrame(l)}()}
 function switchBg(style){bgStyle=style;startBg(style)}
 
-// ═══ DOCK MAGNIFICATION ═══
-let dockItems=[];
-function initDock(){dockItems=document.querySelectorAll('.dock-item');dockMagnify()}
-function dockMagnify(){const dock=document.getElementById('dock');if(!dock||!dockItems.length)return;const rect=dock.getBoundingClientRect();const mx=bgMouse.x;const itemW=52;
-dockItems.forEach(item=>{const ir=item.getBoundingClientRect(),ic=ir.left+ir.width/2,dist=Math.abs(mx-ic),maxDist=200,scale=Math.max(1,1+(1-Math.min(dist/maxDist,1))*0.4);item.style.transform=`scale(${scale})`;if(scale>1.15)item.style.zIndex='10';else item.style.zIndex='';// Dynamic margin to prevent overlap
-const extraMargin=(itemW*(scale-1))/2;item.style.marginLeft=6+extraMargin+'px';item.style.marginRight=6+extraMargin+'px'})}
-function dockReset(){dockItems.forEach(item=>{item.style.transform='scale(1)';item.style.zIndex='';item.style.marginLeft='6px';item.style.marginRight='6px'})}
-document.addEventListener('mousemove',e=>{
-  if(!dockItems.length)return;
-  if(e.clientY>window.innerHeight-140)dockMagnify();
-  else dockReset()
-});
-
 // ═══ AMBIENT + CARD GLOW ═══
 document.addEventListener('mousemove',e=>{
   document.documentElement.style.setProperty('--mx',e.clientX/window.innerWidth);
@@ -46,15 +33,6 @@ document.addEventListener('mousemove',e=>{
     c.style.setProperty('--glow-int',i.toFixed(3));c.style.setProperty('--glow-ang',a2.toFixed(1)+'deg')
   })
 });
-
-// ═══ SIDEBAR ═══
-let sbPinned=false;
-function showSidebar(){if(!sbPinned)document.getElementById('sidebar').classList.remove('hidden')}
-function hideSidebar(){if(!sbPinned)setTimeout(()=>{if(!document.getElementById('sidebar').matches(':hover'))document.getElementById('sidebar').classList.add('hidden')},200)}
-document.getElementById('sidebar').addEventListener('mouseenter',showSidebar);
-document.getElementById('sidebar').addEventListener('mouseleave',hideSidebar);
-document.addEventListener('mousemove',e=>{if(!sbPinned&&e.clientX<16)showSidebar()});
-function togglePin(){sbPinned=!sbPinned;const sb=document.getElementById('sidebar'),pin=document.getElementById('sbPin');if(sbPinned){sb.classList.remove('hidden');pin.classList.add('pinned');document.documentElement.classList.add('sb-pinned')}else{pin.classList.remove('pinned');document.documentElement.classList.remove('sb-pinned');hideSidebar()}}
 
 // ═══ SCROLL REVEAL ═══
 const srObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');srObs.unobserve(e.target)}})},{threshold:0.1});
@@ -81,12 +59,12 @@ async function checkAuth(){try{const r=await fetch('/api/status');if(r.status===
 async function logout(){await fetch('/api/logout',{method:'POST'});window.location.href='/login'}
 function showSec(n){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.dock-item').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.notch-link').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.notch-mobile-link').forEach(s=>s.classList.remove('active'));
   const sec=document.getElementById('sec-'+n);sec.classList.add('active');
   sec.classList.remove('sec-enter');void sec.offsetWidth;sec.classList.add('sec-enter');
-  const nav=document.querySelector('[data-sec="'+n+'"]');if(nav)nav.classList.add('active');
-  const dnav=document.querySelector('.dock-item[data-sec="'+n+'"]');if(dnav)dnav.classList.add('active');
+  const nav=document.querySelector('.notch-link[data-sec="'+n+'"]');if(nav)nav.classList.add('active');
+  const mnav=document.querySelector('.notch-mobile-link[data-sec="'+n+'"]');if(mnav)mnav.classList.add('active');
   setTimeout(()=>{document.querySelectorAll('#sec-'+n+' .sr').forEach(el=>srObs.observe(el))},50)
 }
 
@@ -94,7 +72,7 @@ function showSec(n){
 async function loadCfg(){try{const r=await fetch('/api/dash/config');cfg=await r.json();applyCfg(cfg)}catch{}}
 function applyCfg(c){
   if(c.accentColor){const h=c.accentColor.replace('#',''),r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);document.documentElement.style.setProperty('--accent',c.accentColor);document.documentElement.style.setProperty('--accent-rgb',r+','+g+','+b);document.getElementById('dashColor').value=c.accentColor;document.getElementById('colorVal').textContent=c.accentColor}
-  if(c.title){document.getElementById('dashTitle').value=c.title;document.getElementById('dashTitlePg').textContent=c.title;document.getElementById('dashTitleSidebar').textContent=c.title}
+  if(c.title){document.getElementById('dashTitle').value=c.title;document.getElementById('dashTitlePg').textContent=c.title}
   if(c.refreshInterval){document.getElementById('dashRefresh').value=c.refreshInterval;rInt=c.refreshInterval;if(rTimer){clearInterval(rTimer);stRf()}}
   if(c.showWidgets)document.querySelectorAll('.tg').forEach(t=>{const w=t.dataset.w;if(w&&c.showWidgets[w]===false)t.classList.remove('on')});
   if(c.cardStyle){document.getElementById('dashCardStyle').value=c.cardStyle;document.querySelectorAll('.card').forEach(ca=>{ca.classList.toggle('card-solid',c.cardStyle==='solid');ca.classList.toggle('card-border',c.cardStyle==='border')})}
@@ -105,20 +83,19 @@ function applyCfg(c){
   if(c.backgroundStyle){bgStyle=c.backgroundStyle;document.querySelectorAll('.bg-style-opt').forEach(e=>e.classList.toggle('active',e.dataset.bg===c.backgroundStyle));if(!document.getElementById('sec-settings').classList.contains('active'))switchBg(c.backgroundStyle)}
   if(c.darkMode===false){darkMode=false;applyTheme(false)}else{darkMode=true;applyTheme(true)}
   // New settings
-  if(c.botAvatarUrl){document.getElementById('dashAvatarUrl').value=c.botAvatarUrl;previewAvatar(c.botAvatarUrl)}
+  if(c.botAvatarUrl){document.getElementById('dashAvatarUrl').value=c.botAvatarUrl}
   if(c.animationPreset){document.getElementById('dashAnimPreset').value=c.animationPreset;const speeds={subtle:0.7,smooth:1,energetic:1.3};const dur=speeds[c.animationPreset]||1;document.documentElement.style.setProperty('--anim-speed',dur)}
   if(c.animationSpeed){document.getElementById('dashAnimSpeed').value=c.animationSpeed;document.documentElement.style.setProperty('--anim-speed',c.animationSpeed)}
-  if(c.dockEnabled!==undefined){document.body.classList.toggle('dock-enabled',c.dockEnabled);const dt=document.getElementById('dockToggle');if(c.dockEnabled)dt.classList.add('on');else dt.classList.remove('on')}
   if(c.cardGlow===false)document.querySelectorAll('.card').forEach(ca=>{ca.style.setProperty('--glow-int','0')});
   if(c.ambientLight===false)document.getElementById('ambient').style.display='none';else document.getElementById('ambient').style.display=''
 }
 function previewColor(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);document.documentElement.style.setProperty('--accent',h);document.documentElement.style.setProperty('--accent-rgb',r+','+g+','+b);document.getElementById('dashColor').value=h;document.getElementById('colorVal').textContent=h}
-function previewTitle(v){document.getElementById('dashTitlePg').textContent=v||'Overview';document.getElementById('dashTitleSidebar').textContent=v||'Dashboard'}
-function applyTheme(isDark){document.body.classList.toggle('light-mode',!isDark);darkMode=isDark;const lb=document.getElementById('themeLabel'),ti=document.getElementById('themeIcon'),tg=document.getElementById('themeToggle');if(lb)lb.textContent=isDark?'Light Mode':'Dark Mode';if(ti)ti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(tg)tg.classList.toggle('on',isDark)}
+function previewTitle(v){document.getElementById('dashTitlePg').textContent=v||'Overview'}
+function applyTheme(isDark){document.body.classList.toggle('light-mode',!isDark);darkMode=isDark;const lb=document.getElementById('themeLabel'),ti=document.getElementById('themeIcon'),tg=document.getElementById('themeToggle'),nti=document.getElementById('ntThemeIcon'),ntl=document.getElementById('ntMobileThemeLabel');if(lb)lb.textContent=isDark?'Light Mode':'Dark Mode';if(ti)ti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(tg)tg.classList.toggle('on',isDark);if(nti)nti.innerHTML=isDark?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>':'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';if(ntl)ntl.textContent=isDark?'Light Mode':'Dark Mode'}
 function toggleTheme(){applyTheme(!darkMode)}
+function toggleMobileMenu(){const menu=document.getElementById('notchMobileMenu'),btn=document.getElementById('notchMobileBtn');if(!menu||!btn)return;menu.classList.toggle('open');btn.querySelector('.notch-hamburger').style.display=menu.classList.contains('open')?'none':'';btn.querySelector('.notch-close').style.display=menu.classList.contains('open')?'':'none'}
 function applyPreset(idx){const t=THEMES[idx];previewColor(t.color);document.getElementById('themeGrid').querySelectorAll('.thm-pick').forEach((e,i)=>e.classList.toggle('active',i===idx))}
 function toggleBgType(){const t=document.getElementById('bgType').value;document.getElementById('bgUrlWrap').style.display=t==='url'?'':'none';document.getElementById('bgUploadWrap').style.display=t==='upload'?'':'none'}
-function previewAvatar(url){const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');if(url&&url.startsWith('http')){img.src=url;img.style.display='block';def.style.display='none'}else{img.style.display='none';def.style.display='flex'}}
 function previewBgBlur(v){const bg=document.getElementById('bgOverlay');bg.className='bg-overlay active'+(v&&v!=='0'?' blur-'+v:'')}
 function previewBg(){const url=document.getElementById('dashBgUrl').value,blur=document.getElementById('dashBgBlur').value;if(url&&url.startsWith('http')){document.getElementById('bgPreview').style.backgroundImage='url('+url+')';document.getElementById('bgPreview').className='bg-pv loaded';const bg=document.getElementById('bgOverlay');bg.style.backgroundImage='url('+url+')';bg.className='bg-overlay active'+(blur&&blur!=='0'?' blur-'+blur:'')}else{document.getElementById('bgPreview').style.backgroundImage='';document.getElementById('bgPreview').className='bg-pv';document.getElementById('bgPreview').textContent='No background set.'}}
 async function uploadBgFile(inp){const file=inp.files[0];if(!file)return;const fd=new FormData();fd.append('background',file);try{const r=await fetch('/api/upload',{method:'POST',body:fd}),d=await r.json();if(d.success){document.getElementById('dashBgUrl').value=d.url;document.getElementById('bgPreview').style.backgroundImage='url('+d.url+')';document.getElementById('bgPreview').className='bg-pv loaded';const bg=document.getElementById('bgOverlay');bg.style.backgroundImage='url('+d.url+')';bg.className='bg-overlay active'+(document.getElementById('dashBgBlur').value!=='0'?' blur-'+document.getElementById('dashBgBlur').value:'');document.getElementById('bgType').value='upload';showToast('Uploaded!')}else showToast('Upload failed',true)}catch{showToast('Upload failed',true)}}
@@ -133,7 +110,6 @@ async function saveSettings(){
     cardStyle:document.getElementById('dashCardStyle').value,layoutDensity:document.getElementById('dashDensity').value,
     refreshInterval:parseInt(document.getElementById('dashRefresh').value),showWidgets:getShowWidgets(),darkMode:darkMode,
     animationPreset:document.getElementById('dashAnimPreset').value,animationSpeed:parseFloat(document.getElementById('dashAnimSpeed').value),
-    dockEnabled:document.getElementById('dockToggle').classList.contains('on'),
     cardGlow:document.getElementById('glowToggle').classList.contains('on'),ambientLight:document.getElementById('ambientToggle').classList.contains('on'),
     botAvatarUrl:document.getElementById('dashAvatarUrl').value||null,
   };
@@ -148,10 +124,6 @@ async function loadOv(){
     const[sr,rr,ar]=await Promise.all([fetch('/api/status'),fetch('/api/reminders'),fetch('/api/stats/aggregate')]);
     const s=await sr.json(),rm=await rr.json(),ag=await ar.json();
     if(s.online){
-      document.getElementById('sDot').className='sl-dot on';document.getElementById('sTxt').textContent='Online';
-      if(s.version)document.getElementById('sbVersion').textContent='v'+s.version;
-      // Set bot avatar from status if no custom avatar configured
-      if(!cfg.botAvatarUrl&&s.avatar){const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');img.src=s.avatar;img.style.display='block';def.style.display='none'}
       const sv=s.servers||0,rmC=rm.length,ng=ag.netGrowth||0;
       animCount(document.getElementById('ovServers'),sv);animCount(document.getElementById('ovReminders'),rmC);
       const ovG=document.getElementById('ovGrowth');ovG.textContent=(ng>=0?'+':'')+ng;ovG.style.color=ng>=0?'#3ba55c':'#ed4245';
@@ -224,8 +196,7 @@ document.getElementById('sysMem').innerHTML='<div style="margin-bottom:10px;"><d
 // ═══ BOT CUSTOMIZATION ═══
 async function updateBotPresence(){const type=document.getElementById('botPresenceType').value,text=document.getElementById('botPresenceText').value;if(!text)return showToast('Enter a presence text',true);try{const r=await fetch('/api/bot/presence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,text})}),d=await r.json();d.success?showToast('Presence updated!'):showToast(d.error||'Failed',true)}catch{showToast('Failed to update',true)}}
 async function updateBotName(){const name=document.getElementById('botNameInput').value;if(!name)return showToast('Enter a name',true);if(name.length>32)return showToast('Max 32 characters',true);try{const r=await fetch('/api/bot/name',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}),d=await r.json();if(d.success){showToast('Username changed!');document.getElementById('botNameInput').value=''}else showToast(d.error||'Failed',true)}catch{showToast('Failed to rename',true)}}
-async function updateBotAvatar(){const url=document.getElementById('botAvatarInput').value;if(!url)return showToast('Enter an image URL',true);try{const r=await fetch('/api/bot/avatar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})}),d=await r.json();if(d.success){showToast('Avatar changed!');document.getElementById('botAvatarInput').value='';// Refresh sidebar avatar
-const img=document.getElementById('sbAvatar'),def=document.getElementById('sbIconDefault');img.src=d.avatar;img.style.display='block';def.style.display='none'}else showToast(d.error||'Failed',true)}catch{showToast('Failed to set avatar',true)}}
+async function updateBotAvatar(){const url=document.getElementById('botAvatarInput').value;if(!url)return showToast('Enter an image URL',true);try{const r=await fetch('/api/bot/avatar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})}),d=await r.json();if(d.success){showToast('Avatar changed!');document.getElementById('botAvatarInput').value=''}else showToast(d.error||'Failed',true)}catch{showToast('Failed to set avatar',true)}}
 
 // ═══ BUGS BADGE THEME ═══
 (function(){const b=document.getElementById('bugBadge');if(b){const o=new MutationObserver(()=>{b.style.color=document.body.classList.contains('light-mode')?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.06)'});o.observe(document.body,{attributes:true,attributeFilter:['class']})}})();
