@@ -153,6 +153,13 @@ body.light-mode .stg select{background-image:url("data:image/svg+xml,%3Csvg xmln
 body.light-mode .srv-search select,.light-mode .stg select{background-size:12px!important;background-repeat:no-repeat!important;background-position:right 10px center!important}
 
 /* Loading */
+/* Skeleton loading */
+.sk{background:rgba(255,255,255,0.02);border-radius:var(--radius-sm);padding:18px 22px;margin-bottom:10px;position:relative;overflow:hidden}
+.sk-line{height:12px;border-radius:6px;background:rgba(255,255,255,0.04);margin-bottom:8px;position:relative;overflow:hidden}
+.sk-line::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent);animation:skShimmer 1.5s ease-in-out infinite}
+.sk-line.w60{width:60%}.sk-line.w40{width:40%}.sk-line.w80{width:80%}.sk-line.h16{height:16px}.sk-line.h24{height:24px}
+@keyframes skShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
 .loading{text-align:center;padding:50px 20px;color:var(--text-dim)}
 .spin{width:28px;height:28px;border:2px solid rgba(255,255,255,0.03);border-top-color:var(--accent);border-radius:50%;animation:sp 0.7s linear infinite;margin:0 auto 12px}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -175,6 +182,10 @@ body.light-mode .srv-search select,.light-mode .stg select{background-size:12px!
 .srv-search input:focus{background:rgba(255,255,255,0.03);border-color:var(--accent);box-shadow:0 0 16px rgba(var(--accent-rgb),0.06)}
 .srv-search input::placeholder{color:var(--text-muted)}
 .srv-search select{padding:8px 30px 8px 12px;background:rgba(255,255,255,0.02);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;background-size:12px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.25)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+
+/* Tab Row Mobile Scroll / Sticky */
+.tab-row{display:flex;gap:2px;margin-bottom:16px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:3px;max-width:min(100%,420px);overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;flex-shrink:0}.tab-row::-webkit-scrollbar{display:none}
+.tab-row .mgmt-tab{flex-shrink:0;white-space:nowrap}
 
 /* Back */
 .bck{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;background:rgba(255,255,255,0.02);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);color:var(--text-dim);font-size:12px;cursor:pointer;transition:all 0.15s;margin-bottom:16px;font-family:inherit}

@@ -427,6 +427,46 @@ async function resetGreetingConfig(serverId,type){
   }catch{showToast('Failed',true)}
 }
 
+// ═══ Log Channel Config ═══
+async function setLogChannel(serverId,category){const chId=document.getElementById('logCh-'+category).value;try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,channelId:chId||null})});showToast('Channel set!')}catch{showToast('Failed',true)}}
+async function saveAllLogSettings(serverId){const categories=[];const cats=["messages","reactions","members","roles","server","voice","threads","emojis","bans","invites","stickers","automod","scheduled","stage","webhooks","integrations"];for(const cat of cats){const sel=document.getElementById("logCh-"+cat);if(sel)categories.push({category:cat,channelId:sel.value||null});}try{const r=await fetch("/api/server/"+serverId+"/log/config/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({categories})});const d=await r.json();if(d.success){showToast("All log settings saved!");loadSrvLogging(serverId)}else showToast("Save failed",true)}catch{showToast("Save failed",true)}}
+async function addTrackedChannel(serverId){const chId=document.getElementById('trackedChSelect').value;if(!chId)return showToast('Select a channel',true);try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'add'})});showToast('Added!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
+async function removeTrackedChannel(serverId,chId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'remove'})});showToast('Removed!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
+async function clearTrackedChannels(serverId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannels:'clear'})});showToast('Cleared!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
+
+// ═══ Server Insights ═══
+async function loadSrvInsights(id){try{const r=await fetch('/api/insights/'+id),d=await r.json();if(!d)return;document.getElementById('mgmtInsights').innerHTML='<div class="grid grid-2"><div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Top Users by Messages</div><div style="padding:8px;">'+(d.topUsers.length?d.topUsers.map(function(u,i){return'<div class="act-item"><img src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" style="width:24px;height:24px;border-radius:6px;flex-shrink:0;"><div class="a-tx"><strong>'+(u.tag||u.userId)+'</strong></div><div class="a-tm">'+u.total+' msgs</div></div>'}).join(''):'<div class="empty" style="padding:16px;"><p>Not enough data yet.</p></div>')+'</div></div><div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Top Channels</div><div style="padding:8px;">'+(d.topChannels.length?d.topChannels.map(function(c,i){return'<div class="act-item"><div style="width:24px;height:24px;border-radius:6px;background:rgba(88,101,242,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent);font-size:10px;font-weight:700;">#'+(i+1)+'</div><div class="a-tx"><strong>#'+c.name+'</strong></div><div class="a-tm">'+c.total+' msgs</div></div>'}).join(''):'<div class="empty" style="padding:16px;"><p>Not enough data yet.</p></div>')+'</div></div></div>'}catch{document.getElementById('mgmtInsights').innerHTML='<div class="empty"><p>Failed to load insights.</p></div>'}}
+
+// ═══ Message Search ═══
+var msgSearchTimeout=null;
+function onMsgSearchInput(id){if(msgSearchTimeout)clearTimeout(msgSearchTimeout);msgSearchTimeout=setTimeout(function(){loadSrvMessages(id)},300)}
+function msgSearchFilterChange(id){loadSrvMessages(id)}
+async function loadSrvMessages(id){var el=document.getElementById('mgmtMessages');var q=document.getElementById('msgSearchInput')?.value||'';var action=document.getElementById('msgSearchFilter')?.value||'all';el.innerHTML='<div class="loading"><div class="spin"></div></div>';try{var url='/api/server/'+id+'/messages?limit=50';if(action!=='all')url+='&action='+action;if(q)url+='&q='+encodeURIComponent(q);var r=await fetch(url),msgs=await r.json();var html='<div style="display:flex;gap:6px;margin-bottom:10px;padding:10px;"><input type="text" id="msgSearchInput" placeholder="Search message content..." value="'+q.replace(/"/g,'&quot;')+'" oninput="onMsgSearchInput(\''+id+'\')" style="flex:1;padding:8px 12px;background:rgba(255,255,255,0.02);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;font-family:inherit;"><select id="msgSearchFilter" onchange="msgSearchFilterChange(\''+id+'\')" style="padding:8px 10px;background:rgba(255,255,255,0.02);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:11px;font-family:inherit;"><option value="all">All</option><option value="deleted"'+(action==='deleted'?' selected':'')+'>Deleted</option><option value="edited"'+(action==='edited'?' selected':'')+'>Edited</option></select></div>';if(!msgs||!msgs.length){html+='<div class="empty"><p>No messages found.</p></div>';el.innerHTML=html;return}html+=msgs.map(function(m){var time=new Date(m.loggedAt);var timeStr=time.toLocaleDateString()+' '+time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});var actionBadge=m.action==='deleted'?'<span class="tag red">🗑️ Deleted</span>':'<span class="tag yellow">✏️ Edited</span>';var content=m.content?m.content.slice(0,300):'(no content)';if(q&&content.toLowerCase().includes(q.toLowerCase())){var idx=content.toLowerCase().indexOf(q.toLowerCase());var before=content.slice(0,idx);var match=content.slice(idx,idx+q.length);var after=content.slice(idx+q.length);content=before+'<mark style="background:rgba(88,101,242,0.25);color:#fff;padding:0 2px;border-radius:2px;">'+match+'</mark>'+after}return'<div class="rmd" style="flex-wrap:wrap;"><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><strong style="font-size:12px;">'+m.authorTag+'</strong> '+actionBadge+' <span style="font-size:10px;color:var(--text-dim);">#'+m.channelName+'</span></div><div style="font-size:11px;color:var(--text);word-break:break-all;">'+content+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">'+timeStr+'</div></div></div>'}).join('');el.innerHTML=html}catch{document.getElementById('mgmtMessages').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
+
+// ═══ SSE Events ═══
+let sseSource=null;
+function initSSE(){
+  if(sseSource)try{sseSource.close()}catch{}
+  if(typeof EventSource==='undefined')return;
+  try{
+    sseSource=new EventSource('/api/events');
+    sseSource.onmessage=function(e){
+      try{
+        var ev=JSON.parse(e.data);
+        if(ev.type==='msg_deleted'||ev.type==='msg_edited'){
+          showToast(ev.type==='msg_deleted'?'✉️ Message deleted by '+ev.data.authorTag:'✏️ Message edited by '+ev.data.authorTag);
+        }
+        if(ev.type==='member_join'||ev.type==='member_leave'){
+          loadOv();loadAn();
+        }
+      }catch{}
+    };
+    sseSource.onerror=function(){
+      setTimeout(initSSE,5000);
+    };
+  }catch{}
+}
+
 window.addEventListener('beforeunload',()=>{if(bgAnimId)cancelAnimationFrame(bgAnimId)});
 
-checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadRm();await loadSys();loadBrand();stRf()});
+checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadRm();await loadSys();loadBrand();stRf();initSSE()});
