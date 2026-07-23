@@ -175,7 +175,7 @@ async function showOverview(interaction) {
             { name: '🔒 Server Owner Commands', value: ownerLines, inline: false },
         )
         .addFields(
-            { name: '📋 Detailed Info', value: 'Use `/' + interaction.commandName + ' <category>` to see a category\'s commands.\nUse `/' + interaction.commandName + ' --command <name>` for details on a specific command.', inline: false },
+            { name: '📋 Detailed Info', value: 'Use `/' + interaction.commandName + ' <category>` to see a category\'s commands.\nUse `/' + interaction.commandName + ' command:<name>` for details on a specific command.', inline: false },
         )
         .setFooter({ text: interaction.guild.name, iconURL: interaction.guild.iconURL() })
         .setTimestamp();
@@ -204,7 +204,7 @@ async function showCategory(interaction, categoryName) {
         .setTitle(cat.emoji + ' ' + cat.name + ' Commands')
         .setDescription('**' + cat.commands.length + '** command' + (cat.commands.length !== 1 ? 's' : '') + (cat.public ? ' • Public' : ' • Server Owner Only'))
         .addFields({ name: 'Commands', value: cmdLines })
-        .setFooter({ text: 'Use /help --command <name> for details' })
+        .setFooter({ text: 'Use /help command:<name> for details' })
         .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
