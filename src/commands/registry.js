@@ -19,7 +19,7 @@ const { executeRole, executePurge, executeSlowmode, executeNickname, executeSay,
 
 // ── Moderation ──
 const { executeKick, executeBan, executeUnban, executeTimeout, executeUntimeout, executeWarn, executeWarnings, executeClearWarnings, executeLock, executeUnlock } = require('./moderation');
-const { executeHistory, executeCase as executeCaseCmd, executeReason } = require('./modCases');
+const { executeHistory, executeCase: executeCaseCmd, executeReason } = require('./modCases');
 
 
 
