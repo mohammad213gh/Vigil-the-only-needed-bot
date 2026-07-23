@@ -4,6 +4,7 @@
 
 const { EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
 const { addWarning } = require('./warnings');
+const { createCase, closeCase } = require('./modCases');
 const { getDb } = require('./db');
 const { getLeadingOption } = require('./helpers');
 
@@ -104,6 +105,7 @@ async function handleConfirmKick(interaction, parts) {
 
     try {
         await member.kick(reason);
+        createCase(interaction.guild.id, targetId, interaction.user.id, interaction.user.tag, 'kick', reason);
         const embed = EmbedBuilder.from(interaction.message.embeds[0])
             .setColor(0xE74C3C)
             .setTitle('👢 Member Kicked ✅')
@@ -131,6 +133,7 @@ async function handleConfirmBan(interaction, parts) {
 
     try {
         await guild.bans.create(targetId, { reason: reason, deleteMessageSeconds: deleteMessageSeconds });
+        createCase(interaction.guild.id, targetId, interaction.user.id, interaction.user.tag, 'ban', reason);
         const embed = EmbedBuilder.from(interaction.message.embeds[0])
             .setColor(0xE74C3C)
             .setTitle('🔨 Member Banned ✅')
@@ -227,6 +230,7 @@ async function handleWarnSubmit(interaction, parts) {
     }
 
     const warnings = addWarning(interaction.guild.id, targetId, interaction.user.tag, reason);
+    createCase(interaction.guild.id, targetId, interaction.user.id, interaction.user.tag, 'warn', reason);
 
     const embed = new EmbedBuilder()
         .setColor(0xF1C40F)

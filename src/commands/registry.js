@@ -19,6 +19,9 @@ const { executeRole, executePurge, executeSlowmode, executeNickname, executeSay,
 
 // ── Moderation ──
 const { executeKick, executeBan, executeUnban, executeTimeout, executeUntimeout, executeWarn, executeWarnings, executeClearWarnings, executeLock, executeUnlock } = require('./moderation');
+const { executeHistory, executeCase as executeCaseCmd, executeReason } = require('./modCases');
+
+
 
 // ── Config ──
 const { executeLog, executeEmbedConfig, executePresence, executeBotAvatar, executeBotName, executePrefix } = require('./config');
@@ -88,6 +91,9 @@ const commandRegistry = {
     clearwarnings: executeClearWarnings,
     lock: executeLock,
     unlock: executeUnlock,
+    history: executeHistory,
+    case: executeCaseCmd,
+    reason: executeReason,
 
     // Config
     log: executeLog,

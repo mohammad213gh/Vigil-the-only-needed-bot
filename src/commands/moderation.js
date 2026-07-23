@@ -1,6 +1,7 @@
 const { EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { formatDuration } = require('../helpers');
 const { addWarning, getWarnings, clearWarnings } = require('../warnings');
+const { createCase, closeCase } = require('../modCases');
 
 async function executeKick(interaction) {
     const target = interaction.options.getUser('user');
@@ -157,6 +158,7 @@ async function executeTimeout(interaction) {
 
     try {
         await member.timeout(ms, reason);
+        createCase(guild.id, target.id, interaction.user.id, interaction.user.tag, 'timeout', reason);
         const embed = new EmbedBuilder()
             .setColor(0xF1C40F)
             .setTitle('\u23F1\uFE0F Member Timed Out')
@@ -192,6 +194,11 @@ async function executeUntimeout(interaction) {
 
     try {
         await member.timeout(null);
+        // Close active timeout cases for this user
+        const timeoutCases = require('../modCases').getCases(guild.id, target.id, 50).filter(function(c) { return c.action_type === 'timeout' && c.active; });
+        for (const tc of timeoutCases) {
+            closeCase(guild.id, tc.case_number);
+        }
         const embed = new EmbedBuilder()
             .setColor('Green')
             .setTitle('\u23F1\uFE0F Timeout Removed')
@@ -226,6 +233,7 @@ async function executeWarn(interaction) {
             .setFooter({ text: guild.name, iconURL: guild.iconURL() })
             .setTimestamp();
 
+        createCase(guild.id, target.id, interaction.user.id, interaction.user.tag, 'warn', reason);
         await interaction.reply({ embeds: [embed] });
 
         // DM the user about the warning

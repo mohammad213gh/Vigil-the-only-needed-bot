@@ -316,6 +316,37 @@ const commandDefs = [
             opt.setName('channel')
                 .setDescription('Channel to unlock (defaults to current)')
                 .setRequired(false)),
+
+    // ── Mod-Log (owner only) ──
+    new SlashCommandBuilder()
+        .setName('history')
+        .setDescription('View moderation history for a user')
+        .addUserOption(opt =>
+            opt.setName('user')
+                .setDescription('The user to check')
+                .setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('case')
+        .setDescription('View details of a specific moderation case')
+        .addIntegerOption(opt =>
+            opt.setName('id')
+                .setDescription('Case number to view')
+                .setRequired(true)
+                .setMinValue(1)),
+    new SlashCommandBuilder()
+        .setName('reason')
+        .setDescription('Update the reason for a moderation case')
+        .addIntegerOption(opt =>
+            opt.setName('id')
+                .setDescription('Case number to update')
+                .setRequired(true)
+                .setMinValue(1))
+        .addStringOption(opt =>
+            opt.setName('text')
+                .setDescription('New reason text')
+                .setRequired(true)
+                .setMaxLength(1000)),
+
     new SlashCommandBuilder()
         .setName('poll')
         .setDescription('Create a poll')

@@ -136,6 +136,27 @@ function initSchema() {
             PRIMARY KEY (guild_id, user_id, channel_id)
         );
 
+        CREATE TABLE IF NOT EXISTS mod_cases (
+            id TEXT PRIMARY KEY,
+            guild_id TEXT NOT NULL,
+            case_number INTEGER NOT NULL,
+            user_id TEXT NOT NULL,
+            moderator_id TEXT NOT NULL,
+            moderator_tag TEXT NOT NULL,
+            action_type TEXT NOT NULL,
+            reason TEXT NOT NULL DEFAULT '',
+            created_at INTEGER NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_mod_cases_guild ON mod_cases(guild_id, case_number);
+        CREATE INDEX IF NOT EXISTS idx_mod_cases_user ON mod_cases(guild_id, user_id);
+
+        CREATE TABLE IF NOT EXISTS mod_case_counters (
+            guild_id TEXT PRIMARY KEY,
+            next_case INTEGER NOT NULL DEFAULT 1
+        );
+
         CREATE INDEX IF NOT EXISTS idx_activity_guild ON activity_counts(guild_id, message_count DESC);
     `);
 
