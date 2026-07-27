@@ -16,6 +16,7 @@ const { getInviterStats, getTopInviters, getGuildInviteStats } = require('./invi
 const { addNote, getNotesForUser, editNote, removeNote, getNoteCount } = require('./staffNotes');
 const { getDb } = require('./db');
 const { WS_STATUS } = require('./constants');
+const { getThresholds, addThreshold, removeThreshold } = require('./warningThresholds');
 const {
     BALL_RESPONSES, JOKES, FACTS, ADVICE, QUOTES,
     RPS_CHOICES, RPS_EMOJIS, RPS_WINNERS, WC_OUTCOMES,
@@ -90,6 +91,66 @@ handlers.ban = async (message) => {
         await message.reply({ embeds: [embed] });
     } catch (err) {
         message.reply('⚠️ Failed: ' + err.message);
+    }
+};
+
+handlers.tempban = async (message) => {
+    if (!checkOwnerOrPerm(message, 'tempban')) return;
+    const userId = parseUserMention(message.args[0]);
+    const durationStr = message.args[1];
+    if (!userId || !durationStr) return message.reply('\u26A0\uFE0F Usage: `' + message.prefix + 'tempban @user <duration> [reason]`');
+    const reason = message.restArgs.slice(2).join(' ') || 'No reason provided';
+    const guild = message.guild;
+    if (!guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) return message.reply('\u26A0\uFE0F I need **Ban Members** permission.');
+    
+    const durationMap = { '1h': 3600000, '6h': 21600000, '24h': 86400000, '3d': 259200000, '7d': 604800000, '14d': 1209600000, '30d': 2592000000 };
+    const durationMs = parseDuration(durationStr) || durationMap[durationStr];
+    if (!durationMs) return message.reply('\u26A0\uFE0F Invalid duration. Examples: 1h, 6h, 24h, 3d, 7d, 14d, 30d');
+    
+    try {
+        const db = getDb();
+        const unbanAt = Date.now() + durationMs;
+        await guild.bans.create(userId, { reason: '[Temp Ban] ' + reason });
+        db.prepare('INSERT INTO temp_bans (user_id, guild_id, reason, banned_at, unban_at) VALUES (?, ?, ?, ?, ?)')
+            .run(userId, guild.id, reason, Date.now(), unbanAt);
+        const embed = new EmbedBuilder()
+            .setColor(0xE74C3C).setTitle('\uD83D\uDD28 Temp Banned')
+            .setDescription('<@' + userId + '> was temp banned')
+            .addFields({ name: 'Duration', value: formatDuration(durationMs), inline: true }, { name: 'Reason', value: reason, inline: true })
+            .setFooter({ text: 'Auto-unban at <t:' + Math.floor(unbanAt / 1000) + ':R>' }).setTimestamp();
+        message.reply({ embeds: [embed] });
+        setTimeout(async () => {
+            try { await guild.bans.remove(userId, 'Temp ban expired'); } catch {}
+        }, durationMs);
+    } catch (err) {
+        message.reply('\u26A0\uFE0F Failed: ' + err.message);
+    }
+};
+
+handlers.thresholds = async (message) => {
+    if (!checkOwnerOrPerm(message, 'thresholds')) return;
+    const sub = message.args[0];
+    if (sub === 'add') {
+        const warnCount = parseInt(message.args[1]);
+        const action = message.args[2];
+        const duration = parseInt(message.args[3]) || null;
+        if (!warnCount || !['timeout', 'kick', 'ban'].includes(action)) return message.reply('\u26A0\uFE0F Usage: `' + message.prefix + 'thresholds add <warn_count> <timeout|kick|ban> [duration_min]`');
+        addThreshold(message.guild.id, warnCount, action, duration);
+        const embed = new EmbedBuilder()
+            .setColor('Green').setTitle('\u26A0\uFE0F Threshold Added')
+            .setDescription('**' + warnCount + '** warns \u2192 **' + action + '**' + (action === 'timeout' ? ' for ' + (duration || 10) + ' min' : ''))
+            .setFooter({ text: message.guild.name }).setTimestamp();
+        message.reply({ embeds: [embed] });
+    } else if (sub === 'remove') {
+        const warnCount = parseInt(message.args[1]);
+        if (!warnCount) return message.reply('\u26A0\uFE0F Usage: `' + message.prefix + 'thresholds remove <warn_count>`');
+        removeThreshold(message.guild.id, warnCount);
+        message.reply('\u2705 Threshold for **' + warnCount + '** warns removed.');
+    } else {
+        const thresholds = getThresholds(message.guild.id);
+        if (!thresholds.length) return message.reply('\uD83D\uDCCB No thresholds set. Use `' + message.prefix + 'thresholds add <count> <action>`');
+        const lines = thresholds.map(t => '`' + t.warnCount + ' warns` \u2192 **' + t.action + '**' + (t.action === 'timeout' ? ' (' + (t.duration || 10) + ' min)' : '')).join('\n');
+        message.reply('\uD83D\uDCCB **Warning Thresholds**\n' + lines);
     }
 };
 
@@ -762,7 +823,7 @@ handlers.perm = async (message) => {
         if (isOwner(user.id)) return message.reply('⚠️ The owner already has access to everything.');
         const ownerOnly = ['deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'shutdown', 'perm'];
         if (ownerOnly.includes(command)) return message.reply('⚠️ That command is owner-only and cannot be granted.');
-        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth', 'invites', 'note', 'logs'];
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'tempban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth', 'invites', 'note', 'logs', 'thresholds'];
         if (command === 'all') {
             for (const cmd of grantableCmds) grantPermission(guild.id, cmd, user.id);
             return message.reply('✅ Granted **all** commands to ' + user);
@@ -778,7 +839,7 @@ handlers.perm = async (message) => {
         const user = message.mentions.users.first();
         const command = message.args[2];
         if (!user || !command) return message.reply('⚠️ Usage: `' + message.prefix + 'perm revoke @user <command|all>`');
-        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth', 'welcome', 'goodbye', 'invites', 'note', 'logs'];
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'tempban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth', 'welcome', 'goodbye', 'invites', 'note', 'logs', 'thresholds'];
         if (command === 'all') {
             for (const cmd of grantableCmds) revokePermission(guild.id, cmd, user.id);
             return message.reply('✅ Revoked **all** permissions from ' + user);

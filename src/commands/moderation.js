@@ -101,6 +101,68 @@ async function executeBan(interaction) {
     await interaction.reply({ embeds: [embed], components: [row] });
 }
 
+async function executeTempBan(interaction) {
+    const target = interaction.options.getUser('user');
+    const duration = interaction.options.getString('duration');
+    const reason = interaction.options.getString('reason') || 'No reason provided';
+    const deleteMessages = interaction.options.getString('delete_messages') || 'none';
+    const guild = interaction.guild;
+
+    if (!guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) {
+        return interaction.reply({ content: '\u26A0\uFE0F I need the **Ban Members** permission to do that.', ephemeral: true });
+    }
+
+    const member = await guild.members.fetch(target.id).catch(() => null);
+    if (member && !member.bannable) {
+        return interaction.reply({ content: '\u26A0\uFE0F I cannot ban that user. They may have a higher role than me.', ephemeral: true });
+    }
+
+    const durationMap = {
+        '1h': 3600000,
+        '6h': 21600000,
+        '24h': 86400000,
+        '3d': 259200000,
+        '7d': 604800000,
+        '14d': 1209600000,
+        '30d': 2592000000,
+    };
+    const durationMs = durationMap[duration];
+    if (!durationMs) {
+        return interaction.reply({ content: '\u26A0\uFE0F Invalid duration.', ephemeral: true });
+    }
+
+    const deleteSeconds = { 'none': 0, 'hour': 3600, '6hours': 21600, '24hours': 86400 }[deleteMessages] || 0;
+    const durationLabel = { '1h': '1 hour', '6h': '6 hours', '24h': '24 hours', '3d': '3 days', '7d': '7 days', '14d': '14 days', '30d': '30 days' }[duration];
+
+    const embed = new EmbedBuilder()
+        .setColor(0xE74C3C)
+        .setTitle('\u2753 Confirm Temp Ban')
+        .setDescription('Are you sure you want to **temporarily ban** ' + target + ' for **' + durationLabel + '**?')
+        .addFields(
+            { name: 'User', value: String(target), inline: true },
+            { name: 'Duration', value: durationLabel, inline: true },
+            { name: 'Reason', value: reason, inline: true },
+        )
+        .setFooter({ text: 'They will be auto-unbanned after ' + durationLabel })
+        .setTimestamp();
+
+    const confirm = new ButtonBuilder()
+        .setCustomId('ctb_' + interaction.user.id + '_' + target.id + '_' + duration + '_' + deleteSeconds)
+        .setLabel('Confirm Temp Ban')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('\u2705');
+
+    const cancel = new ButtonBuilder()
+        .setCustomId('cancel_' + interaction.user.id)
+        .setLabel('Cancel')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('\u274C');
+
+    const row = new ActionRowBuilder().addComponents(confirm, cancel);
+
+    await interaction.reply({ embeds: [embed], components: [row] });
+}
+
 async function executeUnban(interaction) {
     const userId = interaction.options.getString('user_id');
     const guild = interaction.guild;
@@ -236,6 +298,21 @@ async function executeWarn(interaction) {
         createCase(guild.id, target.id, interaction.user.id, interaction.user.tag, 'warn', reason);
         await interaction.reply({ embeds: [embed] });
 
+        // Check warning thresholds for auto-punish
+        try {
+            const { checkThresholds } = require('../warningThresholds');
+            const result = await checkThresholds(guild, target.id, interaction);
+            if (result) {
+                // Send a follow-up about the auto-punish
+                await interaction.followUp({
+                    content: '\u26A0\uFE0F **Auto-punish:** ' + target + ' was ' + result + ' (reached ' + warnings.length + ' warnings).',
+                    ephemeral: true,
+                }).catch(() => {});
+            }
+        } catch (err) {
+            console.error('[Thresholds] Check failed:', err.message);
+        }
+
         // DM the user about the warning
         try {
             await target.send('\u26A0\uFE0F You have been warned in **' + guild.name + '**.\nReason: ' + reason);
@@ -365,6 +442,7 @@ async function executeUnlock(interaction) {
 module.exports = {
     executeKick,
     executeBan,
+    executeTempBan,
     executeUnban,
     executeTimeout,
     executeUntimeout,

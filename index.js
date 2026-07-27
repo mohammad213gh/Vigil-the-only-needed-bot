@@ -244,6 +244,42 @@ const { setReminderClient, startReminderChecker } = require('./src/reminders');
 setReminderClient(client);
 startReminderChecker();
 
+// ──────────────────── Restore Pending Temp Bans ────────────────────
+
+try {
+    const { getDb } = require('./src/db');
+    const db = getDb();
+    const pending = db.prepare('SELECT * FROM temp_bans WHERE unban_at > ?').all(Date.now());
+    for (const tb of pending) {
+        const guild = client.guilds.cache.get(tb.guild_id);
+        if (!guild) continue;
+        const remaining = tb.unban_at - Date.now();
+        if (remaining <= 0) {
+            // Already expired — unban immediately
+            guild.bans.remove(tb.user_id, 'Temp ban expired').catch(() => {});
+            db.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(tb.user_id, tb.guild_id);
+        } else {
+            // Schedule unban
+            setTimeout(async () => {
+                try {
+                    await guild.bans.remove(tb.user_id, 'Temp ban expired');
+                    db.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(tb.user_id, tb.guild_id);
+                    console.log('[TempBan] Auto-unbanned', tb.user_id, 'in', tb.guild_id);
+                } catch (err) {
+                    console.error('[TempBan] Auto-unban failed:', err.message);
+                    // Remove stale entry anyway
+                    db.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(tb.user_id, tb.guild_id);
+                }
+            }, remaining);
+        }
+    }
+    if (pending.length > 0) {
+        console.log('[TempBan] Restored', pending.length, 'pending temp bans');
+    }
+} catch (err) {
+    console.error('[TempBan] Boot-time restore error:', err.message);
+}
+
 // ──────────────────── Start Web Dashboard ────────────────────
 
 const { createDashboard, setDashboardClient } = require('./src/dashboard');

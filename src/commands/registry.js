@@ -18,7 +18,7 @@ const { executeRemindMe, executeReminders } = require('./reminder');
 const { executeRole, executePurge, executeSlowmode, executeNickname, executeSay, executeEmbed, executeDeploy, executeTrack, executePoll, executeAnnounce } = require('./admin');
 
 // ── Moderation ──
-const { executeKick, executeBan, executeUnban, executeTimeout, executeUntimeout, executeWarn, executeWarnings, executeClearWarnings, executeLock, executeUnlock } = require('./moderation');
+const { executeKick, executeBan, executeTempBan, executeUnban, executeTimeout, executeUntimeout, executeWarn, executeWarnings, executeClearWarnings, executeLock, executeUnlock } = require('./moderation');
 const { executeHistory, executeCase: executeCaseCmd, executeReason } = require('./modCases');
 
 
@@ -52,6 +52,9 @@ const { executeNote } = require('./note');
 
 // ── Log Search ──
 const { executeLogs } = require('./logs');
+
+// ── Warning Thresholds ──
+const { executeThresholds } = require('./thresholds');
 
 // ──────────────────── Registry Map ────────────────────
 
@@ -98,6 +101,7 @@ const commandRegistry = {
     // Moderation
     kick: executeKick,
     ban: executeBan,
+    tempban: executeTempBan,
     unban: executeUnban,
     timeout: executeTimeout,
     untimeout: executeUntimeout,
@@ -148,6 +152,9 @@ const commandRegistry = {
 
     // Log Search
     logs: executeLogs,
+
+    // Warning Thresholds
+    thresholds: executeThresholds,
 };
 
 // Commands that anyone can use (no owner guard)

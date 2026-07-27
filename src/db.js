@@ -243,6 +243,31 @@ function initSchema() {
         );
 
         CREATE INDEX IF NOT EXISTS idx_staff_notes_guild ON staff_notes(guild_id, target_user_id);
+
+        CREATE TABLE IF NOT EXISTS temp_bans (
+            user_id TEXT NOT NULL,
+            guild_id TEXT NOT NULL,
+            reason TEXT NOT NULL DEFAULT '',
+            banned_at INTEGER NOT NULL,
+            unban_at INTEGER NOT NULL,
+            PRIMARY KEY (user_id, guild_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS warning_thresholds (
+            guild_id TEXT PRIMARY KEY,
+            thresholds TEXT NOT NULL DEFAULT '[]'
+        );
+
+        CREATE TABLE IF NOT EXISTS ban_appeals (
+            id TEXT PRIMARY KEY,
+            guild_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            user_tag TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            message TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at INTEGER NOT NULL
+        );
     `);
 
     // Add prefix column if not exists (safe on every boot)

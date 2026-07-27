@@ -247,6 +247,40 @@ const commandDefs = [
                     { name: 'Past 24 hours', value: '24hours' },
                 )),
     new SlashCommandBuilder()
+        .setName('tempban')
+        .setDescription('Temporarily ban a member (auto-unbans after duration)')
+        .addUserOption(opt =>
+            opt.setName('user')
+                .setDescription('The user to temp ban')
+                .setRequired(true))
+        .addStringOption(opt =>
+            opt.setName('duration')
+                .setDescription('Ban duration')
+                .setRequired(true)
+                .addChoices(
+                    { name: '1 hour', value: '1h' },
+                    { name: '6 hours', value: '6h' },
+                    { name: '24 hours', value: '24h' },
+                    { name: '3 days', value: '3d' },
+                    { name: '7 days', value: '7d' },
+                    { name: '14 days', value: '14d' },
+                    { name: '30 days', value: '30d' },
+                ))
+        .addStringOption(opt =>
+            opt.setName('reason')
+                .setDescription('Reason for the temporary ban')
+                .setRequired(false))
+        .addStringOption(opt =>
+            opt.setName('delete_messages')
+                .setDescription('Delete recent messages')
+                .setRequired(false)
+                .addChoices(
+                    { name: "Don't delete any", value: 'none' },
+                    { name: 'Past hour', value: 'hour' },
+                    { name: 'Past 6 hours', value: '6hours' },
+                    { name: 'Past 24 hours', value: '24hours' },
+                )),
+    new SlashCommandBuilder()
         .setName('unban')
         .setDescription('Unban a user by their ID')
         .addStringOption(opt =>
@@ -1170,6 +1204,45 @@ const commandDefs = [
                     opt.setName('id')
                         .setDescription('The note ID')
                         .setRequired(true))),
+
+    // ── Warning Thresholds (owner only) ──
+    new SlashCommandBuilder()
+        .setName('thresholds')
+        .setDescription('Configure automatic punishments when users reach X warnings')
+        .addSubcommand(sub =>
+            sub.setName('add')
+                .setDescription('Add a punishment threshold')
+                .addIntegerOption(opt =>
+                    opt.setName('warnings')
+                        .setDescription('Number of warnings before punishment')
+                        .setRequired(true)
+                        .setMinValue(1)
+                        .setMaxValue(50))
+                .addStringOption(opt =>
+                    opt.setName('action')
+                        .setDescription('Punishment to apply')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: 'Timeout', value: 'timeout' },
+                            { name: 'Kick', value: 'kick' },
+                            { name: 'Ban', value: 'ban' },
+                        ))
+                .addIntegerOption(opt =>
+                    opt.setName('duration')
+                        .setDescription('Timeout duration in minutes (only for timeout)')
+                        .setRequired(false)
+                        .setMinValue(1)))
+        .addSubcommand(sub =>
+            sub.setName('remove')
+                .setDescription('Remove a punishment threshold')
+                .addIntegerOption(opt =>
+                    opt.setName('warnings')
+                        .setDescription('Warning count threshold to remove')
+                        .setRequired(true)
+                        .setMinValue(1)))
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List all warning thresholds')),
 
     // ── Log Search (owner only) ──
     new SlashCommandBuilder()

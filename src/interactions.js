@@ -61,6 +61,7 @@ async function handleButton(interaction) {
     switch (prefix) {
         case 'ck': return handleConfirmKick(interaction, parts);
         case 'cb': return handleConfirmBan(interaction, parts);
+        case 'ctb': return handleConfirmTempBan(interaction, parts);
         case 'cp': return handleConfirmPurge(interaction, parts);
         case 'cancel': return handleCancel(interaction, parts);
         case 'wm': return handleWarnModalOpen(interaction, parts);
@@ -113,6 +114,65 @@ async function handleConfirmKick(interaction, parts) {
         await interaction.update({ embeds: [embed], components: [] });
     } catch (err) {
         await interaction.update({ content: '❌ Failed to kick: ' + err.message, components: [], embeds: [] });
+    }
+}
+
+// ──────────────────── Confirm Temp Ban ────────────────────
+
+async function handleConfirmTempBan(interaction, parts) {
+    // ctb_{initiatorId}_{targetId}_{duration}_{deleteSeconds}
+    const initiatorId = parts[1];
+    const targetId = parts[2];
+    const duration = parts[3] || '7d';
+    const deleteSeconds = parseInt(parts[4]) || 0;
+    const guild = interaction.guild;
+
+    if (!guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) {
+        return interaction.update({ content: '\u274C I lost the **Ban Members** permission.', components: [], embeds: [] });
+    }
+
+    const durationMap = {
+        '1h': 3600000, '6h': 21600000, '24h': 86400000,
+        '3d': 259200000, '7d': 604800000, '14d': 1209600000, '30d': 2592000000,
+    };
+    const durationMs = durationMap[duration] || 604800000;
+    const durationLabel = { '1h': '1 hour', '6h': '6 hours', '24h': '24 hours', '3d': '3 days', '7d': '7 days', '14d': '14 days', '30d': '30 days' }[duration] || '7 days';
+
+    const reasonField = interaction.message.embeds[0]?.fields?.find(function (f) { return f.name === 'Reason'; });
+    const reason = reasonField ? reasonField.value : 'No reason provided';
+
+    try {
+        await guild.bans.create(targetId, { reason: '[Temp Ban ' + durationLabel + '] ' + reason, deleteMessageSeconds: deleteSeconds });
+
+        // Store the temp ban in the DB with auto-unban timestamp
+        const db = getDb();
+        const unbanAt = Date.now() + durationMs;
+        db.prepare('INSERT INTO temp_bans (user_id, guild_id, reason, banned_at, unban_at) VALUES (?, ?, ?, ?, ?)')
+            .run(targetId, guild.id, reason, Date.now(), unbanAt);
+
+        createCase(interaction.guild.id, targetId, interaction.user.id, interaction.user.tag, 'tempban', reason + ' (Duration: ' + durationLabel + ')');
+
+        const embed = EmbedBuilder.from(interaction.message.embeds[0])
+            .setColor(0xE74C3C)
+            .setTitle('\uD83D\uDD28 Temp Banned \u2705')
+            .setDescription('<@' + targetId + '> has been temp banned for **' + durationLabel + '**.')
+            .setFooter({ text: 'Auto-unban at <t:' + Math.floor(unbanAt / 1000) + ':R>' });
+
+        await interaction.update({ embeds: [embed], components: [] });
+
+        // Schedule the unban
+        setTimeout(async () => {
+            try {
+                await guild.bans.remove(targetId, 'Temp ban expired (' + durationLabel + ')');
+                const db2 = getDb();
+                db2.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(targetId, guild.id);
+                console.log('[TempBan] Auto-unbanned', targetId, 'in', guild.id);
+            } catch (err) {
+                console.error('[TempBan] Auto-unban failed:', err.message);
+            }
+        }, durationMs);
+    } catch (err) {
+        await interaction.update({ content: '\u274C Failed to temp ban: ' + err.message, components: [], embeds: [] });
     }
 }
 
@@ -251,6 +311,21 @@ async function handleWarnSubmit(interaction, parts) {
         const user = await interaction.client.users.fetch(targetId);
         await user.send('⚠️ You have been warned in **' + interaction.guild.name + '**.\nReason: ' + reason);
     } catch { /* DMs closed */ }
+
+    // Check warning thresholds for auto-punish
+    try {
+        const { checkThresholds } = require('./warningThresholds');
+        const guild = interaction.guild;
+        const result = await checkThresholds(guild, targetId, interaction);
+        if (result) {
+            await interaction.followUp({
+                content: '\u26A0\uFE0F **Auto-punish:** <@' + targetId + '> was ' + result + ' (reached ' + warnings.length + ' warnings).',
+                ephemeral: true,
+            }).catch(() => {});
+        }
+    } catch (err) {
+        console.error('[Thresholds] Check failed:', err.message);
+    }
 }
 
 // ──────────────────── Poll DB Helpers ────────────────────
