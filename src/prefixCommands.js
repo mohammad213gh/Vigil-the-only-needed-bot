@@ -12,6 +12,9 @@ const { hasPermission, grantPermission, revokePermission, getAllPermissions } = 
 const { getFlag, formatUptime } = require('./helpers');
 const os = require('os');
 const { getReactionRoles, addReactionRole, removeAllForMessage } = require('./reactionRoles');
+const { getInviterStats, getTopInviters, getGuildInviteStats } = require('./invites');
+const { addNote, getNotesForUser, editNote, removeNote, getNoteCount } = require('./staffNotes');
+const { getDb } = require('./db');
 const { WS_STATUS } = require('./constants');
 const {
     BALL_RESPONSES, JOKES, FACTS, ADVICE, QUOTES,
@@ -759,7 +762,7 @@ handlers.perm = async (message) => {
         if (isOwner(user.id)) return message.reply('⚠️ The owner already has access to everything.');
         const ownerOnly = ['deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'shutdown', 'perm'];
         if (ownerOnly.includes(command)) return message.reply('⚠️ That command is owner-only and cannot be granted.');
-        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth'];
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth', 'invites', 'note', 'logs'];
         if (command === 'all') {
             for (const cmd of grantableCmds) grantPermission(guild.id, cmd, user.id);
             return message.reply('✅ Granted **all** commands to ' + user);
@@ -775,7 +778,7 @@ handlers.perm = async (message) => {
         const user = message.mentions.users.first();
         const command = message.args[2];
         if (!user || !command) return message.reply('⚠️ Usage: `' + message.prefix + 'perm revoke @user <command|all>`');
-        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth', 'welcome', 'goodbye'];
+        const grantableCmds = ['role', 'purge', 'slowmode', 'nickname', 'kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'say', 'embed', 'userinfo', 'avatar', 'track', 'log', 'poll', 'announce', 'reactionrole', 'prefix', 'stats', 'server', 'growth', 'welcome', 'goodbye', 'invites', 'note', 'logs'];
         if (command === 'all') {
             for (const cmd of grantableCmds) revokePermission(guild.id, cmd, user.id);
             return message.reply('✅ Revoked **all** permissions from ' + user);
@@ -1001,6 +1004,183 @@ handlers.botname = async (message) => {
     } catch (err) {
         message.reply('⚠️ Failed: ' + err.message + ' (Discord limits name changes to 2/hour)');
     }
+};
+
+// ─── Invites ───
+
+handlers.invites = async (message) => {
+    const sub = message.args[0];
+    if (!sub || !['check', 'top', 'stats'].includes(sub)) {
+        return message.reply('⚠️ Usage: `' + message.prefix + 'invites check [@user]`, `' + message.prefix + 'invites top [limit]`, `' + message.prefix + 'invites stats`');
+    }
+
+    if (sub === 'check') {
+        const user = message.mentions.users.first() || message.author;
+        const stats = getInviterStats(message.guild.id, user.id);
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
+            .setTitle('📨 Invite Stats')
+            .setDescription(user.id === message.author.id
+                ? 'You have invited **' + stats.total + '** member' + (stats.total !== 1 ? 's' : '')
+                : user + ' has invited **' + stats.total + '** member' + (stats.total !== 1 ? 's' : ''))
+            .setFooter({ text: message.guild.name, iconURL: message.guild.iconURL() })
+            .setTimestamp();
+        if (stats.joiners.length > 0) {
+            const recent = stats.joiners.slice(0, 10).map(j =>
+                '<@' + j.joiner_id + '> — <t:' + Math.floor(j.joined_at / 1000) + ':R>'
+            ).join('\n');
+            embed.addFields({ name: 'Recent Invites', value: recent });
+        }
+        await message.reply({ embeds: [embed] });
+
+    } else if (sub === 'top') {
+        const limit = parseInt(message.args[1]) || 10;
+        const top = getTopInviters(message.guild.id, Math.min(limit, 25));
+        if (!top.length) return message.reply('📋 No invite data yet.');
+        const maxCount = top[0].count;
+        const lines = top.map((r, i) => {
+            const barLen = Math.round((r.count / maxCount) * 20);
+            const bar = '▰'.repeat(barLen) + '▱'.repeat(Math.max(0, 20 - barLen));
+            return '`#' + (i + 1) + '` <@' + r.inviter_id + '> ' + bar + ' **' + r.count + '**';
+        }).join('\n');
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('🏆 Top Inviters').setDescription(lines)
+            .setFooter({ text: message.guild.name, iconURL: message.guild.iconURL() }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+
+    } else if (sub === 'stats') {
+        const top = getGuildInviteStats(message.guild.id);
+        const totalInvites = top.reduce((a, r) => a + r.count, 0);
+        const embed = new EmbedBuilder()
+            .setColor(0x00BFFF).setAuthor({ name: message.guild.name, iconURL: message.guild.iconURL() })
+            .setTitle('📊 Server Invite Stats')
+            .setDescription('**' + totalInvites + '** total invite' + (totalInvites !== 1 ? 's' : '') + ' tracked')
+            .addFields(
+                { name: 'Unique Inviters', value: '**' + top.length + '**', inline: true },
+                { name: 'Avg per Inviter', value: top.length > 0 ? '**' + (totalInvites / top.length).toFixed(1) + '**' : '**0**', inline: true },
+            )
+            .setFooter({ text: message.guild.name, iconURL: message.guild.iconURL() }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    }
+};
+
+// ─── Staff Notes ───
+
+handlers.note = async (message) => {
+    const sub = message.args[0];
+    if (!sub || !['add', 'list', 'edit', 'remove'].includes(sub)) {
+        return message.reply('⚠️ Usage: `' + message.prefix + 'note add @user <text>`, `' + message.prefix + 'note list @user`, `' + message.prefix + 'note edit <id> <text>`, `' + message.prefix + 'note remove <id>`');
+    }
+
+    if (sub === 'add') {
+        const user = message.mentions.users.first();
+        const text = message.restArgs.slice(2).join(' ');
+        if (!user || !text) return message.reply('⚠️ Usage: `' + message.prefix + 'note add @user <note text>`');
+        const result = addNote(message.guild.id, user.id, message.author.id, message.author.tag, text);
+        const count = getNoteCount(message.guild.id, user.id);
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('📝 Staff Note Added')
+            .setDescription('Note added for ' + user.toString())
+            .addFields({ name: 'Note', value: text }, { name: 'Note Count', value: String(count), inline: true }, { name: 'Note ID', value: '`' + result.id + '`', inline: true })
+            .setFooter({ text: 'By ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+
+    } else if (sub === 'list') {
+        const user = message.mentions.users.first();
+        if (!user) return message.reply('⚠️ Usage: `' + message.prefix + 'note list @user`');
+        const notes = getNotesForUser(message.guild.id, user.id);
+        if (!notes.length) return message.reply('📋 No staff notes for ' + user.toString() + '.');
+        const lines = notes.map(n =>
+            '**`' + n.id.slice(0, 8) + '...`** — ' + n.author_tag + ' • <t:' + Math.floor(n.created_at / 1000) + ':R>\n' +
+            '> ' + n.note.slice(0, 200) +
+            (n.updated_at ? '\n> *(edited <t:' + Math.floor(n.updated_at / 1000) + ':R>)*' : '')
+        ).join('\n\n');
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2).setTitle('📋 Staff Notes — ' + user.tag).setDescription(lines.slice(0, 4096))
+            .setFooter({ text: notes.length + ' note' + (notes.length !== 1 ? 's' : '') + ' • Use ' + message.prefix + 'note remove <id> to delete' }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+
+    } else if (sub === 'edit') {
+        const noteId = message.args[1];
+        const text = message.restArgs.slice(2).join(' ');
+        if (!noteId || !text) return message.reply('⚠️ Usage: `' + message.prefix + 'note edit <id> <new text>`');
+        const updated = editNote(noteId, text);
+        if (!updated) return message.reply('❌ Note not found. Check the ID with `' + message.prefix + 'note list @user`.');
+        const embed = new EmbedBuilder()
+            .setColor('Green').setTitle('✏️ Note Edited').setDescription('Note `' + noteId + '` has been updated.')
+            .addFields({ name: 'Updated Note', value: text })
+            .setFooter({ text: 'Edited by ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+
+    } else if (sub === 'remove') {
+        const noteId = message.args[1];
+        if (!noteId) return message.reply('⚠️ Usage: `' + message.prefix + 'note remove <id>`');
+        const removed = removeNote(noteId);
+        if (!removed) return message.reply('❌ Note not found. Check the ID with `' + message.prefix + 'note list @user`.');
+        const embed = new EmbedBuilder()
+            .setColor('Red').setTitle('🗑️ Note Removed').setDescription('Note `' + noteId + '` has been deleted.')
+            .setFooter({ text: 'Removed by ' + message.author.tag }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+    }
+};
+
+// ─── Log Search ───
+
+handlers.logs = async (message) => {
+    const sub = message.args[0];
+    if (!sub || sub !== 'search') {
+        return message.reply('⚠️ Usage: `' + message.prefix + 'logs search [@user] [keyword:<text>] [action:deleted|edited] [limit:<num>]`');
+    }
+
+    const searchUser = message.mentions.users.first();
+    const args = message.restArgs.slice(1);
+    const keyword = args.find(a => a.startsWith('keyword:'))?.slice(8);
+    const action = args.find(a => a.startsWith('action:'))?.slice(7);
+    const limit = Math.min(parseInt(args.find(a => a.startsWith('limit:'))?.slice(6)) || 15, 50);
+
+    const db = getDb();
+    let whereClauses = ['guild_id = ?'];
+    let params = [message.guild.id];
+
+    if (searchUser) {
+        whereClauses.push('author_id = ?');
+        params.push(searchUser.id);
+    }
+    if (keyword) {
+        whereClauses.push('content LIKE ?');
+        params.push('%' + keyword + '%');
+    }
+    if (action) {
+        whereClauses.push('action = ?');
+        params.push(action);
+    }
+
+    const sql = 'SELECT * FROM message_log WHERE ' + whereClauses.join(' AND ') + ' ORDER BY logged_at DESC LIMIT ?';
+    params.push(limit);
+    const results = db.prepare(sql).all(...params);
+
+    if (!results.length) {
+        let msg = '📋 No matching messages found.';
+        if (searchUser) msg += '\nUser: ' + searchUser.toString();
+        if (keyword) msg += '\nKeyword: `' + keyword + '`';
+        if (action) msg += '\nAction: `' + action + '`';
+        return message.reply(msg);
+    }
+
+    const lines = results.map(r => {
+        const actionEmoji = r.action === 'deleted' ? '🗑️' : (r.action === 'edited' ? '✏️' : '📝');
+        const snippet = (r.content || '*[empty]*').slice(0, 100);
+        return actionEmoji + ' <@' + r.author_id + '> — <t:' + Math.floor(r.logged_at / 1000) + ':R>\n' +
+            '> ' + snippet.replace(/\n/g, ' ').trim();
+    }).join('\n\n');
+
+    const embed = new EmbedBuilder()
+        .setColor(0x5865F2).setAuthor({ name: message.guild.name, iconURL: message.guild.iconURL() })
+        .setTitle('📋 Log Search Results').setDescription(lines.slice(0, 4096))
+        .setFooter({ text: results.length + ' result' + (results.length !== 1 ? 's' : '') });
+
+    await message.reply({ embeds: [embed] });
 };
 
 handlers.presence = async (message) => {
@@ -1336,7 +1516,7 @@ handlers.goodbye = async (message) => {
     }
 };
 
-    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'server_leave', 'shutdown', 'welcome', 'goodbye'];
+    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'server_leave', 'shutdown', 'welcome', 'goodbye', 'invites', 'note', 'logs'];
     if (ownerOnlyCmds.includes(cmdName)) {
         if (!checkOwnerOrPerm(message, cmdName)) return true;
     }

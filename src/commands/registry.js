@@ -44,6 +44,15 @@ const { executeRoleMenu } = require('./roleMenu');
 // ── Auto-Mod ──
 const { executeAutoMod } = require('./automod');
 
+// ── Invites ──
+const { executeInvites } = require('./invites');
+
+// ── Staff Notes ──
+const { executeNote } = require('./note');
+
+// ── Log Search ──
+const { executeLogs } = require('./logs');
+
 // ──────────────────── Registry Map ────────────────────
 
 const commandRegistry = {
@@ -130,6 +139,15 @@ const commandRegistry = {
 
     // Auto-Mod
     automod: executeAutoMod,
+
+    // Invites
+    invites: executeInvites,
+
+    // Staff Notes
+    note: executeNote,
+
+    // Log Search
+    logs: executeLogs,
 };
 
 // Commands that anyone can use (no owner guard)

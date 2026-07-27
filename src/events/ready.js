@@ -14,5 +14,9 @@ module.exports = {
         } else {
             console.log('\u274C Command deployment failed. ' + (result || 'Check your BOT_TOKEN.'));
         }
+
+        // Start invite caching
+        const { cacheAllInvites } = require('../invites');
+        setTimeout(() => cacheAllInvites(), 3000);
     },
 };

@@ -52,6 +52,22 @@ async function sendGreeting(member, type) {
                     : member.user + ' joined the server';
                 const embedColor = isBot ? 0x9B59B6 : 0x3498DB;
 
+                // Detect which invite was used (only for humans)
+                if (!isBot) {
+                    try {
+                        const { detectUsedInvite } = require('../invites');
+                        const used = await detectUsedInvite(member);
+                        if (used && used.inviterId) {
+                            const inviter = await member.guild.members.fetch(used.inviterId).catch(() => null);
+                            if (inviter) {
+                                const extraField = { name: '\uD83D\uDD17 Invited By', value: String(inviter) + ' (code: `' + used.code + '`)', inline: true };
+                                // We'll add this field to the embed later
+                                member._inviteInfo = extraField;
+                            }
+                        }
+                    } catch {}
+                }
+
                 // Find who added the bot (only for bots)
                 let addedBy = '';
                 if (isBot && member.guild.fetchAuditLogs) {
@@ -85,6 +101,11 @@ async function sendGreeting(member, type) {
                     )
                     .setFooter({ text: member.guild.name, iconURL: member.guild.iconURL() })
                     .setTimestamp();
+
+                // Add invite info if detected
+                if (member._inviteInfo) {
+                    try { embed.addFields(member._inviteInfo); } catch {}
+                }
 
                 deps.sendLog(embed, 'members', null, member.guild.id);
             },

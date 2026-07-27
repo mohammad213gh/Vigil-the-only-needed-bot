@@ -12,6 +12,7 @@ const { logError } = require('./src/logError');
 const { deployCommands } = require('./src/deploy');
 const { setLoggerClient, sendLog } = require('./src/logging');
 const { findReactionRole } = require('./src/reactionRoles');
+const { setInviteClient, cacheAllInvites, handleInviteCreate, handleInviteDelete } = require('./src/invites');
 
 // ─── Command Registry ───
 const { commandRegistry, publicCommands } = require('./src/commands/registry');
@@ -50,6 +51,7 @@ const client = new Client({
 });
 
 setLoggerClient(client);
+setInviteClient(client);
 
 // ──────────────────── Event Dependencies ────────────────────
 
@@ -64,6 +66,8 @@ const eventDeps = {
     recordLeave,
     rrFind: findReactionRole,
     fetchAuditLogExecutor,
+    handleInviteCreate,
+    handleInviteDelete,
 };
 
 // ──────────────────── Register Events ────────────────────

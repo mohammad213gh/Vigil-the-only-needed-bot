@@ -2,7 +2,7 @@
 
 # NLux Bot
 
-**A complete Discord management bot — source code included**
+**63 Slash Commands · Web dashboard · Full source code · Invite tracking · Staff notes · Log search**
 
 > **$39** · One-time payment · Full source code
 
@@ -11,9 +11,9 @@
 ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 
-**Self-Hosted · Full Source Code · Web Dashboard · Own Your Data · No Subscription**
+**The self-hosted Discord management bot that refuses to put features behind a paywall**
 
-*Built by **franc** (`.nlux.`) — DM me on Discord to buy: **.nlux.** (ID: 1200828694088917114)*
+> Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization · Invite Tracking · Staff Notes · Log Search · Auto-Mod
 
 </div>
 
@@ -25,9 +25,9 @@ This is a complete Discord management bot, battle-tested in my own server. Fully
 
 You get the **full source code**. You host it yourself. You own every piece of it. No monthly fee.
 
-**Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization**
+**Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization · Invite Tracking · Staff Notes · Log Search · Auto-Mod**
 
-It comes with 70+ commands across moderation, logging, reaction roles, fun, utility, and stats — but the real selling points are the ones you can't get from a premium bot: **your own dashboard, your own data, and no subscription.**
+It comes with 63 slash commands across moderation, logging, invite tracking, staff notes, log search, reaction roles, fun, utility, auto-mod, and stats — but the real selling points are the ones you can't get from a premium bot: **your own dashboard, your own data, and no subscription.**
 
 ---
 
@@ -50,8 +50,14 @@ This isn't meant to compete with long-established bots like MEE6, Dyno, or Carl-
 | Feature | NLux Bot | MEE6 | Dyno | Carl-bot |
 |---|---|---|---|---|
 | Moderation | ✅ Yes | ✅ Free tier | ✅ Free tier | ✅ Free tier |
+| Mod-Log Cases | ✅ Yes | ❌ | ❌ | ❌ |
 | Logging | ✅ 16 categories | ✅ Free (limited) | ✅ Free (basic) | ✅ Free |
+| Invite Tracking | ✅ Yes | 🔒 Premium | ❌ | ❌ |
+| Staff Notes | ✅ Yes | ❌ | ❌ | ❌ |
+| Log Search | ✅ Yes | ❌ | ❌ | ❌ |
+| Auto-Moderation | ✅ Yes | 🔒 Premium | 🔒 Premium | ✅ Free |
 | Reaction Roles | ✅ Yes | ✅ Free (limited) | ✅ Free (modules) | ✅ Free |
+| Role Menus (Dropdowns) | ✅ Yes | ❌ | ❌ | ✅ Free |
 | Reminders | ✅ Yes | ❌ | ❌ | ✅ Free |
 | Fun Commands | ✅ Yes | ✅ Free | ✅ Free | ❌ |
 | Web Dashboard | ✅ Yes | ✅ Free | 🔒 Premium | ❌ |
@@ -80,17 +86,58 @@ Every command also works via text prefix (default `;`). Type `;help` to see the 
 
 Both systems work side-by-side. Use whatever feels natural.
 
-### Anyone can use these
-`/ping` `/status` `/botinfo` `/userinfo` `/avatar` `/stats server` `/stats growth` `/worldcup` `/8ball` `/coinflip` `/dice` `/rps` `/joke` `/fact` `/advice` `/quote` `/reverse` `/mock` `/random` `/remindme` `/reminders list` `/reminders cancel`
+### Full Command List by Category
 
-### Owner-only (unless you grant permissions)
-**Logging:** `/log channel` `/log toggle` `/log list`
-**Config:** `/embedconfig` `/presence` `/botavatar` `/botname`
-**Moderation:** `/kick` `/ban` `/unban` `/timeout` `/untimeout` `/warn` `/warnings` `/clearwarnings` `/lock` `/unlock`
-**Admin:** `/role` `/purge` `/slowmode` `/nickname` `/say` `/embed` `/deploy` `/track` `/poll` `/announce`
-**Permissions:** `/perm grant` `/perm revoke` `/perm list` `/perm user`
-**Reaction Roles:** `/reactionrole add` `/reactionrole remove` `/reactionrole list`
-**Other:** `/dashboard` `/dashaccess` `/server_leave` `/shutdown` `/prefix`
+**📋 Info** — Public
+`/help` `/ping` `/status` `/botinfo` `/userinfo` `/avatar` `/stats server` `/stats growth` `/stats commands`
+
+**🎮 Fun** — Public
+`/8ball` `/coinflip` `/dice` `/rps` `/joke` `/fact` `/advice` `/quote` `/reverse` `/mock` `/random` `/worldcup`
+
+**⏰ Reminders** — Public
+`/remindme` `/reminders list` `/reminders cancel`
+
+**🛡️ Moderation** — Owner-only (grantable)
+`/kick` `/ban` `/unban` `/timeout` `/untimeout` `/warn` `/warnings` `/clearwarnings` `/lock` `/unlock` `/purge` `/slowmode` `/nickname`
+
+**📜 Mod-Log** — Owner-only (grantable)
+`/history` `/case` `/reason`
+
+**📊 Admin** — Owner-only (grantable)
+`/role add` `/role remove` `/role list` `/say` `/embed` `/deploy` `/track add` `/track remove` `/track list` `/poll` `/announce`
+
+**⚙️ Config** — Owner-only
+`/log channel` `/log toggle` `/log list` `/embedconfig footer` `/embedconfig color` `/embedconfig show` `/presence` `/botavatar` `/botname` `/prefix`
+
+**🔐 Permissions** — Owner-only
+`/perm grant` `/perm revoke` `/perm list` `/perm user`
+
+**🔄 Reaction Roles** — Owner-only
+`/reactionrole add` `/reactionrole remove` `/reactionrole list`
+
+**📋 Role Menus** — Owner-only
+`/rolemenu create` `/rolemenu add` `/rolemenu remove` `/rolemenu publish` `/rolemenu list`
+
+**🤖 Auto-Mod** — Owner-only
+`/automod config` `/automod list` `/automod filter` `/automod filters`
+
+**👋 Welcome / Goodbye** — Owner-only
+`/welcome channel` `/welcome toggle` `/welcome message` `/welcome title` `/welcome description` `/welcome color` `/welcome footer` `/welcome thumbnail` `/welcome image` `/welcome author` `/welcome show` `/welcome test` `/welcome reset`
+`/goodbye channel` `/goodbye toggle` `/goodbye message` `/goodbye title` `/goodbye description` `/goodbye color` `/goodbye footer` `/goodbye thumbnail` `/goodbye image` `/goodbye author` `/goodbye show` `/goodbye test` `/goodbye reset`
+
+**📨 Invite Tracking** — Owner-only (grantable)
+`/invites check` `/invites top` `/invites stats`
+
+**📝 Staff Notes** — Owner-only (grantable)
+`/note add` `/note list` `/note edit` `/note remove`
+
+**🔍 Log Search** — Owner-only (grantable)
+`/logs search`
+
+**👑 Owner** — Owner only
+`/dashboard` `/dashaccess add` `/dashaccess remove` `/dashaccess list` `/server_leave` `/shutdown`
+
+> 💡 Use `/perm grant @user command` to let trusted people use specific commands, or `/perm grant @user all` to grant everything at once.
 
 Use `/perm grant @user command` to let trusted people use specific commands, or `/perm grant @user all` to grant everything at once.
 
@@ -102,11 +149,15 @@ Use `/perm grant @user command` to let trusted people use specific commands, or 
 
 ```
 Features
-├── 70+ Commands
+├── 63 Slash Commands
 ├── 40 Discord events logged
 ├── 16 logging categories
+├── Invite tracking + detection
+├── Staff notes system
+├── Log search & filtering
+├── Auto-moderation (spam, words, links, caps, mentions)
 ├── Slash + Prefix support
-├── Web dashboard with live stats
+├── Web dashboard with live stats & mod panel
 └── SQLite persistence (no external DB)
 ```
 
@@ -120,7 +171,7 @@ The dashboard is a full web interface that runs alongside your bot. It's customi
 Dashboard
 ├── Overview           — Live status, uptime, memory, member count
 ├── Logging            — Toggle 16 categories per server, set channels
-├── Moderation         — Quick access to warn, kick, ban from browser
+├── Mod Tools          — Quick warn/kick/ban/timeout + staff notes + invite stats
 ├── Audit Logs         — Browse recent events with filters
 ├── Customization      — Themes, colors, cards, animations
 ├── Statistics         — Growth charts, command usage, server trends
@@ -131,7 +182,7 @@ Dashboard
 
 ```
 /dashboard          → Login / landing
-/dashboard/{id}     → Server overview
+/dashboard/{id}     → Server overview (includes Mod Tools tab)
 /dashboard/{id}/logs      → Logging config
 /dashboard/{id}/moderation → Mod actions
 /dashboard/{id}/audit      → Audit log viewer

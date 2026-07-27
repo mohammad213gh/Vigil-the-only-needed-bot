@@ -27,6 +27,9 @@ const commandDefs = [
                     { name: 'Auto-Mod', value: 'automod' },
                     { name: 'Reaction Roles', value: 'reactionroles' },
                     { name: 'Welcome / Goodbye', value: 'welcome' },
+                    { name: 'Invite Tracking', value: 'invite tracking' },
+                    { name: 'Staff Notes', value: 'staff notes' },
+                    { name: 'Log Search', value: 'log search' },
                     { name: 'Owner', value: 'owner' },
                 )),
     new SlashCommandBuilder()
@@ -669,13 +672,14 @@ const commandDefs = [
                             { name: 'unlock', value: 'unlock' },
                             { name: 'say', value: 'say' },
                             { name: 'embed', value: 'embed' },
-                            { name: 'userinfo', value: 'userinfo' },
-                            { name: 'avatar', value: 'avatar' },
                             { name: 'track', value: 'track' },
                             { name: 'log', value: 'log' },
                             { name: 'poll', value: 'poll' },
                             { name: 'announce', value: 'announce' },
                             { name: 'reactionrole', value: 'reactionrole' },
+                            { name: 'invites', value: 'invites' },
+                            { name: 'note', value: 'note' },
+                            { name: 'logs', value: 'logs' },
                         )))
         .addSubcommand(sub =>
             sub.setName('revoke')
@@ -706,13 +710,14 @@ const commandDefs = [
                             { name: 'unlock', value: 'unlock' },
                             { name: 'say', value: 'say' },
                             { name: 'embed', value: 'embed' },
-                            { name: 'userinfo', value: 'userinfo' },
-                            { name: 'avatar', value: 'avatar' },
                             { name: 'track', value: 'track' },
                             { name: 'log', value: 'log' },
                             { name: 'poll', value: 'poll' },
                             { name: 'announce', value: 'announce' },
                             { name: 'reactionrole', value: 'reactionrole' },
+                            { name: 'invites', value: 'invites' },
+                            { name: 'note', value: 'note' },
+                            { name: 'logs', value: 'logs' },
                         )))
         .addSubcommand(sub =>
             sub.setName('list')
@@ -1098,6 +1103,103 @@ const commandDefs = [
         .addSubcommand(sub =>
             sub.setName('reset')
                 .setDescription('Reset all goodbye settings to defaults')),
+
+    // ── Invites (owner only) ──
+    new SlashCommandBuilder()
+        .setName('invites')
+        .setDescription('Track and view invite statistics')
+        .addSubcommand(sub =>
+            sub.setName('check')
+                .setDescription("Check a user's invite stats")
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to check (defaults to you)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('top')
+                .setDescription('Show top inviters')
+                .addIntegerOption(opt =>
+                    opt.setName('limit')
+                        .setDescription('How many to show (default: 10)')
+                        .setRequired(false)
+                        .setMinValue(1)
+                        .setMaxValue(25)))
+        .addSubcommand(sub =>
+            sub.setName('stats')
+                .setDescription('Show overall invite stats for this server')),
+
+    // ── Staff Notes (owner only) ──
+    new SlashCommandBuilder()
+        .setName('note')
+        .setDescription('Manage private staff notes on users')
+        .addSubcommand(sub =>
+            sub.setName('add')
+                .setDescription('Add a note about a user')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to note about')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('note')
+                        .setDescription('The note text')
+                        .setRequired(true)
+                        .setMaxLength(1000)))
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List all notes for a user')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to check notes for')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('edit')
+                .setDescription('Edit a note')
+                .addStringOption(opt =>
+                    opt.setName('id')
+                        .setDescription('The note ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('text')
+                        .setDescription('New note text')
+                        .setRequired(true)
+                        .setMaxLength(1000)))
+        .addSubcommand(sub =>
+            sub.setName('remove')
+                .setDescription('Remove a note')
+                .addStringOption(opt =>
+                    opt.setName('id')
+                        .setDescription('The note ID')
+                        .setRequired(true))),
+
+    // ── Log Search (owner only) ──
+    new SlashCommandBuilder()
+        .setName('logs')
+        .setDescription('Search through logged messages and events')
+        .addSubcommand(sub =>
+            sub.setName('search')
+                .setDescription('Search through message logs')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('Filter by user')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('keyword')
+                        .setDescription('Search for a keyword in message content')
+                        .setRequired(false))
+                .addStringOption(opt =>
+                    opt.setName('action')
+                        .setDescription('Filter by action type')
+                        .setRequired(false)
+                        .addChoices(
+                            { name: 'Deleted', value: 'deleted' },
+                            { name: 'Edited', value: 'edited' },
+                        ))
+                .addIntegerOption(opt =>
+                    opt.setName('limit')
+                        .setDescription('Number of results (max 50)')
+                        .setRequired(false)
+                        .setMinValue(1)
+                        .setMaxValue(50))),
 
     // ── Reaction Roles (owner only) ──
     new SlashCommandBuilder()

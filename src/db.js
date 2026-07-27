@@ -206,6 +206,43 @@ function initSchema() {
         CREATE INDEX IF NOT EXISTS idx_cmd_usage_time ON command_usage(used_at);
 
         CREATE INDEX IF NOT EXISTS idx_activity_guild ON activity_counts(guild_id, message_count DESC);
+
+        CREATE TABLE IF NOT EXISTS invite_tracking (
+            guild_id TEXT NOT NULL,
+            code TEXT NOT NULL,
+            inviter_id TEXT NOT NULL,
+            uses INTEGER NOT NULL DEFAULT 0,
+            max_uses INTEGER,
+            temporary INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL,
+            expires_at INTEGER,
+            PRIMARY KEY (guild_id, code)
+        );
+
+        CREATE TABLE IF NOT EXISTS invite_uses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            code TEXT NOT NULL,
+            inviter_id TEXT NOT NULL,
+            joiner_id TEXT NOT NULL,
+            joined_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_invite_uses_guild ON invite_uses(guild_id, inviter_id);
+        CREATE INDEX IF NOT EXISTS idx_invite_uses_joiner ON invite_uses(joiner_id);
+
+        CREATE TABLE IF NOT EXISTS staff_notes (
+            id TEXT PRIMARY KEY,
+            guild_id TEXT NOT NULL,
+            target_user_id TEXT NOT NULL,
+            author_id TEXT NOT NULL,
+            author_tag TEXT NOT NULL,
+            note TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_staff_notes_guild ON staff_notes(guild_id, target_user_id);
     `);
 
     // Add prefix column if not exists (safe on every boot)

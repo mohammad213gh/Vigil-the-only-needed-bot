@@ -225,12 +225,15 @@ async function showSrv(id){curSrv=id;document.getElementById('srvList').style.di
       '<button class="mgmt-tab" data-tab="audit" onclick="showSrvTab(\'audit\',\''+id+'\')" >Audit Log</button>'+
       '<button class="mgmt-tab" data-tab="greetings" onclick="showSrvTab(\'greetings\',\''+id+'\')" >Greetings</button>'+
       '</div></div>'+
+      '<button class="mgmt-tab" data-tab="modtools" onclick="showSrvTab(\'modtools\',\'\'+id+\'\')" >Mod Tools</button>'+
       '<div class="mgmt-panel" data-panel="overview"><div class="grid grid-2">'+(d.logging&&d.logging.perCategory?'<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>Logging</div><table class="tbl"><tr><th>Category</th><th>Channel</th><th>Status</th></tr>'+Object.entries(d.logging.perCategory).map(([cat,info])=>'<tr><td style="text-transform:capitalize;">'+cat+'</td><td>'+(info.channel?'<code>#'+info.channel+'</code>':'<span style="color:var(--text-muted);">Default</span>')+'</td><td><span class="tag '+(info.enabled?'green':'red')+'\">'+(info.enabled?'On':'Off')+'</span></td></tr>').join('')+'</table></div>':'')+'</div></div>'+
       '<div class="mgmt-panel" data-panel="roles" style="display:none;"><div id="mgmtRoles"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="channels" style="display:none;"><div id="mgmtChannels"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="logging" style="display:none;"><div id="mgmtLogging"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="audit" style="display:none;"><div id="mgmtAudit"><div class="loading"><div class="spin"></div></div></div></div>'+
-      '<div class="mgmt-panel" data-panel="greetings" style="display:none;"><div id="mgmtGreetings"><div class="loading"><div class="spin"></div></div></div></div>'}catch{dt.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Couldn\'t load server details</p><p class="empty-act">The server may have been deleted or the bot lost access.</p></div>'}}
+      '<div class="mgmt-panel" data-panel="greetings" style="display:none;"><div id="mgmtGreetings"><div class="loading"><div class="spin"></div></div></div></div>'+
+      '<div class="mgmt-panel" data-panel="modtools" style="display:none;"><div id="mgmtModTools"><div class="loading"><div class="spin"></div></div></div></div>'+
+      '<div class="mgmt-panel" data-panel="modtools" style="display:none;"><div id="mgmtModTools"><div class="loading"><div class="spin"></div></div></div></div>'}catch{dt.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Couldn\'t load server details</p><p class="empty-act">The server may have been deleted or the bot lost access.</p></div>'}}
 function backSrv(){curSrv=null;document.getElementById('srvList').style.display='';document.getElementById('srvDetail').style.display='none'}
 
 // ═══ SERVER MANAGEMENT ═══
@@ -243,7 +246,7 @@ function showSrvTab(tab,serverId){
   if(tab==='channels'&&serverId)loadSrvChannels(serverId);
   if(tab==='logging'&&serverId)loadSrvLogging(serverId);
   if(tab==='audit'&&serverId)loadSrvAudit(serverId);
-  if(tab==='greetings'&&serverId)loadSrvGreetings(serverId)
+  if(tab==='greetings'&&serverId)loadSrvGreetings(serverId);if(tab==='modtools'&&serverId)loadSrvModTools(serverId);if(tab==='modtools'&&serverId)loadSrvModTools(serverId)
 }
 async function loadSrvRoles(id){const el=document.getElementById('mgmtRoles');showSkeleton(el,'roles',4);try{const r=await fetch('/api/server/'+id+'/roles'),roles=await r.json();el.innerHTML=roles.slice(0,40).map(r=>'<div class="srv-card" style="cursor:default;padding:8px 12px;"><div style="width:10px;height:10px;border-radius:50%;background:'+(r.color||'rgba(255,255,255,0.1)')+';flex-shrink:0;"></div><div class="si"><h3>'+r.name+'</h3><p style="font-size:10px;">'+(r.managed?'Managed by integration':'ID: '+r.id)+'</p></div><span style="font-size:10px;color:var(--text-dim);">'+r.memberCount+' members</span></div>').join('')}catch{el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Couldn\'t load roles</p><p class="empty-act">The bot may need the \'Manage Roles\' permission.</p></div>'}
 }
@@ -554,3 +557,129 @@ function initSSE(){
 window.addEventListener('beforeunload',()=>{if(bgAnimId)cancelAnimationFrame(bgAnimId)});
 
 checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadCommands();await loadRm();await loadSys();loadCmdUsage();loadBrand();stRf();initSSE()});
+
+
+// ═══ MOD TOOLS ═══
+async function loadSrvModTools(id){
+  const el=document.getElementById('mgmtModTools');
+  if(!el)return;
+  el.innerHTML='<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Staff Notes</div><div style="padding:14px;">'
+  +'<div style="display:flex;gap:8px;margin-bottom:12px;"><input type="text" id="noteUserSearch" placeholder="Enter User ID..." style="flex:1;padding:9px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"><button class="btn btn-s" onclick="loadSrvNotes('+id+')" style="padding:9px 14px;font-size:11px;">Search</button></div>'
+  +'<div id="srvNotesList"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Search a user ID above to view or add notes.</p></div></div>'
+  +'</div></div>'
+  +'<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Invite Tracking</div><div style="padding:14px;"><div id="srvInviteStats">'
+  +'<div class="loading"><div class="spin"></div></div></div></div></div>'
+  +'<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Quick Mod Actions</div><div style="padding:14px;">'
+  +'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"><input type="text" id="modUserSearch" placeholder="Enter User ID..." style="flex:1;min-width:200px;padding:9px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"><input type="text" id="modReason" placeholder="Reason (optional)..." style="flex:1;min-width:200px;padding:9px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"></div>'
+  +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+  +'<button class="btn btn-s" onclick="warnSrvMember('+id+')" style="background:rgba(241,196,15,0.12);color:#f1c40f;border-color:rgba(241,196,15,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Warn</button>'
+  +'<button class="btn btn-s" onclick="kickSrvMember('+id+')" style="background:rgba(237,66,69,0.12);color:#ed4245;border-color:rgba(237,66,69,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M16 17l5-5-5-5M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>Kick</button>'
+  +'<button class="btn btn-s" onclick="banSrvMember('+id+')" style="background:rgba(237,66,69,0.12);color:#ed4245;border-color:rgba(237,66,69,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Ban</button>'
+  +'<button class="btn btn-s" onclick="timeoutSrvMember('+id+')" style="background:rgba(88,101,242,0.12);color:#5865F2;border-color:rgba(88,101,242,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timeout</button>'
+  +'</div></div></div>'
+  +'<div id="modActionResult"></div>';
+  try{
+    const r=await fetch('/api/server/'+id+'/invites');
+    if(r.ok){
+      const d=await r.json();
+      let html='';
+      if(d.top&&d.top.length){
+        html=d.top.map(function(m,i){
+          return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;"><span style="color:var(--text-muted);width:20px;">'+(i+1)+'.</span><span style="flex:1;color:var(--text);">'+(m.inviter||"Unknown")+'</span><span style="color:var(--accent);font-weight:600;">'+m.count+' joins</span></div>';
+        }).join('');
+      }else{
+        html='<div class="empty"><p>No invite data yet.</p></div>';
+      }
+      document.getElementById('srvInviteStats').innerHTML=html;
+    }
+  }catch(e){
+    document.getElementById('srvInviteStats').innerHTML='<div class="empty"><p>Could not load invite data.</p></div>';
+  }
+}
+async function loadSrvNotes(id){
+  const userId=document.getElementById('noteUserSearch').value.trim();
+  if(!userId)return showToast('Enter a user ID',true);
+  const el=document.getElementById('srvNotesList');
+  if(!el)return;
+  el.innerHTML='<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r=await fetch('/api/server/'+id+'/notes?userId='+encodeURIComponent(userId));
+    const d=await r.json();
+    var notesHtml='';
+    if(d.notes&&d.notes.length){
+      notesHtml='<div style="margin-bottom:10px;">'+d.notes.map(function(n){
+        return '<div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;">'
+          +'<div style="flex:1;"><div style="font-size:12px;color:var(--text);line-height:1.4;">'+n.note+'</div>'
+          +'<div style="display:flex;gap:8px;margin-top:4px;font-size:10px;color:var(--text-muted);">'
+          +'<span>By: '+n.author+'</span><span>'+new Date(n.createdAt).toLocaleDateString()+'</span></div></div></div>';
+      }).join('')+'</div>';
+    }else{
+      notesHtml='<div class="empty"><p>No notes for this user.</p></div>';
+    }
+    notesHtml+='<div style="display:flex;gap:6px;margin-top:8px;"><input type="text" id="newNoteText" placeholder="Add a note..." style="flex:1;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;"><button class="btn btn-s" onclick="addSrvNote('+id+',\''+userId+'\')" style="padding:8px 14px;font-size:11px;">Add Note</button></div>';
+    el.innerHTML=notesHtml;
+  }catch(e){
+    el.innerHTML='<div class="empty"><p>Could not load notes.</p></div>';
+  }
+}
+async function addSrvNote(serverId,userId){
+  const text=document.getElementById('newNoteText');if(!text||!text.value.trim())return showToast('Enter note text',true);
+  try{
+    const r=await fetch('/api/server/'+serverId+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:userId,note:text.value.trim()})});
+    const d=await r.json();
+    if(d.success){showToast('Note added!');loadSrvNotes(serverId);}
+    else showToast(d.error||'Failed',true);
+  }catch(e){showToast('Failed to add note',true);}
+}
+async function warnSrvMember(serverId){
+  const uidEl=document.getElementById('modUserSearch'),reasonEl=document.getElementById('modReason');if(!uidEl||!reasonEl)return showToast('Mod panel not ready',true);
+  const uid=uidEl.value.trim(),reason=reasonEl.value.trim()||'No reason provided';
+  if(!uid)return showToast('Enter a user ID',true);
+  document.getElementById('modActionResult').innerHTML='<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r=await fetch('/api/server/'+serverId+'/mod/warn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:uid,reason:reason})});
+    const d=await r.json();
+    if(d.success)document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(59,165,92,0.08);border:1px solid rgba(59,165,92,0.15);border-radius:var(--radius-sm);color:#3ba55c;font-size:13px;font-weight:500;">✅ Warned user '+d.user+'</div>';
+    else document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ '+d.error+'</div>';
+  }catch{document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ Request failed</div>';}
+}
+async function kickSrvMember(serverId){
+  const uidEl=document.getElementById('modUserSearch'),reasonEl=document.getElementById('modReason');if(!uidEl||!reasonEl)return showToast('Mod panel not ready',true);
+  const uid=uidEl.value.trim(),reason=reasonEl.value.trim()||'No reason provided';
+  if(!uid)return showToast('Enter a user ID',true);
+  document.getElementById('modActionResult').innerHTML='<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r=await fetch('/api/server/'+serverId+'/mod/kick',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:uid,reason:reason})});
+    const d=await r.json();
+    if(d.success)document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(59,165,92,0.08);border:1px solid rgba(59,165,92,0.15);border-radius:var(--radius-sm);color:#3ba55c;font-size:13px;font-weight:500;">✅ Kicked user '+d.user+'</div>';
+    else document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ '+d.error+'</div>';
+  }catch{document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ Request failed</div>';}
+}
+async function banSrvMember(serverId){
+  const uidEl=document.getElementById('modUserSearch'),reasonEl=document.getElementById('modReason');if(!uidEl||!reasonEl)return showToast('Mod panel not ready',true);
+  const uid=uidEl.value.trim(),reason=reasonEl.value.trim()||'No reason provided';
+  if(!uid)return showToast('Enter a user ID',true);
+  document.getElementById('modActionResult').innerHTML='<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r=await fetch('/api/server/'+serverId+'/mod/ban',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:uid,reason:reason})});
+    const d=await r.json();
+    if(d.success)document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(59,165,92,0.08);border:1px solid rgba(59,165,92,0.15);border-radius:var(--radius-sm);color:#3ba55c;font-size:13px;font-weight:500;">✅ Banned user '+d.user+'</div>';
+    else document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ '+d.error+'</div>';
+  }catch{document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ Request failed</div>';}
+}
+async function timeoutSrvMember(serverId){
+  const uidEl=document.getElementById('modUserSearch'),reasonEl=document.getElementById('modReason');if(!uidEl||!reasonEl)return showToast('Mod panel not ready',true);
+  const uid=uidEl.value.trim(),reason=reasonEl.value.trim()||'No reason provided';
+  if(!uid)return showToast('Enter a user ID',true);
+  const duration=prompt('Timeout duration in minutes:','10');if(!duration||isNaN(duration))return;
+  document.getElementById('modActionResult').innerHTML='<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r=await fetch('/api/server/'+serverId+'/mod/timeout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:uid,reason:reason,duration:parseInt(duration)})});
+    const d=await r.json();
+    if(d.success)document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(59,165,92,0.08);border:1px solid rgba(59,165,92,0.15);border-radius:var(--radius-sm);color:#3ba55c;font-size:13px;font-weight:500;">✅ Timed out user '+d.user+' for '+duration+' min</div>';
+    else document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ '+d.error+'</div>';
+  }catch{document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ Request failed</div>';}
+}
+
+function getModResultEl(){return document.getElementById('modActionResult');}
+function setModResult(html){const el=getModResultEl();if(el)el.innerHTML=html;else showToast('Action complete',false);}

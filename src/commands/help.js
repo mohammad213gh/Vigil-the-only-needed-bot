@@ -137,6 +137,30 @@ const CATEGORIES = [
         ],
     },
     {
+        name: 'Invite Tracking',
+        emoji: '📨',
+        public: false,
+        commands: [
+            { name: 'invites', desc: 'Track invite codes and view who invited whom' },
+        ],
+    },
+    {
+        name: 'Staff Notes',
+        emoji: '📝',
+        public: false,
+        commands: [
+            { name: 'note', desc: 'Private staff notes on users (add/list/edit/remove)' },
+        ],
+    },
+    {
+        name: 'Log Search',
+        emoji: '🔍',
+        public: false,
+        commands: [
+            { name: 'logs', desc: 'Search through logged messages and events' },
+        ],
+    },
+    {
         name: 'Owner',
         emoji: '👑',
         public: false,

@@ -526,6 +526,187 @@ function createDashboard() {
         res.json({ success: true, config: result });
     });
 
+    // ── Mod Actions: Member search ──
+    app.get('/api/server/:id/members', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const q = (req.query.q || '').toLowerCase();
+        const members = guild.members.cache.filter(m => {
+            return !m.user.bot && (
+                m.user.username.toLowerCase().includes(q) ||
+                m.displayName.toLowerCase().includes(q) ||
+                m.user.id === q
+            );
+        }).sort((a, b) => a.displayName.localeCompare(b.displayName))
+        .map(m => ({
+            id: m.user.id,
+            tag: m.user.tag,
+            username: m.user.username,
+            displayName: m.displayName,
+            avatar: m.user.displayAvatarURL({ size: 32 }),
+            joinedTimestamp: m.joinedTimestamp,
+        })).slice(0, 25);
+        res.json(members);
+    });
+
+    // ── Mod Actions API ──
+    function checkOwner(req, res) {
+        // For password-authenticated sessions, allow mod actions
+        // For Discord-authenticated sessions, check if the user is the bot owner
+        const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
+        if (!token || !sessions.has(token)) return false;
+        const session = sessions.get(token);
+        if (session.method === 'password') return true; // password = full access
+        if (session.method === 'discord' && session.userId === process.env.OWNER_ID) return true;
+        return false;
+    }
+
+    function getSessionUser(req) {
+        const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
+        if (!token || !sessions.has(token)) return 'unknown';
+        const session = sessions.get(token);
+        return session.userId || process.env.OWNER_ID || 'dashboard';
+    }
+
+    app.post('/api/server/:id/mod/warn', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can perform mod actions' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { userId, reason } = req.body;
+        if (!userId || !reason) return res.status(400).json({ error: 'Missing userId or reason' });
+
+        try {
+            const { addWarning } = require('./warnings');
+            const { createCase } = require('./modCases');
+            const sessionUser = getSessionUser(req);
+            const warnings = addWarning(guild.id, userId, 'Dashboard (' + sessionUser + ')', reason);
+            createCase(guild.id, userId, sessionUser, 'Dashboard', 'warn', reason);
+            res.json({ success: true, warningCount: warnings.length });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/mod/kick', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can perform mod actions' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { userId, reason } = req.body;
+        if (!userId || !reason) return res.status(400).json({ error: 'Missing userId or reason' });
+
+        try {
+            const member = await guild.members.fetch(userId).catch(() => null);
+            if (!member) return res.status(404).json({ error: 'Member not found in this server' });
+            if (!member.kickable) return res.status(403).json({ error: 'Cannot kick this user - role hierarchy prevents it' });
+
+            await member.kick('[Dashboard] ' + reason);
+            const { createCase } = require('./modCases');
+            createCase(guild.id, userId, process.env.OWNER_ID || 'dashboard', 'Dashboard', 'kick', reason);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/mod/ban', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can perform mod actions' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { userId, reason, deleteMessages } = req.body;
+        if (!userId || !reason) return res.status(400).json({ error: 'Missing userId or reason' });
+
+        try {
+            const deleteSeconds = deleteMessages === '24hours' ? 86400 : (deleteMessages === '6hours' ? 21600 : (deleteMessages === 'hour' ? 3600 : 0));
+            await guild.bans.create(userId, { reason: '[Dashboard] ' + reason, deleteMessageSeconds: deleteSeconds });
+            const { createCase } = require('./modCases');
+            createCase(guild.id, userId, process.env.OWNER_ID || 'dashboard', 'Dashboard', 'ban', reason);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/mod/timeout', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can perform mod actions' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { userId, duration, reason } = req.body;
+        if (!userId || !duration || !reason) return res.status(400).json({ error: 'Missing userId, duration, or reason' });
+
+        try {
+            const member = await guild.members.fetch(userId).catch(() => null);
+            if (!member) return res.status(404).json({ error: 'Member not found in this server' });
+            if (!member.moderatable) return res.status(403).json({ error: 'Cannot timeout this user' });
+
+            const durationMap = { '60s': 60000, '5m': 300000, '10m': 600000, '1h': 3600000, '6h': 21600000, '24h': 86400000, '3d': 259200000, '7d': 604800000 };
+            const ms = durationMap[duration];
+            if (!ms) return res.status(400).json({ error: 'Invalid duration' });
+
+            await member.timeout(ms, '[Dashboard] ' + reason);
+            const { createCase } = require('./modCases');
+            createCase(guild.id, userId, process.env.OWNER_ID || 'dashboard', 'Dashboard', 'timeout', reason);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── Staff Notes API ──
+    app.get('/api/server/:id/notes', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { getGuildNotesForDashboard } = require('./staffNotes');
+        const notes = getGuildNotesForDashboard(guild.id);
+        res.json(notes.map(n => ({
+            id: n.id,
+            targetUserId: n.target_user_id,
+            targetTag: guild.members.cache.get(n.target_user_id)?.user?.tag || n.target_user_id,
+            authorTag: n.author_tag,
+            note: n.note,
+            createdAt: n.created_at,
+            updatedAt: n.updated_at,
+        })));
+    });
+
+    app.post('/api/server/:id/notes', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { targetUserId, note } = req.body;
+        if (!targetUserId || !note) return res.status(400).json({ error: 'Missing targetUserId or note' });
+        const { addNote } = require('./staffNotes');
+        const created = addNote(guild.id, targetUserId, 'dashboard', 'Dashboard', note);
+        res.json({ success: true, note: created });
+    });
+
+    app.delete('/api/server/:id/notes/:noteId', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const { removeNote } = require('./staffNotes');
+        const removed = removeNote(req.params.noteId);
+        if (!removed) return res.status(404).json({ error: 'Note not found' });
+        res.json({ success: true });
+    });
+
+    // ── Invite Stats API ──
+    app.get('/api/server/:id/invites', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { getGuildInviteStats, getTopInviters } = require('./invites');
+        const top = getTopInviters(guild.id, 10);
+        res.json(top.map(r => ({
+            inviterId: r.inviter_id,
+            count: r.count,
+            tag: guild.members.cache.get(r.inviter_id)?.user?.tag || r.inviter_id,
+        })));
+    });
+
     // ── Server Detail ──
     app.get('/api/server/:id', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
@@ -768,6 +949,15 @@ function createDashboard() {
         { category:'Welcome / Goodbye', owner:true, commands:[
             { name:'welcome', description:'Configure welcome messages (channel/toggle/message/title/description/color/footer/thumbnail/image/author/show/test/reset)', usage:'/welcome <subcommand> [options]' },
             { name:'goodbye', description:'Configure goodbye messages (same subcommands as welcome)', usage:'/goodbye <subcommand> [options]' },
+        ]},
+        { category:'Invite Tracking', owner:true, commands:[
+            { name:'invites', description:'Track invite codes and view who invited whom', usage:'/invites check [user] | top [limit] | stats' },
+        ]},
+        { category:'Staff Notes', owner:true, commands:[
+            { name:'note', description:'Private staff notes on users (add/list/edit/remove)', usage:'/note add|list|edit|remove' },
+        ]},
+        { category:'Log Search', owner:true, commands:[
+            { name:'logs', description:'Search through logged messages and events', usage:'/logs search [user] [keyword] [action] [limit]' },
         ]},
         { category:'Owner', owner:true, commands:[
             { name:'dashboard', description:'Get the link to the web dashboard', usage:'/dashboard' },

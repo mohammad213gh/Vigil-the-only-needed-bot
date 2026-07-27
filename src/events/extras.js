@@ -255,6 +255,11 @@ module.exports = [
                 .setFooter({ text: invite.guild.name, iconURL: invite.guild.iconURL() })
                 .setTimestamp();
             deps.sendLog(embed, 'invites', null, invite.guild.id);
+
+            // Update invite cache
+            if (deps.handleInviteCreate) {
+                deps.handleInviteCreate(invite);
+            }
         },
     },
     {
@@ -273,6 +278,11 @@ module.exports = [
                 .setFooter({ text: invite.guild.name, iconURL: invite.guild.iconURL() })
                 .setTimestamp();
             deps.sendLog(embed, 'invites', null, invite.guild.id);
+
+            // Update invite cache
+            if (deps.handleInviteDelete) {
+                deps.handleInviteDelete(invite);
+            }
         },
     },
 
