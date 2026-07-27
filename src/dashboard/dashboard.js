@@ -233,13 +233,16 @@ async function loadAudit(){
       var bg=sc[e.source]||'rgba(255,255,255,0.02)';
       var tc=st[e.source]||'var(--text-dim)';
       var ch=(e.changes||[]).map(function(c){return '<span class="audit-change"><span class="audit-change-k">'+esc(c.key)+'</span><span class="audit-change-v">'+esc(c.new)+'</span></span>';}).join('');
+      var ico=e.icon||'\uD83D\uDD35';
+      var etype=e.type||'Event';
+      var src=e.source||'system';
       return '<div class="audit-item" style="--a-bg:'+bg+'">'+
-        '<div class="audit-ico" style="color:'+tc+'">'+e.icon+'</div>'+
+        '<div class="audit-ico" style="color:'+tc+'">'+ico+'</div>'+
         '<div class="audit-body">'+
           '<div class="audit-h">'+
-            '<span class="audit-type">'+esc(e.type)+'</span>'+
+            '<span class="audit-type">'+esc(etype)+'</span>'+
             '<span class="audit-ts">'+tm+'</span>'+
-            '<span class="audit-source" style="color:'+tc+'">'+e.source+'</span>'+
+            '<span class="audit-source" style="color:'+tc+'">'+esc(src)+'</span>'+
           '</div>'+
           '<div class="audit-meta">'+
             (e.executorTag?'<span class="audit-exec">'+(e.executorAvatar?'<img src="'+e.executorAvatar+'" alt="">':'')+esc(e.executorTag)+'</span>':'')+

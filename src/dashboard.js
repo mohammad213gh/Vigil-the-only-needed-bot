@@ -1074,8 +1074,30 @@ function createDashboard() {
                     entries.push({
                         id: 'discord_' + e.id,
                         source: 'discord',
-                        type: String(e.action).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                        icon: getAuditIcon(e.action),
+                        type: (function(ea){
+                            // Discord.js v14 uses numeric enum values (e.g. 22 for MemberKick)
+                            if(typeof ea === 'number'){
+                                try {
+                                    const name = require('discord.js').AuditLogEvent[ea];
+                                    if(name) return name.replace(/([A-Z])/g, ' $1').trim();
+                                } catch {}
+                                return 'Audit Action' + ea;
+                            }
+                            return String(ea).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        })(e.action),
+                        icon: (function(ea){
+                            if(typeof ea === 'number'){
+                                try {
+                                    const name = require('discord.js').AuditLogEvent[ea];
+                                    if(name) {
+                                        // Convert 'MemberKick' to 'MEMBER_KICK' for icon lookup
+                                        const iconKey = name.replace(/([A-Z])/g, '_$1').toUpperCase().replace(/^_/, '');
+                                        return getAuditIcon(iconKey);
+                                    }
+                                } catch {}
+                            }
+                            return getAuditIcon(ea);
+                        })(e.action),
                         executorTag: e.executor?.tag || 'Unknown',
                         executorAvatar: e.executor?.displayAvatarURL({ size: 32 }) || null,
                         targetTag: e.target?.tag || e.target?.name || e.targetId || null,
