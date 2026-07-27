@@ -32,6 +32,7 @@
           <button class="notch-link active" data-sec="overview" onclick="showSec('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></button>
           <button class="notch-link" data-sec="analytics" onclick="showSec('analytics')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span>Analytics</span></button>
           <button class="notch-link" data-sec="servers" onclick="showSec('servers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><span>Servers</span></button>
+          <button class="notch-link" data-sec="auditlog" onclick="showSec('auditlog');loadAudit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Audit</span></button>
         </nav>
 
         <!-- Center Logo -->
@@ -42,6 +43,7 @@
         <!-- Desktop Right Nav -->
         <nav class="notch-nav-right">
           <button class="notch-link" data-sec="activity" onclick="showSec('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Activity</span></button>
+          <button class="notch-link" data-sec="auditlog" onclick="showSec('auditlog');loadAudit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Audit</span></button>
           <button class="notch-link" data-sec="commands" onclick="showSec('commands')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg><span>Commands</span></button>
           <button class="notch-link" data-sec="reminders" onclick="showSec('reminders')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><span>Reminders</span></button>
           <button class="notch-link" data-sec="system" onclick="showSec('system')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span>System</span></button>
@@ -80,6 +82,7 @@
     <button class="notch-mobile-link active" data-sec="overview" onclick="showSec('overview');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview</button>
     <button class="notch-mobile-link" data-sec="analytics" onclick="showSec('analytics');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</button>
     <button class="notch-mobile-link" data-sec="servers" onclick="showSec('servers');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Servers</button>
+    <button class="notch-mobile-link" data-sec="auditlog" onclick="showSec('auditlog');toggleMobileMenu();loadAudit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Audit Log</button>
     <button class="notch-mobile-link" data-sec="activity" onclick="showSec('activity');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
     <button class="notch-mobile-link" data-sec="commands" onclick="showSec('commands');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg>Commands</button>
     <button class="notch-mobile-link" data-sec="reminders" onclick="showSec('reminders');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg>Reminders</button>
@@ -129,6 +132,25 @@
       <div class="srv-search"><input type="text" id="srvSearch" placeholder="Search servers..." oninput="filterServers()"><select id="srvSort" onchange="loadServers()"><option value="members">Members</option><option value="name">Name</option><option value="boosts">Boosts</option></select></div>
       <div id="srvList" class="srv-list"></div>
       <div id="srvDetail" style="display:none;"></div>
+    </div>
+
+    <!-- ═══ AUDIT LOG ═══ -->
+    <div class="section" id="sec-auditlog">
+      <h1 class="pg-title">Audit Log</h1>
+      <p class="pg-sub">Unified event feed from Discord, moderation, messages, and members. <span class="rfsh-tm" id="rfsh-auditlog"></span></p>
+      <div class="audit-filter">
+        <select id="auditTypeFilter" onchange="loadAudit()">
+          <option value="all">All Events</option>
+          <option value="discord">Discord Audit</option>
+          <option value="moderation">Moderation</option>
+          <option value="messages">Messages</option>
+          <option value="members">Members</option>
+        </select>
+        <select id="auditServerFilter" onchange="loadAudit()">
+          <option value="">All Servers</option>
+        </select>
+      </div>
+      <div id="auditFeed" class="sr"></div>
     </div>
 
     <!-- ═══ ACTIVITY ═══ -->

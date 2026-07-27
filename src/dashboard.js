@@ -1053,6 +1053,154 @@ function createDashboard() {
         })));
     });
 
+    // ── Audit Log (Unified Feed) ──
+    app.get('/api/server/:id/auditlog', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+
+        const db = getDb();
+        const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+        const type = req.query.type || 'all';
+
+        const entries = [];
+        const now = Date.now();
+
+        // 1. Discord's native audit log
+        if (type === 'all' || type === 'discord') {
+            try {
+                const auditLog = await guild.fetchAuditLogs({ limit: 25 });
+                for (const e of auditLog.entries) {
+                    entries.push({
+                        id: 'discord_' + e.id,
+                        source: 'discord',
+                        type: String(e.action).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                        icon: getAuditIcon(e.action),
+                        executorTag: e.executor?.tag || 'Unknown',
+                        executorAvatar: e.executor?.displayAvatarURL({ size: 32 }) || null,
+                        targetTag: e.target?.tag || e.target?.name || e.targetId || null,
+                        reason: e.reason || null,
+                        changes: e.changes?.slice(0, 3).map(c => ({ key: c.key, old: String(c.old ?? '').slice(0, 100), new: String(c.new ?? '').slice(0, 100) })) || [],
+                        timestamp: e.createdTimestamp,
+                    });
+                }
+            } catch {}
+        }
+
+        // 2. Bot's mod cases
+        if (type === 'all' || type === 'moderation') {
+            const cases = db.prepare('SELECT * FROM mod_cases WHERE guild_id = ? ORDER BY created_at DESC LIMIT ?').all(guild.id, Math.min(limit, 30));
+            const actionIcons = { warn: '\u26A0\uFE0F', kick: '\uD83D\uDC22', ban: '\uD83D\uDD28', unban: '\uD83D\uDD13', timeout: '\u23F1\uFE0F', untimeout: '\u25B6\uFE0F', tempban: '\uD83D\uDD28', lock: '\uD83D\uDD12', unlock: '\uD83D\uDD13', purge: '\uD83E\uDDF9' };
+            for (const c of cases) {
+                entries.push({
+                    id: 'case_' + c.id,
+                    source: 'moderation',
+                    type: c.action_type.charAt(0).toUpperCase() + c.action_type.slice(1),
+                    icon: actionIcons[c.action_type] || '\uD83D\uDCCB',
+                    executorTag: c.moderator_tag,
+                    executorAvatar: null,
+                    targetTag: '<@' + c.user_id + '>',
+                    reason: c.reason || null,
+                    changes: [{ key: 'Case #' + c.case_number, old: '', new: c.active ? 'Active' : 'Closed' }],
+                    timestamp: c.created_at,
+                });
+            }
+        }
+
+        // 3. Message log (deleted/edited messages)
+        if (type === 'all' || type === 'messages') {
+            const msgs = db.prepare('SELECT * FROM message_log WHERE guild_id = ? ORDER BY logged_at DESC LIMIT ?').all(guild.id, Math.min(limit, 30));
+            for (const m of msgs) {
+                entries.push({
+                    id: 'msg_' + m.id,
+                    source: 'messages',
+                    type: m.action === 'deleted' ? 'Message Deleted' : 'Message Edited',
+                    icon: m.action === 'deleted' ? '\uD83D\uDDD1\uFE0F' : '\u270F\uFE0F',
+                    executorTag: m.author_tag,
+                    executorAvatar: null,
+                    targetTag: guild.channels.cache.get(m.channel_id)?.name || m.channel_id,
+                    reason: null,
+                    changes: [{ key: 'Content', old: '', new: (m.content || '').slice(0, 200) }],
+                    timestamp: m.logged_at,
+                });
+            }
+        }
+
+        // 4. Recent member activity from stats
+        if (type === 'all' || type === 'members') {
+            const { getGuildStats } = require('./stats');
+            const stats = getGuildStats(guild.id);
+            const snapshots = stats.dailySnapshots || [];
+            const recent = snapshots.slice(-14);
+            for (const snap of recent) {
+                if (snap.joins > 0) {
+                    entries.push({
+                        id: 'join_' + snap.date,
+                        source: 'members',
+                        type: 'Members Joined',
+                        icon: '\uD83D\uDC65',
+                        executorTag: 'System',
+                        executorAvatar: null,
+                        targetTag: null,
+                        reason: null,
+                        changes: [{ key: 'Count', old: '', new: String(snap.joins) }],
+                        timestamp: new Date(snap.date).getTime(),
+                    });
+                }
+                if (snap.leaves > 0) {
+                    entries.push({
+                        id: 'leave_' + snap.date,
+                        source: 'members',
+                        type: 'Members Left',
+                        icon: '\uD83D\uDEAA',
+                        executorTag: 'System',
+                        executorAvatar: null,
+                        targetTag: null,
+                        reason: null,
+                        changes: [{ key: 'Count', old: '', new: String(snap.leaves) }],
+                        timestamp: new Date(snap.date).getTime(),
+                    });
+                }
+            }
+        }
+
+        // Sort by timestamp descending, limit results
+        entries.sort((a, b) => b.timestamp - a.timestamp);
+        res.json(entries.slice(0, limit));
+    });
+
+    // Helper for audit log icons
+    function getAuditIcon(action) {
+        const iconMap = {
+            MEMBER_KICK: '\uD83D\uDC22',
+            MEMBER_BAN: '\uD83D\uDD28',
+            MEMBER_UNBAN: '\uD83D\uDD13',
+            MEMBER_UPDATE: '\uD83D\uDC64',
+            MEMBER_ROLE_UPDATE: '\uD83D\uDCCB',
+            MEMBER_MOVE: '\uD83D\uDCE6',
+            MEMBER_DISCONNECT: '\u274C',
+            CHANNEL_CREATE: '\u2795',
+            CHANNEL_DELETE: '\u2796',
+            CHANNEL_UPDATE: '\u270F\uFE0F',
+            ROLE_CREATE: '\uD83C\uDFF7\uFE0F',
+            ROLE_DELETE: '\u274C',
+            ROLE_UPDATE: '\u270F\uFE0F',
+            MESSAGE_DELETE: '\uD83D\uDDD1\uFE0F',
+            MESSAGE_BULK_DELETE: '\uD83E\uDDF9',
+            OVERWRITE_UPDATE: '\uD83D\uDD12',
+            GUILD_UPDATE: '\u270F\uFE0F',
+            EMOJI_CREATE: '\uD83D\uDE0E',
+            EMOJI_DELETE: '\u274C',
+            EMOJI_UPDATE: '\u270F\uFE0F',
+            STAGE_INSTANCE_CREATE: '\uD83C\uDFAD',
+            THREAD_CREATE: '\uD83E\uDD9C',
+            THREAD_DELETE: '\u274C',
+            WEBHOOK_CREATE: '\uD83D\uDD17',
+            BOT_ADD: '\uD83E\uDD16',
+        };
+        return iconMap[action] || '\uD83D\uDD35';
+    }
+
     // ── Serve Frontend ──
     app.get('/', (req, res) => {
         if (!req.authenticated) return res.redirect('/login');

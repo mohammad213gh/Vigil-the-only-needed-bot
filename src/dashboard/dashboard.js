@@ -188,6 +188,74 @@ const SKELETONS={
 };
 function showSkeleton(el,type,count){count=count||3;if(!SKELETONS[type]){el.innerHTML='<div class="sk"><div class="sk-line w80 h16"></div><div class="sk-line w60" style="margin-top:8px;"></div><div class="sk-line w40" style="margin-top:6px;"></div></div>';return}var html='';for(var i=0;i<count;i++)html+=SKELETONS[type];el.innerHTML=html}
 
+// ═══ TIME SINCE HELPER ═══
+function timeSince(ts){const d=Date.now()-ts;if(d<60000)return Math.floor(d/1000)+'s ago';if(d<3600000)return Math.floor(d/60000)+'m ago';if(d<86400000)return Math.floor(d/3600000)+'h ago';return Math.floor(d/86400000)+'d ago'}
+
+// ═══ DATA LOADERS ═══
+async function loadAudit(){
+  const el=document.getElementById('auditFeed');
+  if(!el)return;
+  const sf=document.getElementById('auditServerFilter');
+  const tf=document.getElementById('auditTypeFilter');
+  if(!sf)return;
+
+  // Populate server dropdown if needed
+  if(sf.options.length<=1&&allServers.length){
+    sf.innerHTML='<option value="">Select a server...</option>'+allServers.map(s=>'<option value="'+s.id+'">'+(s.name||s.id)+'</option>').join('');
+    if(curSrv)sf.value=curSrv;
+  }
+
+  const serverId=sf.value;
+  const type=tf?tf.value:'all';
+
+  if(!serverId){
+    el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><p>Select a server to view its audit log</p><p class="empty-act">Choose a server from the dropdown above to see moderation events, message edits, member joins, and more.</p></div>';
+    updateRefreshTimestamp('auditlog');
+    return;
+  }
+
+  showSkeleton(el,'audit',5);
+
+  try{
+    const r=await fetch('/api/server/'+serverId+'/auditlog?type='+type+'&limit=60');
+    const entries=await r.json();
+
+    if(!entries.length){
+      el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><p>No audit log entries found</p><p class="empty-act">Audit events appear as moderation actions, message edits, member joins, and Discord events are recorded.</p></div>';
+      updateRefreshTimestamp('auditlog');
+      return;
+    }
+
+    el.innerHTML=entries.map(function(e){
+      var tm=e.timestamp?timeSince(e.timestamp):'';
+      var sc={discord:'rgba(var(--accent-rgb),0.12)',moderation:'rgba(241,196,15,0.12)',messages:'rgba(59,165,92,0.12)',members:'rgba(59,165,92,0.12)'};
+      var st={discord:'var(--accent)',moderation:'#f1c40f',messages:'#3ba55c',members:'#3ba55c'};
+      var bg=sc[e.source]||'rgba(255,255,255,0.02)';
+      var tc=st[e.source]||'var(--text-dim)';
+      var ch=(e.changes||[]).map(function(c){return '<span class="audit-change"><span class="audit-change-k">'+esc(c.key)+'</span><span class="audit-change-v">'+esc(c.new)+'</span></span>';}).join('');
+      return '<div class="audit-item" style="--a-bg:'+bg+'">'+
+        '<div class="audit-ico" style="color:'+tc+'">'+e.icon+'</div>'+
+        '<div class="audit-body">'+
+          '<div class="audit-h">'+
+            '<span class="audit-type">'+esc(e.type)+'</span>'+
+            '<span class="audit-ts">'+tm+'</span>'+
+            '<span class="audit-source" style="color:'+tc+'">'+e.source+'</span>'+
+          '</div>'+
+          '<div class="audit-meta">'+
+            (e.executorTag?'<span class="audit-exec">'+(e.executorAvatar?'<img src="'+e.executorAvatar+'" alt="">':'')+esc(e.executorTag)+'</span>':'')+
+            (e.targetTag?'<span class="audit-arrow">&rarr;</span><span class="audit-target">'+esc(e.targetTag)+'</span>':'')+
+            (e.reason?'<span class="audit-reason">'+esc(e.reason)+'</span>':'')+
+          '</div>'+
+          (ch?'<div class="audit-changes">'+ch+'</div>':'')+
+        '</div>'+
+      '</div>';
+    }).join('');
+    updateRefreshTimestamp('auditlog');
+  }catch{
+    el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Could not load audit log</p><p class="empty-act">The bot may be starting up or the selected server is unavailable.</p></div>';
+  }
+}
+
 // ═══ DATA LOADERS ═══
 async function loadOv(){
   try{
