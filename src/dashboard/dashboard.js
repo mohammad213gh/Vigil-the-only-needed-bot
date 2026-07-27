@@ -232,10 +232,15 @@ async function loadAudit(){
       var st={discord:'var(--accent)',moderation:'#f1c40f',messages:'#3ba55c',members:'#3ba55c'};
       var bg=sc[e.source]||'rgba(255,255,255,0.02)';
       var tc=st[e.source]||'var(--text-dim)';
-      var ch=(e.changes||[]).map(function(c){return '<span class="audit-change"><span class="audit-change-k">'+esc(c.key)+'</span><span class="audit-change-v">'+esc(c.new)+'</span></span>';}).join('');
+      var ch=(e.changes||[]).map(function(c){
+        if(!c.key&&!c.new)return '';
+        return '<span class="audit-change"><span class="audit-change-k">'+esc(c.key||'')+'</span><span class="audit-change-v">'+esc(c.new||'')+'</span></span>';
+      }).filter(function(s){return s}).join('');
       var ico=e.icon||'\uD83D\uDD35';
       var etype=e.type||'Event';
       var src=e.source||'system';
+      // Show executor only if it has a real name (not 'Unknown' placeholder)
+      var execTag=e.executorTag&&e.executorTag!=='Unknown'&&e.executorTag!=='unknown'?e.executorTag:null;
       return '<div class="audit-item" style="--a-bg:'+bg+'">'+
         '<div class="audit-ico" style="color:'+tc+'">'+ico+'</div>'+
         '<div class="audit-body">'+
@@ -245,7 +250,7 @@ async function loadAudit(){
             '<span class="audit-source" style="color:'+tc+'">'+esc(src)+'</span>'+
           '</div>'+
           '<div class="audit-meta">'+
-            (e.executorTag?'<span class="audit-exec">'+(e.executorAvatar?'<img src="'+e.executorAvatar+'" alt="">':'')+esc(e.executorTag)+'</span>':'')+
+            (execTag?'<span class="audit-exec">'+(e.executorAvatar?'<img src="'+e.executorAvatar+'" alt="">':'')+esc(execTag)+'</span>':'')+
             (e.targetTag?'<span class="audit-arrow">&rarr;</span><span class="audit-target">'+esc(e.targetTag)+'</span>':'')+
             (e.reason?'<span class="audit-reason">'+esc(e.reason)+'</span>':'')+
           '</div>'+
