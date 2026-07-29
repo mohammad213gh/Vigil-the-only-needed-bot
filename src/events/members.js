@@ -123,16 +123,48 @@ async function sendGreeting(member, type) {
                 // ── Send goodbye message ──
                 await sendGreeting(member, 'goodbye');
 
+                // ── Check if kicked or banned by someone ──
+                let removedBy = '';
+                let removeType = 'left the server';
+                let embedColor = 0xE67E22;
+                try {
+                    // Check audit log for kick (20) or ban (22)
+                    for (const actionType of [20, 22]) {
+                        const audit = await member.guild.fetchAuditLogs({ type: actionType, limit: 5 }).catch(() => null);
+                        if (!audit?.entries?.size) continue;
+                        const entry = audit.entries.find(e => {
+                            const tId = e.target?.id || e.targetId;
+                            return tId === member.user.id;
+                        });
+                        if (entry && entry.executor) {
+                            const ago = Date.now() - entry.createdTimestamp;
+                            if (ago < 5000) { // Only within last 5 seconds
+                                removedBy = ' by ' + String(entry.executor);
+                                if (actionType === 20) {
+                                    removeType = 'was kicked';
+                                    embedColor = 0xE74C3C;
+                                } else {
+                                    removeType = 'was banned';
+                                    embedColor = 0x992D22;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    logError(err, 'events', 'guildMemberRemove/audit');
+                }
+
                 const daysSinceCreation = Math.floor((Date.now() - member.user.createdTimestamp) / 86400000);
                 const membershipDuration = member.joinedAt
                     ? deps.formatUptime(Date.now() - member.joinedAt.getTime())
                     : '*Unknown*';
 
                 const embed = new EmbedBuilder()
-                    .setColor(0xE67E22)
+                    .setColor(embedColor)
                     .setAuthor({ name: member.user.tag, iconURL: member.user.displayAvatarURL() })
-                    .setTitle('\uD83D\uDEAA Member Left')
-                    .setDescription(member.user + ' has left the server')
+                    .setTitle('\uD83D\uDEAA Member ' + (removeType === 'left the server' ? 'Left' : 'Removed'))
+                    .setDescription(member.user + ' ' + removeType + removedBy)
                     .setThumbnail(member.user.displayAvatarURL({ size: 128 }))
                     .addFields(
                         {

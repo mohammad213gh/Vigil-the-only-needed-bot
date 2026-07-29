@@ -143,10 +143,12 @@ module.exports = [
         once: false,
         execute: (deps) => async (emoji) => {
             if (!emoji.guild) return;
+            const executor = await deps.fetchAuditLogExecutor(emoji.guild, 62, emoji.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0xE74C3C)
                 .setTitle('\uD83D\uDE0E Emoji Deleted')
-                .setDescription('The emoji **' + emoji.name + '** was removed')
+                .setDescription('The emoji **' + emoji.name + '** was removed' + byUser)
                 .addFields(
                     { name: 'Name', value: emoji.name, inline: true },
                     { name: 'Animated', value: emoji.animated ? 'Yes' : 'No', inline: true },
@@ -154,6 +156,7 @@ module.exports = [
                 )
                 .setFooter({ text: emoji.guild.name, iconURL: emoji.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'emojis', null, emoji.guild.id);
         },
     },
@@ -241,19 +244,23 @@ module.exports = [
         execute: (deps) => async (invite) => {
             if (!invite.guild) return;
             const expiresText = invite.maxAge && invite.maxAge > 0 ? '<t:' + Math.floor((Date.now() + invite.maxAge * 1000) / 1000) + ':R>' : 'Never';
+            // Try to find who created the invite via audit log
+            const executor = await deps.fetchAuditLogExecutor(invite.guild, 20, invite.code).catch(() => null);
+            const creator = executor || invite.inviter || null;
+            const byUser = creator ? ' by ' + String(creator) : '';
             const embed = new EmbedBuilder()
                 .setColor(0x2ECC71)
                 .setTitle('\uD83D\uDD17 Invite Created')
-                .setDescription('An invite was created for ' + invite.channel.toString())
+                .setDescription('An invite was created for ' + invite.channel.toString() + byUser)
                 .addFields(
                     { name: 'Channel', value: invite.channel.toString(), inline: true },
                     { name: 'Code', value: invite.code, inline: true },
                     { name: 'Expires', value: expiresText, inline: true },
                     { name: 'Uses', value: invite.maxUses > 0 ? String(invite.maxUses) : 'Unlimited', inline: true },
-                    { name: 'Created by', value: invite.inviter ? String(invite.inviter) : 'Unknown', inline: true },
                 )
                 .setFooter({ text: invite.guild.name, iconURL: invite.guild.iconURL() })
                 .setTimestamp();
+            if (creator) embed.setAuthor({ name: creator.tag, iconURL: creator.displayAvatarURL() });
             deps.sendLog(embed, 'invites', null, invite.guild.id);
 
             // Update invite cache
@@ -267,16 +274,19 @@ module.exports = [
         once: false,
         execute: (deps) => async (invite) => {
             if (!invite.guild) return;
+            const executor = await deps.fetchAuditLogExecutor(invite.guild, 21, invite.code).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0xE74C3C)
                 .setTitle('\uD83D\uDD17 Invite Deleted')
-                .setDescription('An invite was deleted for ' + invite.channel.toString())
+                .setDescription('An invite was deleted for ' + invite.channel.toString() + byUser)
                 .addFields(
                     { name: 'Channel', value: invite.channel.toString(), inline: true },
                     { name: 'Code', value: invite.code, inline: true },
                 )
                 .setFooter({ text: invite.guild.name, iconURL: invite.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'invites', null, invite.guild.id);
 
             // Update invite cache
@@ -294,17 +304,19 @@ module.exports = [
         once: false,
         execute: (deps) => async (stage) => {
             if (!stage.guild) return;
+            const executor = await deps.fetchAuditLogExecutor(stage.guild, 83, stage.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0x9B59B6)
                 .setTitle('\uD83C\uDF9F Stage Started')
-                .setDescription('A stage channel **' + stage.channel.name + '** is now live')
+                .setDescription('A stage channel **' + stage.channel.name + '** is now live' + byUser)
                 .addFields(
                     { name: 'Topic', value: stage.topic || 'No topic', inline: true },
                     { name: 'Channel', value: stage.channel.toString(), inline: true },
-                    { name: 'Speaker Count', value: String(stage.guild.members.cache.filter(m => m.voice.channelId === stage.channelId && m.voice.suppress === false).size), inline: true },
                 )
                 .setFooter({ text: stage.guild.name, iconURL: stage.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'stage', null, stage.guild.id);
         },
     },
@@ -313,16 +325,19 @@ module.exports = [
         once: false,
         execute: (deps) => async (stage) => {
             if (!stage.guild) return;
+            const executor = await deps.fetchAuditLogExecutor(stage.guild, 84, stage.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0xE74C3C)
                 .setTitle('\uD83C\uDF9F Stage Ended')
-                .setDescription('The stage **' + stage.channel.name + '** has ended')
+                .setDescription('The stage **' + stage.channel.name + '** has ended' + byUser)
                 .addFields(
                     { name: 'Topic', value: stage.topic || 'No topic', inline: true },
                     { name: 'Channel', value: stage.channel.toString(), inline: true },
                 )
                 .setFooter({ text: stage.guild.name, iconURL: stage.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'stage', null, stage.guild.id);
         },
     },
@@ -332,16 +347,19 @@ module.exports = [
         execute: (deps) => async (oldStage, newStage) => {
             if (!newStage.guild) return;
             if (oldStage.topic === newStage.topic) return;
+            const executor = await deps.fetchAuditLogExecutor(newStage.guild, 85, newStage.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0xF1C40F)
                 .setTitle('\uD83C\uDF9F Stage Updated')
-                .setDescription('Stage topic changed in **' + newStage.channel.name + '**')
+                .setDescription('Stage topic changed in **' + newStage.channel.name + '**' + byUser)
                 .addFields(
                     { name: 'Before', value: oldStage.topic || '(none)', inline: true },
                     { name: 'After', value: newStage.topic || '(none)', inline: true },
                 )
                 .setFooter({ text: newStage.guild.name, iconURL: newStage.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'stage', null, newStage.guild.id);
         },
     },
@@ -355,10 +373,12 @@ module.exports = [
         execute: (deps) => async (event) => {
             if (!event.guild) return;
             const entityType = { 1: 'Stage', 2: 'Voice', 3: 'External' }[event.entityType] || 'Unknown';
+            const executor = await deps.fetchAuditLogExecutor(event.guild, 100, event.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0x2ECC71)
                 .setTitle('\uD83D\uDCC5 Event Created')
-                .setDescription('A new event **' + event.name + '** was scheduled')
+                .setDescription('A new event **' + event.name + '** was scheduled' + byUser)
                 .addFields(
                     { name: 'Name', value: event.name, inline: true },
                     { name: 'Type', value: entityType, inline: true },
@@ -367,6 +387,7 @@ module.exports = [
                 )
                 .setFooter({ text: event.guild.name, iconURL: event.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'scheduled', null, event.guild.id);
         },
     },
@@ -375,16 +396,19 @@ module.exports = [
         once: false,
         execute: (deps) => async (event) => {
             if (!event.guild) return;
+            const executor = await deps.fetchAuditLogExecutor(event.guild, 102, event.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0xE74C3C)
                 .setTitle('\uD83D\uDCC5 Event Cancelled')
-                .setDescription('The event **' + event.name + '** was cancelled')
+                .setDescription('The event **' + event.name + '** was cancelled' + byUser)
                 .addFields(
                     { name: 'Name', value: event.name, inline: true },
-                    { name: 'Status', value: String(event.status), inline: true },
+                    { name: 'ID', value: event.id, inline: true },
                 )
                 .setFooter({ text: event.guild.name, iconURL: event.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'scheduled', null, event.guild.id);
         },
     },
@@ -398,13 +422,16 @@ module.exports = [
             if (oldEvent.description !== newEvent.description) changes.push({ name: 'Description', old: oldEvent.description || '(none)', new: newEvent.description || '(none)' });
             if (oldEvent.scheduledStartTimestamp !== newEvent.scheduledStartTimestamp) changes.push({ name: 'Start Time', old: '<t:' + Math.floor(oldEvent.scheduledStartTimestamp / 1000) + ':R>', new: '<t:' + Math.floor(newEvent.scheduledStartTimestamp / 1000) + ':R>' });
             if (changes.length === 0) return;
+            const executor = await deps.fetchAuditLogExecutor(newEvent.guild, 101, newEvent.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0xF1C40F)
                 .setTitle('\uD83D\uDCC5 Event Updated')
-                .setDescription('The event **' + newEvent.name + '** was modified')
+                .setDescription('The event **' + newEvent.name + '** was modified' + byUser)
                 .setTimestamp();
             for (const c of changes) embed.addFields({ name: c.name, value: '**Before:** ' + deps.truncate(String(c.old), 500) + '\n**After:** ' + deps.truncate(String(c.new), 500), inline: false });
             embed.setFooter({ text: newEvent.guild.name, iconURL: newEvent.guild.iconURL() });
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'scheduled', null, newEvent.guild.id);
         },
     },
@@ -464,16 +491,19 @@ module.exports = [
         once: false,
         execute: (deps) => async (sticker) => {
             if (!sticker.guild) return;
+            const executor = await deps.fetchAuditLogExecutor(sticker.guild, 92, sticker.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0xE74C3C)
                 .setTitle('\uD83D\uDC02 Sticker Removed')
-                .setDescription('The sticker **' + sticker.name + '** was removed')
+                .setDescription('The sticker **' + sticker.name + '** was removed' + byUser)
                 .addFields(
                     { name: 'Name', value: sticker.name, inline: true },
                     { name: 'ID', value: sticker.id, inline: true },
                 )
                 .setFooter({ text: sticker.guild.name, iconURL: sticker.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'stickers', null, sticker.guild.id);
         },
     },
@@ -532,16 +562,19 @@ module.exports = [
         once: false,
         execute: (deps) => async (rule) => {
             if (!rule.guild) return;
+            const executor = await deps.fetchAuditLogExecutor(rule.guild, 142, rule.id).catch(() => null);
+            const byUser = executor ? ' by ' + String(executor) : '';
             const embed = new EmbedBuilder()
                 .setColor(0xE74C3C)
                 .setTitle('\uD83E\uDD16 Auto Mod Rule Deleted')
-                .setDescription('The auto-mod rule **' + rule.name + '** was deleted')
+                .setDescription('The auto-mod rule **' + rule.name + '** was deleted' + byUser)
                 .addFields(
                     { name: 'Name', value: rule.name, inline: true },
                     { name: 'Trigger', value: String(rule.triggerType), inline: true },
                 )
                 .setFooter({ text: rule.guild.name, iconURL: rule.guild.iconURL() })
                 .setTimestamp();
+            if (executor) embed.setAuthor({ name: executor.tag, iconURL: executor.displayAvatarURL() });
             deps.sendLog(embed, 'automod', null, rule.guild.id);
         },
     },
