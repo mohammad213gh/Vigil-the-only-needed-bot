@@ -136,6 +136,8 @@ function applyCfg(c){
   if(c.backgroundType){document.getElementById('bgType').value=c.backgroundType;const t=c.backgroundType;document.getElementById('bgUrlWrap').style.display=t==='url'?'':'none';document.getElementById('bgUploadWrap').style.display=t==='upload'?'':'none'}
   if(c.backgroundStyle){bgStyle=c.backgroundStyle;document.querySelectorAll('.bg-style-opt').forEach(e=>e.classList.toggle('active',e.dataset.bg===c.backgroundStyle));if(!document.getElementById('sec-settings').classList.contains('active'))switchBg(c.backgroundStyle)}
   if(c.darkMode===false){darkMode=false;applyTheme(false)}else{darkMode=true;applyTheme(true)}
+  // Restore dashboard look
+  if(c.dashboardLook)setLook(c.dashboardLook);
   // New settings
   if(c.botAvatarUrl){document.getElementById('dashAvatarUrl').value=c.botAvatarUrl}
   if(c.animationPreset){document.getElementById('dashAnimPreset').value=c.animationPreset;const speeds={subtle:0.7,smooth:1,energetic:1.3};const dur=speeds[c.animationPreset]||1;document.documentElement.style.setProperty('--anim-speed',dur)}
@@ -166,6 +168,7 @@ async function saveSettings(){
     animationPreset:document.getElementById('dashAnimPreset').value,animationSpeed:parseFloat(document.getElementById('dashAnimSpeed').value),
     cardGlow:document.getElementById('glowToggle').classList.contains('on'),ambientLight:document.getElementById('ambientToggle').classList.contains('on'),
     botAvatarUrl:document.getElementById('dashAvatarUrl').value||null,
+    dashboardLook:cfg.dashboardLook||'neo',
   };
   try{const r=await fetch('/api/dash/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg2)}),d=await r.json();if(d.success){applyCfg(d.config);showToast('Settings saved!')}}catch{showToast('Failed to save',true)}
 }
@@ -760,3 +763,174 @@ async function timeoutSrvMember(serverId){
 
 function getModResultEl(){return document.getElementById('modActionResult');}
 function setModResult(html){const el=getModResultEl();if(el)el.innerHTML=html;else showToast('Action complete',false);}
+
+// ═══ MOD STATS ═══
+async function loadMod(){
+  const summary=document.getElementById('modSummary'),recent=document.getElementById('modRecent'),topW=document.getElementById('modTopWarned');
+  if(!summary||!recent||!topW)return;
+  summary.innerHTML='<div class="card sk" style="padding:20px 16px;text-align:center;"><div class="sk-line w40" style="margin:0 auto;"></div><div class="sk-line w30 h24" style="margin:6px auto 0;"></div></div><div class="card sk" style="padding:20px 16px;text-align:center;"><div class="sk-line w40" style="margin:0 auto;"></div><div class="sk-line w30 h24" style="margin:6px auto 0;"></div></div><div class="card sk" style="padding:20px 16px;text-align:center;"><div class="sk-line w40" style="margin:0 auto;"></div><div class="sk-line w30 h24" style="margin:6px auto 0;"></div></div><div class="card sk" style="padding:20px 16px;text-align:center;"><div class="sk-line w40" style="margin:0 auto;"></div><div class="sk-line w30 h24" style="margin:6px auto 0;"></div></div>';
+  recent.innerHTML='<div class="mod-list" style="padding:12px;"><div class="sk"><div class="sk-line w60"></div><div class="sk-line w40" style="margin-top:4px;"></div></div><div class="sk"><div class="sk-line w50"></div><div class="sk-line w35" style="margin-top:4px;"></div></div><div class="sk"><div class="sk-line w70"></div><div class="sk-line w45" style="margin-top:4px;"></div></div></div>';
+  topW.innerHTML='<div class="mod-list" style="padding:12px;"><div class="sk"><div class="sk-line w50"></div><div class="sk-line w20" style="margin-top:4px;"></div></div><div class="sk"><div class="sk-line w45"></div><div class="sk-line w25" style="margin-top:4px;"></div></div><div class="sk"><div class="sk-line w55"></div><div class="sk-line w30" style="margin-top:4px;"></div></div></div>';
+
+  // Use the first server in the list, or the currently selected server
+  let serverId=curSrv||(allServers.length?allServers[0].id:null);
+  if(!serverId){summary.innerHTML='<div class="empty" style="grid-column:1/-1;"><p>No server selected</p><p class="empty-act">Select a server from the Servers tab to view mod stats.</p></div>';recent.innerHTML='';topW.innerHTML='';return}
+
+  try{
+    const r=await fetch('/api/server/'+serverId+'/modstats');
+    const d=await r.json();
+    if(!d||d.error)throw new Error(d.error||'No data');
+
+    // Summary cards
+    const byTypeHtml=d.byType&&d.byType.length?d.byType.map(function(t){
+      const colors={warn:'#f1c40f',kick:'#e67e22',ban:'#ed4245',timeout:'#9b59b6',unban:'#3ba55c',tempban:'#e74c3c',lock:'#3498db',unlock:'#2ecc71',purge:'#95a5a6'};
+      return '<div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px;"><span style="width:10px;height:10px;border-radius:3px;background:'+((colors[t.action]||'#5865F2'))+';flex-shrink:0;"></span><span style="flex:1;color:var(--text-dim);text-transform:capitalize;">'+t.action+'</span><span style="color:var(--text);font-weight:700;font-family:monospace;">'+t.count+'</span></div>';
+    }).join(''):'<div style="font-size:11px;color:var(--text-muted);padding:4px 0;">No actions recorded</div>';
+
+    summary.innerHTML=
+      '<div class="card" style="text-align:center;padding:20px 16px;"><div class="lbl" style="font-size:9px;">Total Cases</div><div class="val" style="font-size:28px;font-weight:800;font-family:monospace;">'+(d.total||0)+'</div><div class="sub" style="font-size:10px;">'+((d.active||0))+' active</div></div>'+
+      '<div class="card" style="text-align:center;padding:20px 16px;"><div class="lbl" style="font-size:9px;">By Type</div><div style="margin-top:8px;">'+byTypeHtml+'</div></div>'+
+      '<div class="card" style="text-align:center;padding:20px 16px;"><div class="lbl" style="font-size:9px;">Server</div><div class="val" style="font-size:20px;font-weight:700;font-family:monospace;">'+(allServers.find(function(s){return s.id===serverId})?.name||serverId).slice(0,20)+'</div><div class="sub" style="font-size:10px;">'+((allServers.find(function(s){return s.id===serverId})?.memberCount)||'?')+' members</div></div>'+
+      '<div class="card" style="text-align:center;padding:20px 16px;"><div class="lbl" style="font-size:9px;">Case Types</div><div class="val" style="font-size:20px;font-weight:700;font-family:monospace;">'+(d.byType?.length||0)+'</div><div class="sub" style="font-size:10px;">Unique action types</div></div>';
+
+    // Recent cases
+    if(d.recent&&d.recent.length){
+      recent.innerHTML='<div class="mod-list" style="padding:8px 12px 12px;">'+d.recent.slice(0,10).map(function(c){
+        const cs={warn:'#f1c40f',kick:'#e67e22',ban:'#ed4245',timeout:'#9b59b6',unban:'#3ba55c',tempban:'#e74c3c',lock:'#3498db',unlock:'#2ecc71'};
+        return '<div class="mod-item">'+
+          '<div class="mod-icon" style="background:rgba('+((cs[c.actionType]||'#5865F2').replace('#','').match(/.{2}/g).map(function(x){return parseInt(x,16)}).join(',')||'88,101,242')+',0.1);">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;color:'+(cs[c.actionType]||'#5865F2')+'"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>'+
+          '<div class="mod-body"><div class="mod-top"><span class="mod-type" style="text-transform:capitalize;">'+c.actionType+' <span class="mod-user">#'+c.caseNumber+'</span></span><span class="mod-badge '+(c.active?'active':'closed')+'">'+(c.active?'Active':'Closed')+'</span></div>'+
+          '<div class="mod-reason">'+(c.reason||'No reason')+'</div></div>'+
+          '<div class="mod-time">By '+(c.moderatorTag?.split('#')[0]||'Unknown')+'</div></div>';
+      }).join('')+'</div>';
+    }else recent.innerHTML='<div class="mod-list"><div class="empty"><p>No recent cases</p><p class="empty-act">Moderation actions will appear here.</p></div></div>';
+
+    // Top warned
+    if(d.topWarned&&d.topWarned.length){
+      topW.innerHTML='<div class="mod-list" style="padding:8px 12px 12px;">'+d.topWarned.map(function(u,i){
+        const medals=['\uD83E\uDD47','\uD83E\uDD48','\uD83E\uDD49','',''];
+        return '<div class="mod-item"><span style="font-size:14px;width:24px;text-align:center;">'+(medals[i]||i+1)+'</span><div class="mod-body"><div class="mod-top"><span class="mod-type">'+(u.tag||u.userId).slice(0,25)+'</span></div></div><div class="mod-count">'+u.count+'</div></div>';
+      }).join('')+'</div>';
+    }else topW.innerHTML='<div class="mod-list"><div class="empty"><p>No warnings yet</p></div></div>';
+
+    updateRefreshTimestamp('moderation');
+  }catch(e){
+    summary.innerHTML='<div class="empty" style="grid-column:1/-1;"><p>Could not load moderation data</p><p class="empty-act">'+e.message+'</p></div>';
+    recent.innerHTML='';topW.innerHTML='';
+  }
+}
+
+// ═══ INSIGHTS ═══
+async function loadInsights(){
+  const sel=document.getElementById('insSrvSelect');
+  if(!sel)return;
+  // Populate server select if empty
+  if(sel.options.length<=1&&allServers.length){
+    sel.innerHTML='<option value="">Select a server...</option>'+allServers.map(function(s){return '<option value="'+s.id+'"'+(curSrv===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('');
+  }
+
+  const serverId=sel.value;
+  const topUsers=document.getElementById('insTopUsers'),topChannels=document.getElementById('insTopChannels'),totalEl=document.getElementById('insTotal');
+  if(!serverId){
+    topUsers.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>Select a server to view insights</p></div>';
+    topChannels.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><p>Server activity data appears here</p></div>';
+    if(totalEl)totalEl.textContent='0';
+    updateRefreshTimestamp('insights');
+    return;
+  }
+
+  topUsers.innerHTML='<div class="loading" style="padding:24px;"><div class="spin"></div></div>';
+  topChannels.innerHTML='<div class="loading" style="padding:24px;"><div class="spin"></div></div>';
+
+  try{
+    const r=await fetch('/api/insights/'+serverId);
+    const d=await r.json();
+    if(!d||d.error)throw new Error(d.error||'No data');
+
+    if(d.topUsers&&d.topUsers.length){
+      topUsers.innerHTML='<div style="padding:8px 12px 12px;">'+d.topUsers.map(function(u,i){
+        const medals=['\uD83E\uDD47','\uD83E\uDD48','\uD83E\uDD49'];
+        return '<div class="mod-item">'+
+          '<span style="font-size:13px;width:22px;text-align:center;">'+(medals[i]||i+1)+'</span>'+
+          (u.avatar?'<img src="'+u.avatar+'" style="width:24px;height:24px;border-radius:50%;">':'<div class="mod-icon" style="background:rgba(var(--accent-rgb),0.1);color:var(--accent);font-size:10px;">'+(u.tag?u.tag[0].toUpperCase():'?')+'</div>')+
+          '<div class="mod-body"><div class="mod-top"><span class="mod-type">'+(u.tag||u.userId).slice(0,25)+'</span></div></div>'+
+          '<div class="mod-count" style="color:var(--accent);">'+u.total.toLocaleString()+'</div></div>';
+      }).join('')+'</div>';
+    }else topUsers.innerHTML='<div class="empty"><p>No activity data yet</p><p class="empty-act">Messages must be tracked and logged first.</p></div>';
+
+    if(d.topChannels&&d.topChannels.length){
+      topChannels.innerHTML='<div style="padding:8px 12px 12px;">'+d.topChannels.map(function(c,i){
+        return '<div class="mod-item"><span class="mod-icon" style="background:rgba(var(--accent-rgb),0.08);color:var(--accent);">#'+(i+1)+'</span><div class="mod-body"><div class="mod-top"><span class="mod-type">#'+c.name+'</span></div></div><div class="mod-count">'+c.total.toLocaleString()+'</div></div>';
+      }).join('')+'</div>';
+    }else topChannels.innerHTML='<div class="empty"><p>No channel data</p></div>';
+
+    if(totalEl)totalEl.textContent=d.totalTracked.toLocaleString();
+    updateRefreshTimestamp('insights');
+  }catch(e){
+    topUsers.innerHTML='<div class="empty"><p>Failed to load insights</p><p class="empty-act">'+e.message+'</p></div>';
+    topChannels.innerHTML='';
+  }
+}
+
+// ═══ INVITES ═══
+async function loadInvites(){
+  const sel=document.getElementById('invSrvSelect');
+  if(!sel)return;
+  // Populate server select if empty
+  if(sel.options.length<=1&&allServers.length){
+    sel.innerHTML='<option value="">Select a server...</option>'+allServers.map(function(s){return '<option value="'+s.id+'"'+(curSrv===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('');
+  }
+
+  const serverId=sel.value;
+  const list=document.getElementById('invList');
+  if(!list)return;
+
+  if(!serverId){
+    list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg><p>Select a server to view invite leaderboard</p><p class="empty-act">Invite tracking must be enabled for the server.</p></div>';
+    updateRefreshTimestamp('invites');
+    return;
+  }
+
+  list.innerHTML='<div class="loading" style="padding:24px;"><div class="spin"></div></div>';
+
+  try{
+    const r=await fetch('/api/server/'+serverId+'/invites');
+    const d=await r.json();
+    if(!Array.isArray(d))throw new Error('Invalid response');
+
+    if(d.length){
+      const maxCount=Math.max.apply(null,d.map(function(i){return i.count}));
+      list.innerHTML='<div style="padding:8px 12px 12px;">'+d.map(function(inv,i){
+        const medals=['\uD83E\uDD47','\uD83E\uDD48','\uD83E\uDD49','','','','','','',''];
+        const pct=Math.max(4,(inv.count/maxCount)*100);
+        return '<div class="mod-item" style="flex-direction:column;align-items:stretch;"><div style="display:flex;align-items:center;gap:10px;">'+
+          '<span style="font-size:14px;width:24px;text-align:center;">'+(medals[i]||(i+1))+'</span>'+
+          '<div class="mod-body"><div class="mod-top"><span class="mod-type">'+(inv.tag||inv.inviterId||'Unknown').slice(0,30)+'</span></div></div>'+
+          '<div class="mod-count" style="color:#f59e0b;">'+inv.count+' joins</div></div>'+
+          '<div style="display:flex;align-items:center;gap:6px;padding-left:34px;"><div style="flex:1;height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#f59e0b,#ffd700);border-radius:2px;transition:width 0.6s ease;"></div></div></div></div>';
+      }).join('')+'</div>';
+    }else list.innerHTML='<div class="empty"><p>No invite data yet</p><p class="empty-act">Invite tracking must be enabled. Use <code>track add</code> in a channel to start tracking.</p></div>';
+
+    updateRefreshTimestamp('invites');
+  }catch(e){
+    list.innerHTML='<div class="empty"><p>Failed to load invites</p><p class="empty-act">'+e.message+'</p></div>';
+  }
+}
+
+// ═══ LOOK SWITCHER ═══
+function setLook(look){
+  // Remove all look classes
+  document.body.classList.remove('look-neo','look-classic','look-minimal');
+  // Add the selected look class
+  document.body.classList.add('look-'+look);
+  // Update UI
+  document.querySelectorAll('#lookGrid .bg-style-opt').forEach(function(btn){
+    btn.classList.toggle('active',btn.dataset.look===look);
+  });
+  // Save preference
+  cfg.dashboardLook=look;
+  // Show toast feedback
+  const names={neo:'Neo (Modern)',classic:'Classic',minimal:'Minimal'};
+  showToast('Switched to '+names[look]+' look');
+}

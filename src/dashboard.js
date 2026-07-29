@@ -992,6 +992,39 @@ function createDashboard() {
         }
     };
 
+    // ── Server Insights: Moderation Stats ──
+    app.get('/api/server/:id/modstats', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const db = getDb();
+            const totalCases = db.prepare('SELECT COUNT(*) as total FROM mod_cases WHERE guild_id = ?').get(guild.id);
+            const activeCases = db.prepare('SELECT COUNT(*) as total FROM mod_cases WHERE guild_id = ? AND active = 1').get(guild.id);
+            const byType = db.prepare('SELECT action_type, COUNT(*) as count FROM mod_cases WHERE guild_id = ? GROUP BY action_type ORDER BY count DESC').all(guild.id);
+            const recent = db.prepare('SELECT * FROM mod_cases WHERE guild_id = ? ORDER BY created_at DESC LIMIT 15').all(guild.id);
+            const topWarned = db.prepare('SELECT user_id, COUNT(*) as count FROM mod_cases WHERE guild_id = ? AND action_type = \'warn\' GROUP BY user_id ORDER BY count DESC LIMIT 5').all(guild.id);
+            res.json({
+                total: totalCases?.total || 0,
+                active: activeCases?.total || 0,
+                byType: byType.map(t => ({ action: t.action_type, count: t.count })),
+                recent: recent.map(c => ({
+                    id: c.id,
+                    caseNumber: c.case_number,
+                    userId: c.user_id,
+                    moderatorTag: c.moderator_tag,
+                    actionType: c.action_type,
+                    reason: c.reason?.slice(0, 100) || '',
+                    active: !!c.active,
+                    createdAt: c.created_at,
+                })),
+                topWarned: topWarned.map(u => ({ userId: u.user_id, count: u.count, tag: guild.members.cache.get(u.user_id)?.user?.tag || u.user_id })),
+            });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // ── Server Insights: Message activity ──
     app.get('/api/insights/:id', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
