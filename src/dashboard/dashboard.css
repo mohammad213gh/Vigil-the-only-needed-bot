@@ -458,6 +458,42 @@ body.look-minimal .notch-nav{border-bottom-color:transparent}
 body.look-minimal #bgCanvas{display:none}
 body.light-mode.look-minimal .card{border-color:rgba(0,0,0,0.04)}
 
+/* ═══ AUTO-MOD ═══ */
+.am-rule{border-left:3px solid var(--border);transition:border-color 0.2s}
+.am-rule-h{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer}
+.am-rule-icon{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.am-rule-icon svg{width:16px;height:16px}
+.am-rule-info{flex:1;min-width:0}
+.am-rule-label{font-size:12px;font-weight:600;color:var(--text)}
+.am-rule-desc{font-size:10px;color:var(--text-dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am-rule-toggle{flex-shrink:0}
+.am-rule-body{padding:0 16px 14px;display:none}
+.am-rule-body .am-fields{display:flex;gap:6px;flex-wrap:wrap}
+.am-rule-body .am-field{flex:1;min-width:90px}
+.am-rule-body .am-field label{font-size:10px;color:var(--text-dim);display:block;margin-bottom:2px}
+.am-rule-body .am-field select{width:100%;padding:5px 8px;font-size:11px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:var(--text);font-family:inherit;cursor:pointer}
+.am-section{padding:10px 12px}
+.am-f-list{display:flex;flex-direction:column;gap:3px;margin-bottom:8px;max-height:220px;overflow-y:auto}
+.am-f-item{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;background:rgba(255,255,255,0.02);font-size:11px}
+.am-f-item:hover{background:rgba(255,255,255,0.04)}
+.am-f-pat{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.am-f-pat svg{flex-shrink:0;color:var(--accent)}
+.am-f-act{font-size:10px;font-weight:500;padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.04);flex-shrink:0}
+.am-f-del{width:22px;height:22px;border-radius:5px;border:none;background:rgba(237,66,69,0.08);color:rgba(237,66,69,0.5);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
+.am-f-del:hover{background:rgba(237,66,69,0.15);color:#ed4245}
+.am-f-empty{padding:16px;text-align:center;font-size:11px;color:var(--text-muted)}
+.am-f-add{display:flex;gap:4px}
+.am-f-add input{padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.02);color:var(--text);font-family:inherit;outline:none;transition:border-color 0.15s}
+.am-f-add input:focus{border-color:rgba(var(--accent-rgb),0.3)}
+.am-chan-list{display:flex;flex-direction:column;gap:1px;max-height:240px;overflow-y:auto}
+.am-chan-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:5px;font-size:11px;cursor:pointer;transition:background 0.15s}
+.am-chan-item:hover{background:rgba(255,255,255,0.03)}
+.am-chan-item input[type=checkbox]{width:13px;height:13px;cursor:pointer;accent-color:var(--accent)}
+.am-chan-item span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.am-chan-mode select{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;cursor:pointer}
+.am-chan-save button{transition:all 0.15s}
+.am-chan-save button:hover{opacity:0.85}
+
 /* ═══ Mobile Improvements ═══ */
 @media(max-width:768px){
   .main{padding:calc(var(--notch-h) + 12px) 16px 16px}

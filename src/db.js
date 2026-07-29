@@ -196,6 +196,13 @@ function initSchema() {
             PRIMARY KEY (guild_id, filter_type, pattern)
         );
 
+        CREATE TABLE IF NOT EXISTS automod_config (
+            guild_id TEXT PRIMARY KEY,
+            included_channels TEXT NOT NULL DEFAULT '[]',
+            excluded_channels TEXT NOT NULL DEFAULT '[]',
+            whitelisted_roles TEXT NOT NULL DEFAULT '[]'
+        );
+
         CREATE TABLE IF NOT EXISTS command_usage (
             guild_id TEXT NOT NULL,
             command TEXT NOT NULL,

@@ -20,6 +20,58 @@ const DEFAULT_RULES = {
     caps:      { enabled: false, threshold: 70, time_window: 0, action: 'warn', duration: null },
 };
 
+// ──────────────────── Guild Config (channels + roles) ────────────────────
+
+function getAutoModConfig(guildId) {
+    const db = getDb();
+    let row = db.prepare('SELECT * FROM automod_config WHERE guild_id = ?').get(guildId);
+    if (!row) {
+        // Insert defaults
+        db.prepare('INSERT OR REPLACE INTO automod_config (guild_id, included_channels, excluded_channels, whitelisted_roles) VALUES (?, ?, ?, ?)')
+            .run(guildId, '[]', '[]', '[]');
+        return { includedChannels: [], excludedChannels: [], whitelistedRoles: [] };
+    }
+    try {
+        return {
+            includedChannels: JSON.parse(row.included_channels || '[]'),
+            excludedChannels: JSON.parse(row.excluded_channels || '[]'),
+            whitelistedRoles: JSON.parse(row.whitelisted_roles || '[]'),
+        };
+    } catch {
+        return { includedChannels: [], excludedChannels: [], whitelistedRoles: [] };
+    }
+}
+
+function updateAutoModConfig(guildId, updates) {
+    const current = getAutoModConfig(guildId);
+    const merged = { ...current, ...updates };
+    const db = getDb();
+    db.prepare('INSERT OR REPLACE INTO automod_config (guild_id, included_channels, excluded_channels, whitelisted_roles) VALUES (?, ?, ?, ?)')
+        .run(guildId, JSON.stringify(merged.includedChannels), JSON.stringify(merged.excludedChannels), JSON.stringify(merged.whitelistedRoles));
+    return merged;
+}
+
+function isChannelAllowed(guildId, channelId) {
+    const cfg = getAutoModConfig(guildId);
+    // If includedChannels has entries, ONLY those channels are checked
+    if (cfg.includedChannels.length > 0) {
+        return cfg.includedChannels.includes(channelId);
+    }
+    // If excludedChannels has entries, skip those channels
+    if (cfg.excludedChannels.length > 0) {
+        return !cfg.excludedChannels.includes(channelId);
+    }
+    // No restrictions — check all channels
+    return true;
+}
+
+function isRoleWhitelisted(guildId, member) {
+    if (!member) return false;
+    const cfg = getAutoModConfig(guildId);
+    if (cfg.whitelistedRoles.length === 0) return false;
+    return member.roles.cache.some(r => cfg.whitelistedRoles.includes(r.id));
+}
+
 // ──────────────────── Rule Config ────────────────────
 
 function getAutoModRules(guildId) {
@@ -120,6 +172,12 @@ async function checkMessage(message, guildId) {
     // Skip bots and users with admin/manage messages
     if (member.user.bot) return;
     if (member.permissions.has('Administrator') || member.permissions.has('ManageMessages')) return;
+
+    // Check channel filtering (include/exclude)
+    if (!isChannelAllowed(guildId, message.channelId)) return;
+
+    // Check role whitelist
+    if (isRoleWhitelisted(guildId, member)) return;
 
     let violations = [];
 
@@ -230,6 +288,82 @@ async function executeAutoModAction(message, guildId, violation) {
     await sendLog(embed, 'automod', null, guildId);
 }
 
+// ──────────────────── Import / Export ────────────────────
+
+function exportAutoModConfig(guildId) {
+    const rules = getAutoModRules(guildId);
+    const wordFilters = getAutoModFilters(guildId, 'words');
+    const linkFilters = getAutoModFilters(guildId, 'links');
+    const config = getAutoModConfig(guildId);
+    return {
+        exportedAt: Date.now(),
+        guildId,
+        rules,
+        filters: {
+            words: wordFilters.map(f => ({ pattern: f.pattern, action: f.action })),
+            links: linkFilters.map(f => ({ pattern: f.pattern, action: f.action })),
+        },
+        channelSettings: {
+            includedChannels: config.includedChannels,
+            excludedChannels: config.excludedChannels,
+            whitelistedRoles: config.whitelistedRoles,
+        },
+    };
+}
+
+function importAutoModConfig(guildId, data) {
+    const db = getDb();
+    const tx = db.transaction(() => {
+        // Import rules
+        if (data.rules && typeof data.rules === 'object') {
+            for (const [ruleType, ruleConfig] of Object.entries(data.rules)) {
+                if (RULE_TYPES.includes(ruleType) && ruleConfig && typeof ruleConfig === 'object') {
+                    updateAutoModRule(guildId, ruleType, ruleConfig);
+                }
+            }
+        }
+        // Import filters
+        if (data.filters) {
+            // Clear existing and re-import
+            if (Array.isArray(data.filters.words)) {
+                db.prepare('DELETE FROM automod_filters WHERE guild_id = ? AND filter_type = ?').run(guildId, 'words');
+                for (const f of data.filters.words) {
+                    if (f.pattern) addAutoModFilter(guildId, 'words', f.pattern, f.action || 'delete');
+                }
+            }
+            if (Array.isArray(data.filters.links)) {
+                db.prepare('DELETE FROM automod_filters WHERE guild_id = ? AND filter_type = ?').run(guildId, 'links');
+                for (const f of data.filters.links) {
+                    if (f.pattern) addAutoModFilter(guildId, 'links', f.pattern, f.action || 'delete');
+                }
+            }
+        }
+        // Import channel/role settings
+        if (data.channelSettings) {
+            updateAutoModConfig(guildId, data.channelSettings);
+        }
+    });
+    tx();
+    return { success: true };
+}
+
+function bulkAddFilters(guildId, filterType, patterns) {
+    // Accept comma-separated string or array
+    const items = Array.isArray(patterns) ? patterns : patterns.split(',').map(s => s.trim()).filter(Boolean);
+    const added = [];
+    for (const item of items) {
+        // An item can be "word" or "word:action"
+        const parts = item.split(':');
+        const pattern = parts[0].trim().toLowerCase();
+        const action = parts[1]?.trim() || 'delete';
+        if (pattern && ACTIONS.includes(action)) {
+            addAutoModFilter(guildId, filterType, pattern, action);
+            added.push({ pattern, action });
+        }
+    }
+    return added;
+}
+
 module.exports = {
     RULE_TYPES,
     ACTIONS,
@@ -239,4 +373,9 @@ module.exports = {
     addAutoModFilter,
     removeAutoModFilter,
     checkMessage,
+    getAutoModConfig,
+    updateAutoModConfig,
+    exportAutoModConfig,
+    importAutoModConfig,
+    bulkAddFilters,
 };
