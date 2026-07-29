@@ -1027,7 +1027,9 @@ async function loadAutomod(){
         '<div class="am-section">'+
           '<div class="am-f-list">'+wordHtml+'</div>'+
           '<div class="am-f-add"><input type="text" id="amWordInput" placeholder="Add banned word..." style="flex:1;" onkeydown="if(event.key===\'Enter\')addAMFilter(\''+serverId+'\',\'words\')"><button class="btn btn-s" onclick="addAMFilter(\''+serverId+'\',\'words\')" style="padding:7px 12px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></div>'+
-          '<div class="am-f-add" style="margin-top:4px;"><input type="text" id="amWordBulk" placeholder="word1:delete, word2:warn, word3:timeout" style="flex:1;font-size:10px;"><button class="btn btn-s" onclick="bulkAMFilter(\''+serverId+'\',\'words\')" style="padding:5px 10px;font-size:10px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:10px;height:10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Bulk Import</button></div>'+
+          '<div class="am-f-add" style="margin-top:4px;"><input type="text" id="amWordBulk" placeholder="word1:delete, word2:warn, word3:timeout" style="flex:1;font-size:10px;"><button class="btn btn-s" onclick="bulkAMFilter(\''+serverId+'\',\'words\')" style="padding:5px 10px;font-size:10px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:10px;height:10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Bulk Import</button>'+
+            '<input type="file" id="amTxtUpload" accept=".txt" style="display:none;" onchange="uploadTxtFilter(\''+serverId+'\',this)">'+
+            '<button class="btn btn-s" onclick="document.getElementById(\'amTxtUpload\').click()" style="padding:5px 10px;font-size:10px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:10px;height:10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> .txt File</button></div>'+
         '</div></div>'+
       // Link allowlist panel
       '<div class="tw sr"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Link Allowlist</div>'+
@@ -1106,6 +1108,21 @@ async function deleteAMFilter(serverId,type,pattern){
     if(d.success){showToast('Filter removed!');loadAutomod()}else showToast('Failed',true);
   }catch{showToast('Failed',true)}
 }
+async function uploadTxtFilter(serverId,inp){
+  var file=inp.files&&inp.files[0];
+  if(!file)return;
+  try{
+    var text=await file.text();
+    // Split by commas, newlines, or both
+    var raw=text.split(/[,\n]+/).map(function(s){return s.trim().toLowerCase()}).filter(function(s){return s.length>0});
+    if(!raw.length){showToast('No words found in file',true);return}
+    // Send as comma-separated list (bulk endpoint defaults to :delete action)
+    var r=await fetch('/api/server/'+serverId+'/automod/filters/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filterType:'words',patterns:raw.join(',')})});
+    var d=await r.json();
+    if(d.success){showToast('Added '+d.added+' words from file!');inp.value='';loadAutomod()}else showToast('Import failed',true);
+  }catch(e){showToast('Error reading file: '+e.message,true);inp.value=''}
+}
+
 async function bulkAMFilter(serverId,type){
   var input=document.getElementById(type==='words'?'amWordBulk':'')||document.getElementById('amWordBulk');
   if(!input||!input.value.trim())return;
