@@ -5,6 +5,7 @@
 const { getDb } = require('./db');
 const { getWarnings } = require('./warnings');
 const { createCase } = require('./modCases');
+const { logError } = require('./logError');
 
 // ──────────────────── Threshold Config ────────────────────
 
@@ -100,7 +101,7 @@ async function checkThresholds(guild, userId, interaction) {
             }
         }
     } catch (err) {
-        console.error('[Thresholds] Auto-punish failed:', err.message);
+        logError(err, 'thresholds', 'auto_punish');
     }
 
     return actionResult;

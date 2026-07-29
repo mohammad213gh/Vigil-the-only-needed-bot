@@ -2,6 +2,7 @@ const { EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, Butt
 const { formatDuration } = require('../helpers');
 const { addWarning, getWarnings, clearWarnings } = require('../warnings');
 const { createCase, closeCase } = require('../modCases');
+const { logError } = require('../logError');
 
 async function executeKick(interaction) {
     const target = interaction.options.getUser('user');
@@ -182,7 +183,7 @@ async function executeUnban(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to unban user: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to unban user: ' + err.message, ephemeral: true }).catch(() => {});
     }
 }
 
@@ -235,7 +236,7 @@ async function executeTimeout(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to timeout user: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to timeout user: ' + err.message, ephemeral: true }).catch(() => {});
     }
 }
 
@@ -257,7 +258,7 @@ async function executeUntimeout(interaction) {
     try {
         await member.timeout(null);
         // Close active timeout cases for this user
-        const timeoutCases = require('../modCases').getCases(guild.id, target.id, 50).filter(function(c) { return c.action_type === 'timeout' && c.active; });
+        const timeoutCases = require('../modCases').getCases(guild.id, target.id, 50).filter(c => c.action_type === 'timeout' && c.active);
         for (const tc of timeoutCases) {
             closeCase(guild.id, tc.case_number);
         }
@@ -270,7 +271,7 @@ async function executeUntimeout(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to remove timeout: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to remove timeout: ' + err.message, ephemeral: true }).catch(() => {});
     }
 }
 
@@ -310,7 +311,7 @@ async function executeWarn(interaction) {
                 }).catch(() => {});
             }
         } catch (err) {
-            console.error('[Thresholds] Check failed:', err.message);
+            logError(err, 'commands', 'moderation/thresholds');
         }
 
         // DM the user about the warning
@@ -410,7 +411,7 @@ async function executeLock(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to lock channel: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to lock channel: ' + err.message, ephemeral: true }).catch(() => {});
     }
 }
 
@@ -435,7 +436,7 @@ async function executeUnlock(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to unlock channel: ' + err.message, ephemeral: true }).catch(err => console.error('[Fallback]', err.message));
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to unlock channel: ' + err.message, ephemeral: true }).catch(() => {});
     }
 }
 

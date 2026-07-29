@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { getGuildConfig } = require('../config');
 const { handlePrefixMessage } = require('../prefixCommands');
+const { logError } = require('../logError');
 
 const { getDb } = require('../db');
 const { checkMessage } = require('../automod');
@@ -11,7 +12,9 @@ function trackActivity(guildId, userId, channelId) {
     try {
         db.prepare('INSERT OR REPLACE INTO activity_counts (guild_id, user_id, channel_id, message_count) VALUES (?, ?, ?, COALESCE((SELECT message_count + 1 FROM activity_counts WHERE guild_id = ? AND user_id = ? AND channel_id = ?), 1))')
             .run(guildId, userId, channelId, guildId, userId, channelId);
-    } catch {}
+    } catch (err) {
+        logError(err, 'events', 'messages/trackActivity');
+    }
 }
 
 // ──────────────────── Log deleted/edited messages for search ────────────────────
@@ -22,7 +25,9 @@ function logMessageAction(guildId, channelId, messageId, authorId, authorTag, co
             .run(guildId, channelId, messageId, authorId, authorTag, content || '', action, attachments ? JSON.stringify(attachments) : null, Date.now());
         // Keep only last 1000 per guild
         db.prepare('DELETE FROM message_log WHERE id IN (SELECT id FROM message_log WHERE guild_id = ? ORDER BY logged_at DESC LIMIT -1 OFFSET 1000)').run(guildId);
-    } catch (err) {}
+    } catch (err) {
+        logError(err, 'events', 'messages/logMessageAction');
+    }
 }
 
 module.exports = [

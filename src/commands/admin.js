@@ -148,8 +148,8 @@ async function executeSlowmode(interaction) {
 
         await interaction.reply({ embeds: [embed] });
     } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to set slowmode: ' + err.message, ephemeral: true }).catch(err => console.error('[ReplyFallback]', err.message));
-    }
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to set slowmode: ' + err.message, ephemeral: true })                .catch(() => {});
+            }
 }
 
 async function executeNickname(interaction) {
@@ -235,10 +235,10 @@ async function executeEmbed(interaction) {
         await interaction.reply({
             content: '\u2705 Embed sent to ' + channel,
             ephemeral: true,
-        }).catch(err => console.error('[ReplyFallback]', err.message));
-    } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to send embed: ' + err.message, ephemeral: true }).catch(err => console.error('[ReplyFallback]', err.message));
-    }
+        })                .catch(() => {});
+            } catch (err) {
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to send embed: ' + err.message, ephemeral: true })                .catch(() => {});
+            }
 }
 
 async function executeDeploy(interaction) {
@@ -347,7 +347,7 @@ async function executePoll(interaction) {
 
     // ── Pick embed color based on poll type ──
     // Like logs: blue default, multi=purple, anonymous=dark, timed=orange
-    var embedColor = 0x5865F2;
+    let embedColor = 0x5865F2;
     if (anonymous) embedColor = 0x2C2F33;
     else if (multi && durationLabel) embedColor = 0x9B59B6;
     else if (multi) embedColor = 0x71368A;
@@ -383,7 +383,7 @@ async function executePoll(interaction) {
     // ── Build vote buttons with actual option text ──
     const votePrefix = multi ? 'pm_vote_' : (anonymous ? 'pa_vote_' : 'pv_vote_');
     const buttons = options.map((opt, i) => {
-        var label = opt.length > 50 ? opt.substring(0, 47) + '...' : opt;
+        const label = opt.length > 50 ? opt.substring(0, 47) + '...' : opt;
         return new ButtonBuilder()
             .setCustomId(votePrefix + i)
             .setStyle(i === 0 ? ButtonStyle.Primary : i === 1 ? ButtonStyle.Success : i === 2 ? ButtonStyle.Primary : ButtonStyle.Danger)
@@ -398,7 +398,7 @@ async function executePoll(interaction) {
 
     // Add Show Voters button (not for anonymous polls)
     if (!anonymous) {
-        var votersBtn = new ButtonBuilder()
+        const votersBtn = new ButtonBuilder()
             .setCustomId('pvv_voters')
             .setLabel('Show Voters \uD83D\uDC65')
             .setStyle(ButtonStyle.Secondary);
@@ -422,51 +422,55 @@ async function executePoll(interaction) {
                 const { getDb } = require('../db');
                 const db = getDb();
                 const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
-                var voteCounts = {};
-                var voters = {};
-                for (var r of rows) {
+                const voteCounts = {};
+                const voters = {};
+                for (const r of rows) {
                     voteCounts[r.option_index] = (voteCounts[r.option_index] || 0) + 1;
                     if (!voters[r.option_index]) voters[r.option_index] = [];
                     voters[r.option_index].push(r.user_id);
                 }
-                var totalVotes = Object.keys(voteCounts).reduce(function(a, k) { return a + voteCounts[k]; }, 0);
+                const totalVotes = Object.values(voteCounts).reduce((a, c) => a + c, 0);
                 
                 // Find winner(s)
-                var maxVotes = 0;
-                var winners = [];
-                for (var k in voteCounts) {
-                    if (voteCounts[k] > maxVotes) {
-                        maxVotes = voteCounts[k];
-                        winners = [parseInt(k)];
-                    } else if (voteCounts[k] === maxVotes && maxVotes > 0) {
-                        winners.push(parseInt(k));
+                let maxVotes = 0;
+                const winners = [];
+                for (const k in voteCounts) {
+                    if (Object.prototype.hasOwnProperty.call(voteCounts, k)) {
+                        if (voteCounts[k] > maxVotes) {
+                            maxVotes = voteCounts[k];
+                            winners.length = 0;
+                            winners.push(parseInt(k));
+                        } else if (voteCounts[k] === maxVotes && maxVotes > 0) {
+                            winners.push(parseInt(k));
+                        }
                     }
                 }
                 
-                var totalVoters = Object.keys(voters).length || totalVotes;
+                const totalVoters = Object.keys(voters).length || totalVotes;
                 
                 const finalEmbed = EmbedBuilder.from(msg.embeds[0])
                     .setColor(0x95A5A6)
                     .setTitle('\uD83D\uDDF3\uFE0F  Poll Ended: ' + question)
-                    .setDescription('\uD83D\uDD14 **Poll has ended!**' + (winners.length > 0 ? '\n\uD83C\uDFC6 **Winner:** ' + winners.map(function(w) { return '**' + options[w] + '**'; }).join(', ') : ''));
+                    .setDescription('\uD83D\uDD14 **Poll has ended!**' + (winners.length > 0 ? '\n\uD83C\uDFC6 **Winner:** ' + winners.map(w => '**' + options[w] + '**').join(', ') : ''));
                 
                 // Rebuild fields with final results
                 finalEmbed.spliceFields(0, embed.data.fields?.length || 0);
                 for (let i = 0; i < options.length; i++) {
                     const count = voteCounts[i] || 0;
                     const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-                    var isWinner = winners.includes(i);
+                    const isWinner = winners.includes(i);
                     finalEmbed.addFields({
                         name: emojis[i] + '  ' + options[i] + (isWinner ? '  \uD83C\uDFC6' : ''),
                         value: '\uD83D\uDCCA Votes: **' + count + '** (' + pct + '%)',
-                        inline: options.length <= 2 ? true : false,
+                        inline: options.length <= 2,
                     });
                 }
                 
                 finalEmbed.setFooter({ text: '\uD83D\uDDF3  ' + totalVotes + ' total votes  \u2022  ' + totalVoters + ' voter' + (totalVoters !== 1 ? 's' : '') + '  \u2022  Poll ended' });
                 await msg.edit({ embeds: [finalEmbed], components: [] });
-            } catch (err) { 
-                console.error('[Poll End Error]', err.message);
+            } catch (err) {
+                const { logError } = require('../logError');
+                logError(err, 'commands', 'admin/poll_end');
             }
         }, ms);
     }
@@ -500,10 +504,10 @@ async function executeAnnounce(interaction) {
 
     try {
         await channel.send({ content, embeds: [embed] });
-        await interaction.reply({ content: '\u2705 Announcement sent to ' + channel, ephemeral: true }).catch(err => console.error('[ReplyFallback]', err.message));
-    } catch (err) {
-        await interaction.reply({ content: '\u26A0\uFE0F Failed to send announcement: ' + err.message, ephemeral: true }).catch(err => console.error('[ReplyFallback]', err.message));
-    }
+        await interaction.reply({ content: '\u2705 Announcement sent to ' + channel, ephemeral: true })                .catch(() => {});
+            } catch (err) {
+        await interaction.reply({ content: '\u26A0\uFE0F Failed to send announcement: ' + err.message, ephemeral: true })                .catch(() => {});
+            }
 }
 
 module.exports = {

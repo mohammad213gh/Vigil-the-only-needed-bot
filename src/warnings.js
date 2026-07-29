@@ -22,7 +22,7 @@ function loadWarnings() {
 
 function addWarning(guildId, userId, moderatorTag, reason) {
     const db = getDb();
-    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     db.prepare('INSERT INTO warnings (id, guild_id, user_id, moderator, reason, date) VALUES (?, ?, ?, ?, ?, ?)')
         .run(id, guildId, userId, moderatorTag, reason || 'No reason provided', new Date().toISOString());
     return getWarnings(guildId, userId);

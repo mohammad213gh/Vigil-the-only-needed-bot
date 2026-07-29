@@ -5,6 +5,7 @@ const { logError } = require('./logError');
 
 function truncate(str, max = 1024) {
     if (!str) return '*Empty*';
+    if (typeof str !== 'string') return String(str).slice(0, max);
     return str.length > max ? str.slice(0, max - 3) + '...' : str;
 }
 
@@ -101,10 +102,10 @@ function randomInt(min, max) {
 async function fetchAuditLogExecutor(guild, actionType, targetId) {
     // Attempt to find who made a change via audit logs
     // Returns the executor (User) or null
-    if (!guild || !guild.fetchAuditLogs) return null;
+    if (!guild?.fetchAuditLogs) return null;
     try {
         const audit = await guild.fetchAuditLogs({ type: actionType, limit: 5 });
-        if (!audit || !audit.entries) return null;
+        if (!audit?.entries) return null;
         // Find the entry that matches our target
         if (targetId) {
             const entry = audit.entries.find(e => e.target?.id === targetId || e.targetId === targetId);
@@ -122,35 +123,28 @@ async function fetchAuditLogExecutor(guild, actionType, targetId) {
 // ──────────────────── Poll Helpers ────────────────────
 function makePollBar(count, total, isLeading) {
     if (total === 0) return '\u25AB'.repeat(10);
-    var filled = Math.round((count / total) * 10);
-    if (filled === 0 && count > 0) filled = 1;
-    var bar = '';
-    var fillChar = isLeading ? '\uD83D\uDFE2' : '\uD83D\uDD35';
-    for (var i = 0; i < filled; i++) bar += fillChar;
-    for (var i = filled; i < 10; i++) bar += '\u25AB';
-    return bar;
+    const filled = Math.max(Math.round((count / total) * 10), count > 0 ? 1 : 0);
+    const fillChar = isLeading ? '\uD83D\uDFE2' : '\uD83D\uDD35';
+    const emptyChar = '\u25AB';
+    return fillChar.repeat(filled) + emptyChar.repeat(10 - filled);
 }
 
 function getLeadingOption(voteCounts) {
-    var maxVotes = 0;
-    var leading = null;
-    for (var k in voteCounts) {
-        if (voteCounts[k] > maxVotes) {
-            maxVotes = voteCounts[k];
-            leading = parseInt(k);
-        }
-    }
-    return leading;
+    if (!voteCounts || typeof voteCounts !== 'object') return null;
+    const entries = Object.entries(voteCounts);
+    if (entries.length === 0) return null;
+    const maxEntry = entries.reduce((max, curr) => curr[1] > max[1] ? curr : max);
+    return parseInt(maxEntry[0]);
 }
 
 // ──────────────────── Welcome/Goodbye Placeholders ────────────────────
 
 function replacePlaceholders(text, member, type) {
-    if (!text) return text;
+    if (!text || !member?.guild?.members?.cache) return text || '';
     const guild = member.guild;
     const user = member.user;
-    const memberCount = guild.memberCount;
-    const botCount = guild.members.cache.filter(function(m) { return m.user.bot; }).size;
+    const memberCount = guild.memberCount || 0;
+    const botCount = guild.members.cache.filter(m => m.user.bot).size;
     const humanCount = memberCount - botCount;
     
     const replacements = {

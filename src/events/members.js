@@ -65,7 +65,9 @@ async function sendGreeting(member, type) {
                                 member._inviteInfo = extraField;
                             }
                         }
-                    } catch {}
+                    } catch (err) {
+                        logError(err, 'events', 'guildMemberAdd/invite_detect');
+                    }
                 }
 
                 // Find who added the bot (only for bots)

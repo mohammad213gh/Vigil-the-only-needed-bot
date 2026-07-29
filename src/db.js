@@ -2,6 +2,7 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 const { getDataDir } = require('./data');
+const { logError } = require('./logError');
 
 // ──────────────────── Database Initialization ────────────────────
 
@@ -514,7 +515,7 @@ function closeDb() {
             db.close();
             console.log('[DB] Database closed.');
         } catch (err) {
-            console.error('[DB] Error closing database:', err.message);
+            logError(err, 'db', 'close');
         }
         db = null;
     }

@@ -1,4 +1,6 @@
+const { EmbedBuilder } = require('discord.js');
 const { getDb } = require('./db');
+const { logError } = require('./logError');
 
 let client = null;
 let checkInterval = null;
@@ -93,17 +95,17 @@ function startReminderChecker() {
                 try {
                     const user = await client.users.fetch(reminder.user_id).catch(() => null);
                     if (user) {
-                        await user.send({
-                            embeds: [{
-                                color: 0x5865F2,
-                                title: '⏰ Reminder',
-                                description: reminder.text,
-                                footer: { text: 'Set ' + new Date(reminder.created_at).toLocaleString() },
-                                timestamp: new Date().toISOString(),
-                            }],
-                        });
+                        const embed = new EmbedBuilder()
+                            .setColor(0x5865F2)
+                            .setTitle('⏰ Reminder')
+                            .setDescription(reminder.text)
+                            .setFooter({ text: 'Set ' + new Date(reminder.created_at).toLocaleString() })
+                            .setTimestamp();
+                        await user.send({ embeds: [embed] });
                     }
-                } catch { /* DMs closed, skip */ }
+                } catch {
+                    /* DMs closed, skip silently */
+                }
             }
 
             // Prune notified reminders older than 24 hours
@@ -111,7 +113,7 @@ function startReminderChecker() {
             db.prepare('DELETE FROM reminders WHERE notified = 1 AND remind_at < ?').run(oneDayAgo);
 
         } catch (err) {
-            console.error('[Reminders] Check error:', err.message);
+            logError(err, 'reminders', 'check');
         }
     }, 15000);
 

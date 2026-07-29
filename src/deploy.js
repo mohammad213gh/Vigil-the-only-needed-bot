@@ -1,4 +1,5 @@
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { logError } = require('./logError');
 
 // ──────────────────── All Command Definitions ────────────────────
 
@@ -1340,7 +1341,7 @@ async function deployCommands(clientUser) {
             return true;
         } catch (guildErr) {
             const guildMsg = guildErr.rawError?.message || guildErr.message || 'Unknown error';
-            console.error('\u26A0\uFE0F Guild deploy failed (' + guildMsg + '). Falling back to global deploy...');
+            logError(new Error(guildMsg), 'deploy', 'guild_deploy_fallback');
             // Fall through to global deploy
         }
     }
@@ -1361,9 +1362,9 @@ async function deployCommands(clientUser) {
     } catch (err) {
         const msg = err.rawError?.message || err.message || 'Unknown error';
         const code = err.rawError?.code || '';
-        console.error('\u274C Failed to register commands:', msg);
+        logError(err, 'deploy', 'global_deploy_failed');
         if (err.rawError?.errors) {
-            try { console.error('Detailed errors:', JSON.stringify(err.rawError.errors, null, 2).slice(0, 2000)); } catch {}
+            try { logError(new Error(JSON.stringify(err.rawError.errors).slice(0, 2000)), 'deploy', 'detailed_errors'); } catch {}
         }
         return 'Discord API: ' + msg + (code ? ' (code ' + code + ')' : '');
     }

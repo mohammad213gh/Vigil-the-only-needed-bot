@@ -72,17 +72,24 @@ function removeAutoModFilter(guildId, filterType, pattern) {
 const spamTracker = new Map(); // guildId_userId → [timestamps]
 
 // Periodic cleanup of stale spam entries (every 5 minutes)
+const SPAM_CLEANUP_INTERVAL = 300000; // 5 minutes
+const SPAM_WINDOW = 120000; // 2 minutes
+
 setInterval(() => {
-    const cutoff = Date.now() - 120000; // 2 minutes
-    for (const [key, timestamps] of spamTracker.entries()) {
-        while (timestamps.length > 0 && timestamps[0] < cutoff) {
-            timestamps.shift();
+    const cutoff = Date.now() - SPAM_WINDOW;
+    try {
+        for (const [key, timestamps] of spamTracker.entries()) {
+            while (timestamps.length > 0 && timestamps[0] < cutoff) {
+                timestamps.shift();
+            }
+            if (timestamps.length === 0) {
+                spamTracker.delete(key);
+            }
         }
-        if (timestamps.length === 0) {
-            spamTracker.delete(key);
-        }
+    } catch (err) {
+        console.error('[AutoMod] Spam tracker cleanup error:', err.message);
     }
-}, 300000).unref();
+}, SPAM_CLEANUP_INTERVAL);
 
 function checkSpam(guildId, userId, threshold, timeWindow) {
     const key = guildId + '_' + userId;
@@ -95,6 +102,10 @@ function checkSpam(guildId, userId, threshold, timeWindow) {
         timestamps.shift();
     }
     timestamps.push(now);
+    // Keep only last 100 timestamps to prevent memory leaks
+    if (timestamps.length > 100) {
+        timestamps.splice(0, timestamps.length - 100);
+    }
     return timestamps.length >= threshold;
 }
 

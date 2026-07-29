@@ -7,6 +7,7 @@ const { addWarning } = require('./warnings');
 const { createCase, closeCase } = require('./modCases');
 const { getDb } = require('./db');
 const { getLeadingOption } = require('./helpers');
+const { logError } = require('./logError');
 
 // ─── Custom ID Prefixes ───
 //   ck_{initiatorId}_{targetId}         = confirm kick
@@ -41,7 +42,6 @@ async function handleButton(interaction) {
     const initiatorId = parts[1];
 
     // Poll votes — anyone can vote, no security check needed
-    // pv = single vote, pm = multi vote, pa = anonymous
     if (prefix === 'pv' || prefix === 'pm' || prefix === 'pa') {
         return handlePollVote(interaction, parts);
     }
@@ -73,7 +73,7 @@ async function handleButton(interaction) {
 // ──────────────────── Cancel ────────────────────
 
 async function handleCancel(interaction) {
-    var desc = interaction.message.embeds[0]?.description || 'Action cancelled.';
+    const desc = interaction.message.embeds[0]?.description || 'Action cancelled.';
     const embed = EmbedBuilder.from(interaction.message.embeds[0])
         .setColor(0x95A5A6)
         .setDescription('~~' + desc + '~~')
@@ -100,8 +100,7 @@ async function handleConfirmKick(interaction, parts) {
         return interaction.update({ content: '❌ I can no longer kick that user (role hierarchy changed).', components: [], embeds: [] });
     }
 
-    // Extract reason from the original embed
-    const reasonField = interaction.message.embeds[0]?.fields?.find(function (f) { return f.name === 'Reason'; });
+    const reasonField = interaction.message.embeds[0]?.fields?.find(f => f.name === 'Reason');
     const reason = reasonField ? reasonField.value : 'No reason provided';
 
     try {
@@ -113,6 +112,7 @@ async function handleConfirmKick(interaction, parts) {
             .setDescription('<@' + targetId + '> has been kicked.');
         await interaction.update({ embeds: [embed], components: [] });
     } catch (err) {
+        logError(err, 'interactions', 'confirmKick');
         await interaction.update({ content: '❌ Failed to kick: ' + err.message, components: [], embeds: [] });
     }
 }
@@ -128,17 +128,20 @@ async function handleConfirmTempBan(interaction, parts) {
     const guild = interaction.guild;
 
     if (!guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) {
-        return interaction.update({ content: '\u274C I lost the **Ban Members** permission.', components: [], embeds: [] });
+        return interaction.update({ content: '❌ I lost the **Ban Members** permission.', components: [], embeds: [] });
     }
 
-    const durationMap = {
+    const durationMs = {
         '1h': 3600000, '6h': 21600000, '24h': 86400000,
         '3d': 259200000, '7d': 604800000, '14d': 1209600000, '30d': 2592000000,
-    };
-    const durationMs = durationMap[duration] || 604800000;
-    const durationLabel = { '1h': '1 hour', '6h': '6 hours', '24h': '24 hours', '3d': '3 days', '7d': '7 days', '14d': '14 days', '30d': '30 days' }[duration] || '7 days';
+    }[duration] || 604800000;
 
-    const reasonField = interaction.message.embeds[0]?.fields?.find(function (f) { return f.name === 'Reason'; });
+    const durationLabel = {
+        '1h': '1 hour', '6h': '6 hours', '24h': '24 hours',
+        '3d': '3 days', '7d': '7 days', '14d': '14 days', '30d': '30 days',
+    }[duration] || '7 days';
+
+    const reasonField = interaction.message.embeds[0]?.fields?.find(f => f.name === 'Reason');
     const reason = reasonField ? reasonField.value : 'No reason provided';
 
     try {
@@ -154,7 +157,7 @@ async function handleConfirmTempBan(interaction, parts) {
 
         const embed = EmbedBuilder.from(interaction.message.embeds[0])
             .setColor(0xE74C3C)
-            .setTitle('\uD83D\uDD28 Temp Banned \u2705')
+            .setTitle('🔨 Temp Banned ✅')
             .setDescription('<@' + targetId + '> has been temp banned for **' + durationLabel + '**.')
             .setFooter({ text: 'Auto-unban at <t:' + Math.floor(unbanAt / 1000) + ':R>' });
 
@@ -168,11 +171,12 @@ async function handleConfirmTempBan(interaction, parts) {
                 db2.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(targetId, guild.id);
                 console.log('[TempBan] Auto-unbanned', targetId, 'in', guild.id);
             } catch (err) {
-                console.error('[TempBan] Auto-unban failed:', err.message);
+                logError(err, 'interactions', 'autoUnban');
             }
         }, durationMs);
     } catch (err) {
-        await interaction.update({ content: '\u274C Failed to temp ban: ' + err.message, components: [], embeds: [] });
+        logError(err, 'interactions', 'confirmTempBan');
+        await interaction.update({ content: '❌ Failed to temp ban: ' + err.message, components: [], embeds: [] });
     }
 }
 
@@ -187,8 +191,7 @@ async function handleConfirmBan(interaction, parts) {
         return interaction.update({ content: '❌ I lost the **Ban Members** permission.', components: [], embeds: [] });
     }
 
-    // Extract reason from the original embed
-    const reasonField = interaction.message.embeds[0]?.fields?.find(function (f) { return f.name === 'Reason'; });
+    const reasonField = interaction.message.embeds[0]?.fields?.find(f => f.name === 'Reason');
     const reason = reasonField ? reasonField.value : 'No reason provided';
 
     try {
@@ -200,6 +203,7 @@ async function handleConfirmBan(interaction, parts) {
             .setDescription('<@' + targetId + '> has been banned.');
         await interaction.update({ embeds: [embed], components: [] });
     } catch (err) {
+        logError(err, 'interactions', 'confirmBan');
         await interaction.update({ content: '❌ Failed to ban: ' + err.message, components: [], embeds: [] });
     }
 }
@@ -237,6 +241,7 @@ async function handleConfirmPurge(interaction, parts) {
             await interaction.channel.send({ embeds: [embed] });
         }
     } catch (err) {
+        logError(err, 'interactions', 'confirmPurge');
         const errMsg = '❌ Failed to purge: ' + err.message;
         try {
             await interaction.editReply({ content: errMsg, components: [], embeds: [] });
@@ -310,7 +315,9 @@ async function handleWarnSubmit(interaction, parts) {
     try {
         const user = await interaction.client.users.fetch(targetId);
         await user.send('⚠️ You have been warned in **' + interaction.guild.name + '**.\nReason: ' + reason);
-    } catch { /* DMs closed */ }
+    } catch {
+        // DMs closed, silently skip
+    }
 
     // Check warning thresholds for auto-punish
     try {
@@ -319,57 +326,79 @@ async function handleWarnSubmit(interaction, parts) {
         const result = await checkThresholds(guild, targetId, interaction);
         if (result) {
             await interaction.followUp({
-                content: '\u26A0\uFE0F **Auto-punish:** <@' + targetId + '> was ' + result + ' (reached ' + warnings.length + ' warnings).',
+                content: '⚠️ **Auto-punish:** <@' + targetId + '> was ' + result + ' (reached ' + warnings.length + ' warnings).',
                 ephemeral: true,
             }).catch(() => {});
         }
     } catch (err) {
-        console.error('[Thresholds] Check failed:', err.message);
+        logError(err, 'interactions', 'checkThresholds');
     }
 }
 
 // ──────────────────── Poll DB Helpers ────────────────────
 
 function getPollVotes(messageId) {
-    const db = getDb();
-    const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
-    var votes = new Map();
-    for (var i = 0; i < rows.length; i++) {
-        if (!votes.has(rows[i].user_id)) {
-            votes.set(rows[i].user_id, []);
+    try {
+        const db = getDb();
+        const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
+        const votes = new Map();
+        for (const row of rows) {
+            if (!votes.has(row.user_id)) {
+                votes.set(row.user_id, []);
+            }
+            votes.get(row.user_id).push(row.option_index);
         }
-        votes.get(rows[i].user_id).push(rows[i].option_index);
+        return votes;
+    } catch (err) {
+        logError(err, 'interactions', 'getPollVotes');
+        return new Map();
     }
-    return votes;
 }
 
 function getPollVotesFlat(messageId) {
-    const db = getDb();
-    const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
-    var votes = new Map();
-    for (var i = 0; i < rows.length; i++) {
-        votes.set(rows[i].user_id, rows[i].option_index);
+    try {
+        const db = getDb();
+        const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ?').all(messageId);
+        const votes = new Map();
+        for (const row of rows) {
+            votes.set(row.user_id, row.option_index);
+        }
+        return votes;
+    } catch (err) {
+        logError(err, 'interactions', 'getPollVotesFlat');
+        return new Map();
     }
-    return votes;
 }
 
 function setPollVoteInDb(messageId, userId, optionIndex) {
-    const db = getDb();
-    db.prepare('INSERT OR REPLACE INTO poll_votes (message_id, user_id, option_index, voted_at) VALUES (?, ?, ?, ?)')
-        .run(messageId, userId, optionIndex, Date.now());
+    try {
+        const db = getDb();
+        db.prepare('INSERT OR REPLACE INTO poll_votes (message_id, user_id, option_index, voted_at) VALUES (?, ?, ?, ?)')
+            .run(messageId, userId, optionIndex, Date.now());
+    } catch (err) {
+        logError(err, 'interactions', 'setPollVoteInDb');
+    }
 }
 
 function removePollVoteFromDb(messageId, userId) {
-    const db = getDb();
-    db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ?').run(messageId, userId);
+    try {
+        const db = getDb();
+        db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ?').run(messageId, userId);
+    } catch (err) {
+        logError(err, 'interactions', 'removePollVoteFromDb');
+    }
 }
 
 function removePollOptionVoteFromDb(messageId, userId, optionIndex) {
-    const db = getDb();
-    db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ? AND option_index = ?').run(messageId, userId, optionIndex);
+    try {
+        const db = getDb();
+        db.prepare('DELETE FROM poll_votes WHERE message_id = ? AND user_id = ? AND option_index = ?').run(messageId, userId, optionIndex);
+    } catch (err) {
+        logError(err, 'interactions', 'removePollOptionVoteFromDb');
+    }
 }
 
-// ──────────────────── Poll Vote Handler (log-style: clean fields, no bars) ────────────────────
+// ──────────────────── Poll Vote Handler ────────────────────
 
 async function handlePollVote(interaction, parts) {
     const prefix = parts[0];
@@ -380,7 +409,7 @@ async function handlePollVote(interaction, parts) {
     const isAnonymous = prefix === 'pa';
 
     // ── Record the vote ──
-    var userVoteAction = '';
+    let userVoteAction = '';
     if (isMulti) {
         const votes = getPollVotes(messageId);
         const userOptions = votes.get(userId) || [];
@@ -399,7 +428,7 @@ async function handlePollVote(interaction, parts) {
         setPollVoteInDb(messageId, userId, optionIndex);
         userVoteAction = 'anonymously cast';
     } else {
-        var votes = getPollVotesFlat(messageId);
+        const votes = getPollVotesFlat(messageId);
         if (votes.get(userId) === optionIndex) {
             removePollVoteFromDb(messageId, userId);
             userVoteAction = 'removed';
@@ -412,106 +441,113 @@ async function handlePollVote(interaction, parts) {
 
     // ── Reload votes ──
     const allVotes = getPollVotes(messageId);
-    var totalVoters = allVotes.size;
+    const totalVoters = allVotes.size;
 
-    var voteCounts = {};
-    for (var [uid, opts] of allVotes) {
-        for (var opt of opts) {
+    const voteCounts = {};
+    for (const [, opts] of allVotes) {
+        for (const opt of opts) {
             voteCounts[opt] = (voteCounts[opt] || 0) + 1;
         }
     }
-    var totalVotes = Object.keys(voteCounts).reduce(function(a, k) { return a + voteCounts[k]; }, 0);
+    const totalVotes = Object.values(voteCounts).reduce((a, b) => a + b, 0);
 
     // Find leading option
-    var leadingIdx = getLeadingOption(voteCounts);
+    const leadingIdx = getLeadingOption(voteCounts);
 
-    // ── Build updated embed (log-style: clean field values, no progress bars) ──
+    // ── Build updated embed ──
     const embed = EmbedBuilder.from(interaction.message.embeds[0]);
-    
     const fields = embed.data.fields || [];
-    
-    var updatedFields = [];
-    for (var i = 0; i < fields.length; i++) {
+
+    const updatedFields = fields.map((field, i) => {
         const count = voteCounts[i] || 0;
         const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-        var isLeading = (leadingIdx === i && count > 0);
-        
-        var optionName = fields[i].name;
-        var badge = '';
-        if (isLeading) badge = '  \uD83D\uDC51';
-        else if (count > 0 && leadingIdx !== null && count === voteCounts[leadingIdx] && leadingIdx !== i) badge = '  \uD83D\uDC51';
-        
-        updatedFields.push({
-            name: badge ? optionName.replace(/  \uD83C\uDFC6$/, '') + badge : optionName,
-            value: '\uD83D\uDCCA Votes: **' + count + '** (' + pct + '%)',
-            inline: fields[i].inline,
-        });
-    }
+        const isLeading = leadingIdx === i && count > 0;
+
+        let badge = '';
+        if (isLeading) badge = '  👑';
+        else if (count > 0 && leadingIdx !== null && count === voteCounts[leadingIdx] && leadingIdx !== i) badge = '  👑';
+
+        return {
+            name: badge ? field.name.replace(/  🏆$/, '') + badge : field.name,
+            value: '📊 Votes: **' + count + '** (' + pct + '%)',
+            inline: field.inline,
+        };
+    });
     embed.spliceFields(0, fields.length, updatedFields);
 
     // ── Build footer ──
-    var footerParts = ['\uD83D\uDDF3  ' + totalVoters + ' voter' + (totalVoters !== 1 ? 's' : '')];
+    const footerParts = ['🗳  ' + totalVoters + ' voter' + (totalVoters !== 1 ? 's' : '')];
     if (totalVotes > totalVoters) footerParts.push(totalVotes + ' total votes');
-    if (isMulti) footerParts.push('\uD83D\uDD01 Multi');
-    if (isAnonymous) footerParts.push('\uD83D\uDD75\uFE0F Anonymous');
-    
-    var desc = embed.data.description || '';
-    var endMatch = desc.match(/Ends <t:(\d+):R>/);
+    if (isMulti) footerParts.push('🔁 Multi');
+    if (isAnonymous) footerParts.push('🕵️ Anonymous');
+
+    const desc = embed.data.description || '';
+    const endMatch = desc.match(/Ends <t:(\d+):R>/);
     if (endMatch) {
         footerParts.push('Ends <t:' + endMatch[1] + ':R>');
     }
-    
-    embed.setFooter({ text: footerParts.join('  \u2022  ') });
+
+    embed.setFooter({ text: footerParts.join('  •  ') });
 
     // ── Defer first (instant ack — avoids 3-second timeout) ──
     await interaction.deferUpdate();
 
     // ── Update the embed after all DB ops ──
-    var components = interaction.message.components;
+    const components = interaction.message.components;
     await interaction.editReply({ embeds: [embed], components: components.length > 0 ? components : undefined });
 
     // ── Send confirmation ──
-    await interaction.followUp({ content: '\u2705 Vote ' + userVoteAction + '!', ephemeral: true });
+    try {
+        await interaction.followUp({ content: '✅ Vote ' + userVoteAction + '!', ephemeral: true });
+    } catch (err) {
+        logError(err, 'interactions', 'pollVoteFollowUp');
+    }
 }
 
 // ──────────────────── Poll Voters Button ────────────────────
 async function handlePollVoters(interaction) {
     const messageId = interaction.message.id;
-    
-    const db = getDb();
-    const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ? ORDER BY option_index, voted_at').all(messageId);
-    
-    if (rows.length === 0) {
-        return interaction.reply({ content: 'No votes have been cast yet.', ephemeral: true });
+
+    try {
+        const db = getDb();
+        const rows = db.prepare('SELECT user_id, option_index FROM poll_votes WHERE message_id = ? ORDER BY option_index, voted_at').all(messageId);
+
+        if (rows.length === 0) {
+            return interaction.reply({ content: 'No votes have been cast yet.', ephemeral: true });
+        }
+
+        const votersByOption = {};
+        const userIds = new Set();
+        for (const r of rows) {
+            if (!votersByOption[r.option_index]) votersByOption[r.option_index] = [];
+            votersByOption[r.option_index].push(r.user_id);
+            userIds.add(r.user_id);
+        }
+
+        const lines = ['**🗳️ Poll Voters**', ''];
+        const optNames = interaction.message.embeds[0]?.fields?.map(f => f.name) || [];
+
+        for (const optIdx in votersByOption) {
+            if (!Object.prototype.hasOwnProperty.call(votersByOption, optIdx)) continue;
+            const idx = parseInt(optIdx);
+            const voters = votersByOption[idx];
+            const name = optNames[idx] || 'Option ' + (idx + 1);
+            lines.push('**' + name + '** (' + voters.length + ' vote' + (voters.length !== 1 ? 's' : '') + '):');
+
+            const showVoters = voters.slice(0, 15);
+            const mentions = showVoters.map(uid => '<@' + uid + '>').join(', ');
+            if (voters.length > 15) mentions += ' +' + (voters.length - 15) + ' more';
+            lines.push(mentions);
+            lines.push('');
+        }
+
+        lines.push('📊 **' + userIds.size + '** total voter' + (userIds.size !== 1 ? 's' : ''));
+
+        await interaction.reply({ content: lines.join('\n').slice(0, 1900), ephemeral: true });
+    } catch (err) {
+        logError(err, 'interactions', 'handlePollVoters');
+        await interaction.reply({ content: 'Failed to load voters.', ephemeral: true });
     }
-    
-    var votersByOption = {};
-    var userIds = new Set();
-    for (var r of rows) {
-        if (!votersByOption[r.option_index]) votersByOption[r.option_index] = [];
-        votersByOption[r.option_index].push(r.user_id);
-        userIds.add(r.user_id);
-    }
-    
-    var lines = ['**\uD83D\uDDF3\uFE0F Poll Voters**', ''];
-    var optNames = interaction.message.embeds[0]?.fields?.map(function(f) { return f.name; }) || [];
-    
-    for (var optIdx in votersByOption) {
-        var idx = parseInt(optIdx);
-        var voters = votersByOption[idx];
-        var name = optNames[idx] || 'Option ' + (idx + 1);
-        lines.push('**' + name + '** (' + voters.length + ' vote' + (voters.length !== 1 ? 's' : '') + '):');
-        
-        var showVoters = voters.slice(0, 15);
-        var mentions = showVoters.map(function(uid) { return '<@' + uid + '>'; }).join(', ');
-        if (voters.length > 15) mentions += ' +' + (voters.length - 15) + ' more';
-        lines.push(mentions);
-        lines.push('');
-    }
-    
-    lines.push('\uD83D\uDCCA **' + userIds.size + '** total voter' + (userIds.size !== 1 ? 's' : ''));
-    
-    await interaction.reply({ content: lines.join('\n').slice(0, 1900), ephemeral: true });
 }
 
 // ──────────────────── Select Menu Handler ────────────────────

@@ -1585,7 +1585,8 @@ handlers.goodbye = async (message) => {
     try {
         await handler(message);
     } catch (err) {
-        console.error('[PrefixCmd] Error in ' + cmdName + ':', err);
+        const { logError } = require('./logError');
+        logError(err, 'prefixCommands', cmdName);
         message.reply('⚠️ An error occurred while executing that command.').catch(() => {});
     }
     return true;

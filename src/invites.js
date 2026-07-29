@@ -87,19 +87,19 @@ async function detectUsedInvite(member) {
 
         // No match found — invite may have been deleted after use (vanity/never-cached)
         inviteCache.set(guildId, newCache);
-        return null;
-    } catch (err) {
-        // Try to update cache anyway
-        try {
-            const invites = await member.guild.invites.fetch();
-            const nc = new Map();
-            for (const [c, inv] of invites) {
-                nc.set(c, { uses: inv.uses || 0, inviterId: inv.inviter?.id || null });
+        return null;            } catch (err) {
+                logError(err, 'invites', 'detectUsedInvite');
+                // Try to update cache anyway
+                try {
+                    const invites = await member.guild.invites.fetch();
+                    const nc = new Map();
+                    for (const [c, inv] of invites) {
+                        nc.set(c, { uses: inv.uses || 0, inviterId: inv.inviter?.id || null });
+                    }
+                    inviteCache.set(guildId, nc);
+                } catch {}
+                return null;
             }
-            inviteCache.set(guildId, nc);
-        } catch {}
-        return null;
-    }
 }
 
 // ──────────────────── DB Operations ────────────────────

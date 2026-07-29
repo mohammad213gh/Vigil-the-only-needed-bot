@@ -15,8 +15,11 @@ function getDataDir() {
     if (!fs.existsSync(dir)) {
         try {
             fs.mkdirSync(dir, { recursive: true });
+            console.log('[Data] Created data directory:', dir);
         } catch (err) {
             console.error('[Data] Failed to create data directory:', err.message);
+            // Fall back to project root if data dir can't be created
+            return path.join(__dirname, '..');
         }
     }
     return dir;
