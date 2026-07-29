@@ -955,6 +955,8 @@ async function loadAutomod(){
     const channels=d.channels||[];
     const roles=d.roles||[];
     const cs=d.channelSettings||{includedChannels:[],excludedChannels:[],whitelistedRoles:[]};
+    console.log('[AM] loadAutomod got channelSettings:',JSON.stringify(cs));
+    console.log('[AM] includedChannels length:',cs.includedChannels?.length,'value:',cs.includedChannels);
 
     // Build rule cards
     const ruleConfigs=[
@@ -1164,11 +1166,16 @@ async function saveAMChannels(serverId){
   }else{
     inc=[];exc=[];
   }
+  console.log('[AM] Saving channels:',JSON.stringify({mode,inc,exc}));
   try{
     var r=await fetch('/api/server/'+serverId+'/automod/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({includedChannels:inc,excludedChannels:exc})});
     var d=await r.json();
-    if(d.success){showToast('Channel settings saved!');loadAutomod()}else showToast('Failed',true);
-  }catch{showToast('Failed',true)}
+    console.log('[AM] Save response:',JSON.stringify(d));
+    if(d.success){
+      showToast('Channel settings saved!');
+      loadAutomod()
+    }else showToast('Failed',true);
+  }catch(e){console.log('[AM] Save error:',e);showToast('Failed',true)}
 }
 async function saveAMRoles(serverId){
   var wh=[];

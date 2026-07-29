@@ -1081,6 +1081,7 @@ function createDashboard() {
             const wordFilters = getAutoModFilters(guild.id, 'words');
             const linkFilters = getAutoModFilters(guild.id, 'links');
             const config = getAutoModConfig(guild.id);
+            console.log('[AM-DEBUG] GET automod for', guild.id, ': channelSettings=', JSON.stringify({ includedChannels: config.includedChannels, excludedChannels: config.excludedChannels }));
             // Get all text channels for the channel picker
             const channels = guild.channels.cache
                 .filter(c => c.type === 0 || c.type === 5)
@@ -1181,12 +1182,17 @@ function createDashboard() {
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         const { includedChannels, excludedChannels, whitelistedRoles } = req.body;
+        console.log('[AM-DEBUG] Save channels request for', guild.id, ':', { includedChannels, excludedChannels, whitelistedRoles });
         try {
             const updates = {};
             if (includedChannels !== undefined) updates.includedChannels = includedChannels;
             if (excludedChannels !== undefined) updates.excludedChannels = excludedChannels;
             if (whitelistedRoles !== undefined) updates.whitelistedRoles = whitelistedRoles;
             const result = updateAutoModConfig(guild.id, updates);
+            console.log('[AM-DEBUG] Save channels result:', JSON.stringify(result));
+            // Verify by re-reading
+            const verify = getAutoModConfig(guild.id);
+            console.log('[AM-DEBUG] Verify readback:', JSON.stringify(verify));
             res.json({ success: true, channelSettings: result });
         } catch (err) {
             res.status(500).json({ error: err.message });
