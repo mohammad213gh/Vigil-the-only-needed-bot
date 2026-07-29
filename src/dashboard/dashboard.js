@@ -1055,6 +1055,8 @@ async function loadAutomod(){
     '</div>';
 
     updateRefreshTimestamp('automod');
+    // Trigger scroll reveal for newly added elements
+    setTimeout(function(){document.querySelectorAll('#sec-automod .sr').forEach(function(el){srObs.observe(el)})},50);
   }catch(e){
     el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Could not load auto-mod config</p><p class="empty-act">'+e.message+'</p></div>';
   }
