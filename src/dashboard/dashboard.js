@@ -229,7 +229,13 @@ async function loadAudit(){
       return;
     }
 
-    el.innerHTML=entries.map(function(e){
+    var validEntries=entries.filter(function(e){return e.type&&e.type!=='Undefined'&&e.type!=='undefined';});
+    if(!validEntries.length){
+      el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><p>No audit entries available</p><p class="empty-act">Discord audit log entries without recognizable action types were skipped. Try running moderation commands or enabling message tracking to populate the feed.</p></div>';
+      updateRefreshTimestamp('auditlog');
+      return;
+    }
+    el.innerHTML=validEntries.map(function(e){
       var tm=e.timestamp?timeSince(e.timestamp):'';
       var sc={discord:'rgba(var(--accent-rgb),0.12)',moderation:'rgba(241,196,15,0.12)',messages:'rgba(59,165,92,0.12)',members:'rgba(59,165,92,0.12)'};
       var st={discord:'var(--accent)',moderation:'#f1c40f',messages:'#3ba55c',members:'#3ba55c'};

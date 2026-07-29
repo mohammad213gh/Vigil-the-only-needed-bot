@@ -1108,17 +1108,19 @@ function createDashboard() {
                         id: 'discord_' + e.id,
                         source: 'discord',
                         type: (function(ea){
+                            if(ea == null) return 'Audit Event';
                             // Discord.js v14 uses numeric enum values (e.g. 22 for MemberKick)
                             if(typeof ea === 'number'){
                                 try {
                                     const name = require('discord.js').AuditLogEvent[ea];
                                     if(name) return name.replace(/([A-Z])/g, ' $1').trim();
                                 } catch {}
-                                return 'Audit Action' + ea;
+                                return 'Audit Action ' + ea;
                             }
                             return String(ea).replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         })(e.action),
                         icon: (function(ea){
+                            if(ea == null) return '\uD83D\uDD35';
                             if(typeof ea === 'number'){
                                 try {
                                     const name = require('discord.js').AuditLogEvent[ea];
