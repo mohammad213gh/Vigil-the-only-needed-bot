@@ -2,7 +2,7 @@
 
 # NLux Bot
 
-**63 Slash Commands · Web dashboard · Full source code · Invite tracking · Staff notes · Log search**
+**65+ Slash Commands · Full web dashboard · Complete source code · SQLite persistent · No monthly fees**
 
 > **$39** · One-time payment · Full source code
 
@@ -13,7 +13,7 @@
 
 **The self-hosted Discord management bot that refuses to put features behind a paywall**
 
-> Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization · Invite Tracking · Staff Notes · Log Search · Auto-Mod
+> Full logging (16 categories) · Moderation · Auto-Mod · Custom Web Dashboard · Invite Tracking · Staff Notes · Reaction Roles · Role Menus · Message Search · Advanced Polls · Reminders · Warning Thresholds · Welcome/Goodbye · Activity Insights · Temp Bans · Permission System · And more
 
 </div>
 
@@ -21,19 +21,17 @@
 
 ## What Is This?
 
-This is a complete Discord management bot, battle-tested in my own server. Fully self-hosted, persistent SQLite database, a full web dashboard, and zero dependency on any third-party service.
+This is a complete Discord management bot, battle-tested in my own server. Fully self-hosted, persistent SQLite database, a full web dashboard with real-time events, and zero dependency on any third-party service.
 
 You get the **full source code**. You host it yourself. You own every piece of it. No monthly fee.
 
-**Logging · Moderation · Reaction Roles · Dashboard · Stats · Reminders · Customization · Invite Tracking · Staff Notes · Log Search · Auto-Mod**
-
-It comes with 63 slash commands across moderation, logging, invite tracking, staff notes, log search, reaction roles, fun, utility, auto-mod, and stats — but the real selling points are the ones you can't get from a premium bot: **your own dashboard, your own data, and no subscription.**
+It comes with **65+ slash commands** across moderation, auto-mod, logging, invite tracking, staff notes, message search, reaction roles, role menus, polls, reminders, fun, utility, and stats — but the real selling points are the ones you can't get from a premium bot: **your own dashboard, your own data, and no subscription.**
 
 ---
 
 ## Why?
 
-I got tired of Discord bots locking basic features behind monthly subscriptions. Want to log who left? That's $5/month. Reaction roles? Another tier. A dashboard to manage your server? Upgrade again.
+I got tired of Discord bots locking basic features behind monthly subscriptions. Want to log who left? That's $5/month. Reaction roles? Another tier. A dashboard to manage your server? Upgrade again. Want to know who invited someone? That's premium only. Want auto-mod without paying extra? Good luck.
 
 So I built my own. Everything my server needed, from scratch. 30+ rewrites of the dashboard alone until it felt right. One memory leak that took weeks to find and almost made me scrap the whole project.
 
@@ -45,33 +43,39 @@ I've been running this bot in my own server for a long time. It works. Now I'm s
 
 This isn't meant to compete with long-established bots like MEE6, Dyno, or Carl-bot. Those projects have years of development and teams behind them. The goal here is different: complete control, self-hosting, and no premium paywalls.
 
-**You host it. You control it. You don't pay monthly.**
+**You host it. You control it. You pay once.**
 
 | Feature | NLux Bot | MEE6 | Dyno | Carl-bot |
 |---|---|---|---|---|
-| Moderation | ✅ Yes | ✅ Free tier | ✅ Free tier | ✅ Free tier |
-| Mod-Log Cases | ✅ Yes | ❌ | ❌ | ❌ |
-| Logging | ✅ 16 categories | ✅ Free (limited) | ✅ Free (basic) | ✅ Free |
-| Invite Tracking | ✅ Yes | 🔒 Premium | ❌ | ❌ |
-| Staff Notes | ✅ Yes | ❌ | ❌ | ❌ |
-| Log Search | ✅ Yes | ❌ | ❌ | ❌ |
-| Auto-Moderation | ✅ Yes | 🔒 Premium | 🔒 Premium | ✅ Free |
+| Moderation (kick/ban/timeout/warn) | ✅ Full suite | ✅ Free tier | ✅ Free tier | ✅ Free tier |
+| Temp Bans (auto-unban) | ✅ Yes | ❌ | ❌ | ✅ Yes |
+| Mod-Log Cases (numbered, searchable) | ✅ Yes | ❌ | ❌ | ❌ |
+| **16 Logging Categories** | ✅ Yes | ✅ Free (limited) | ✅ Free (basic) | ✅ Free |
+| Dynamic Channel Perms Logging | ✅ Yes | ❌ | ❌ | ❌ |
+| Invite Tracking (detects exact code) | ✅ Yes | 🔒 Premium | ❌ | ❌ |
+| Staff Notes (private, per-user) | ✅ Yes | ❌ | ❌ | ❌ |
+| Log Search & Filtering | ✅ Yes | ❌ | ❌ | ❌ |
+| Auto-Mod (5 rule types, 4 actions) | ✅ Yes | 🔒 Premium | 🔒 Premium | ✅ Free |
+| Warning Thresholds (auto-punish) | ✅ Yes | ❌ | ❌ | ❌ |
 | Reaction Roles | ✅ Yes | ✅ Free (limited) | ✅ Free (modules) | ✅ Free |
-| Role Menus (Dropdowns) | ✅ Yes | ❌ | ❌ | ✅ Free |
-| Reminders | ✅ Yes | ❌ | ❌ | ✅ Free |
-| Fun Commands | ✅ Yes | ✅ Free | ✅ Free | ❌ |
-| Web Dashboard | ✅ Yes | ✅ Free | 🔒 Premium | ❌ |
-| Customization | ✅ Themes, colors, glass | ❌ | ❌ | ❌ |
-| Prefix Commands | ✅ Yes | ❌ | ✅ Yes | ✅ Yes |
-| Permission System | ✅ Yes | 🔒 Premium | 🔒 Premium | 🔒 Premium |
-| Server Stats / Growth | ✅ Yes | 🔒 Premium | ❌ | ❌ |
-| Self-Hosted (own data) | ✅ Yes | ❌ Cloud | ❌ Cloud | ❌ Cloud |
+| Role Menus (Dropdown Select) | ✅ Yes | ❌ | ❌ | ✅ Free |
+| Advanced Polls (multi/anonymous/timed) | ✅ Yes | ❌ | ❌ | ❌ |
+| Reminders (DM-based, persistent) | ✅ Yes | ❌ | ❌ | ✅ Free |
+| Fun Commands (12 games) | ✅ Yes | ✅ Free | ✅ Free | ❌ |
+| **Web Dashboard** (full UI w/ auto-mod) | ✅ Yes | ✅ Free | 🔒 Premium | ❌ |
+| Activity Insights (top users/channels) | ✅ Yes | ❌ | ❌ | ❌ |
+| Growth Stats (daily + 90-day history) | ✅ Yes | ❌ | ❌ | ❌ |
+| Command Usage Stats | ✅ Yes | ❌ | ❌ | ❌ |
+| Customization (themes/colors/glass) | ✅ Yes | ❌ | ❌ | ❌ |
+| Granular Permission System | ✅ Yes | 🔒 Premium | 🔒 Premium | 🔒 Premium |
+| Audit Log Viewer (in dashboard) | ✅ Yes | ❌ | ❌ | ❌ |
+| Self-Hosted (own your data) | ✅ Yes | ❌ Cloud | ❌ Cloud | ❌ Cloud |
 | **One-Time Payment** | ✅ **$39** | ❌ $5–$12/mo | ❌ $5–$10/mo | ❌ $5–$10/mo |
 
 **The honest tradeoffs:**
 - **Polished UI?** MEE6 and Dyno have better docs and sleeker UIs. They've been doing this longer.
 - **Features?** Premium bots have niche stuff like leveling, music, giveaways, and ticket systems built in.
-- **Reliability?** Cloud bots have 99.9% uptime. This one goes down when Railway goes down.
+- **Reliability?** Cloud bots have 99.9% uptime. This one goes down when your host goes down.
 - **But** — you pay once, you own your data, you can customize everything, and you're not locked into a subscription.
 
 ---
@@ -88,58 +92,58 @@ Both systems work side-by-side. Use whatever feels natural.
 
 ### Full Command List by Category
 
-**📋 Info** — Public
-`/help` `/ping` `/status` `/botinfo` `/userinfo` `/avatar` `/stats server` `/stats growth` `/stats commands`
+**📋 Info (7)** — Public
+`/help` `/ping` `/status` `/botinfo` `/userinfo` `/avatar` `/stats server/growth/commands`
 
-**🎮 Fun** — Public
+**🎮 Fun (12)** — Public
 `/8ball` `/coinflip` `/dice` `/rps` `/joke` `/fact` `/advice` `/quote` `/reverse` `/mock` `/random` `/worldcup`
 
-**⏰ Reminders** — Public
-`/remindme` `/reminders list` `/reminders cancel`
+**⏰ Reminders (2)** — Public
+`/remindme` `/reminders list/cancel`
 
-**🛡️ Moderation** — Owner-only (grantable)
-`/kick` `/ban` `/unban` `/timeout` `/untimeout` `/warn` `/warnings` `/clearwarnings` `/lock` `/unlock` `/purge` `/slowmode` `/nickname`
+**🛡️ Moderation (14)** — Owner-only (grantable)
+Kick (with confirm) · Ban (delete msg options + confirm) · Tempban (auto-unban) · Unban · Timeout · Untimeout · Warn (modal input or direct + auto-DM) · Warnings · Clearwarnings · Lock channel · Unlock channel · Purge (with confirm) · Slowmode · Nickname
 
-**📜 Mod-Log** — Owner-only (grantable)
-`/history` `/case` `/reason`
+**📜 Mod-Log Cases (3)** — Owner-only (grantable)
+`/history` · `/case` · `/reason` — Full numbered case system
 
-**📊 Admin** — Owner-only (grantable)
-`/role add` `/role remove` `/role list` `/say` `/embed` `/deploy` `/track add` `/track remove` `/track list` `/poll` `/announce`
+**📊 Admin (10)** — Owner-only (grantable)
+Role add/remove/list · Say · Embed · Deploy · Track add/remove/list · Poll (multi/anonymous/timed) · Announce
 
-**⚙️ Config** — Owner-only
-`/log channel` `/log toggle` `/log list` `/embedconfig footer` `/embedconfig color` `/embedconfig show` `/presence` `/botavatar` `/botname` `/prefix`
+**⚙️ Config (6)** — Owner-only
+Log channel/toggle/list · Embedconfig footer/color/show · Presence · Botavatar · Botname · Prefix
 
-**🔐 Permissions** — Owner-only
-`/perm grant` `/perm revoke` `/perm list` `/perm user`
+**🔐 Permissions (4)** — Owner-only
+`/perm grant/revoke/list/user` — Granular per-command access
 
-**🔄 Reaction Roles** — Owner-only
-`/reactionrole add` `/reactionrole remove` `/reactionrole list`
+**🔄 Reaction Roles (3)** — Owner-only
+`/reactionrole add/remove/list`
 
-**📋 Role Menus** — Owner-only
-`/rolemenu create` `/rolemenu add` `/rolemenu remove` `/rolemenu publish` `/rolemenu list`
+**📋 Role Menus (5)** — Owner-only
+`/rolemenu create/add/remove/publish/list` — Dropdown select menus
 
-**🤖 Auto-Mod** — Owner-only
-`/automod config` `/automod list` `/automod filter` `/automod filters`
+**🤖 Auto-Mod (4)** — Owner-only
+`/automod config/list/filter/filters` — 5 rule types, 4 actions, import/export
 
-**👋 Welcome / Goodbye** — Owner-only
-`/welcome channel` `/welcome toggle` `/welcome message` `/welcome title` `/welcome description` `/welcome color` `/welcome footer` `/welcome thumbnail` `/welcome image` `/welcome author` `/welcome show` `/welcome test` `/welcome reset`
-`/goodbye channel` `/goodbye toggle` `/goodbye message` `/goodbye title` `/goodbye description` `/goodbye color` `/goodbye footer` `/goodbye thumbnail` `/goodbye image` `/goodbye author` `/goodbye show` `/goodbye test` `/goodbye reset`
+**⚠️ Warning Thresholds (3)** — Owner-only
+`/thresholds add/remove/list` — Auto-punish at X warnings
 
-**📨 Invite Tracking** — Owner-only (grantable)
-`/invites check` `/invites top` `/invites stats`
+**👋 Welcome / Goodbye (26)** — Owner-only
+Full per-field embed customization with 25+ placeholders
 
-**📝 Staff Notes** — Owner-only (grantable)
-`/note add` `/note list` `/note edit` `/note remove`
+**📨 Invite Tracking (3)** — Owner-only (grantable)
+`/invites check/top/stats`
 
-**🔍 Log Search** — Owner-only (grantable)
-`/logs search`
+**📝 Staff Notes (4)** — Owner-only (grantable)
+`/note add/list/edit/remove`
 
-**👑 Owner** — Owner only
-`/dashboard` `/dashaccess add` `/dashaccess remove` `/dashaccess list` `/server_leave` `/shutdown`
+**🔍 Log Search (1)** — Owner-only (grantable)
+`/logs search` — Search by user, keyword, action type
+
+**👑 Owner (4)** — Owner only
+`/dashboard` `/dashaccess add/remove/list` `/server_leave` `/shutdown`
 
 > 💡 Use `/perm grant @user command` to let trusted people use specific commands, or `/perm grant @user all` to grant everything at once.
-
-Use `/perm grant @user command` to let trusted people use specific commands, or `/perm grant @user all` to grant everything at once.
 
 > **After first deploy or any update, run `/deploy` in your server** to sync all commands.
 
@@ -149,16 +153,31 @@ Use `/perm grant @user command` to let trusted people use specific commands, or 
 
 ```
 Features
-├── 63 Slash Commands
-├── 40 Discord events logged
-├── 16 logging categories
-├── Invite tracking + detection
-├── Staff notes system
-├── Log search & filtering
-├── Auto-moderation (spam, words, links, caps, mentions)
-├── Slash + Prefix support
-├── Web dashboard with live stats & mod panel
-└── SQLite persistence (no external DB)
+├── 65+ Slash Commands
+├── 40+ Discord events logged across 16 categories
+│   messages · reactions · members · roles · server (channels/perms) · voice
+│   threads · bans · invites · emojis · stickers · stage · scheduled events
+│   automod rules · webhooks · integrations
+├── Custom auto-moderation — 5 rule types: spam, words, links, caps, mentions
+│   Each with 4 action options: warn, delete, timeout, kick
+├── Warning thresholds — auto punish at configurable warn counts
+├── Temp bans with auto-unban (survives bot restarts)
+├── Invite tracking — detects the exact invite code used per join
+├── Staff notes — private per-user notes, full CRUD
+├── Log search & filtering by user, keyword, action type
+├── Self-assignable roles — reaction roles + dropdown role menus
+├── Advanced polls — multi-vote, anonymous, timed auto-finalize
+├── Reminder system — DM-based, persistent, auto-cleanup
+├── Welcome/goodbye — fully customizable embeds + 25+ placeholders
+├── Activity insights — top users, top channels by message count
+├── Daily member growth snapshots (90 days of history)
+├── Command usage stats (per-server + global)
+├── Granular permission system (per-command per-user)
+├── Slash + prefix command support (configurable per server)
+├── Web dashboard with live stats, mod panel, audit viewer, auto-mod UI
+├── Cooldown system, friendly error messages, graceful shutdown
+├── SQLite persistence (no external database needed)
+└── Docker + Discloud ready
 ```
 
 ---
@@ -169,25 +188,34 @@ The dashboard is a full web interface that runs alongside your bot. It's customi
 
 ```
 Dashboard
-├── Overview           — Live status, uptime, memory, member count
-├── Logging            — Toggle 16 categories per server, set channels
-├── Mod Tools          — Quick warn/kick/ban/timeout + staff notes + invite stats
-├── Audit Logs         — Browse recent events with filters
-├── Customization      — Themes, colors, cards, animations
-├── Statistics         — Growth charts, command usage, server trends
-└── Account Settings   — Profile, tokens, session management
+├── Overview              — Live status, uptime, memory, member count
+├── Server View           — Per-server stats, prefix, role/channel browser
+├── Logging               — Toggle all 16 categories, set per-category channels
+├── Mod Tools             — Quick warn/kick/ban/timeout + staff notes + invites
+├── Audit Log Viewer      — Browse Discord audit log with filters
+├── Auto-Mod Panel        — Full rule config, word/link filters, channel/role rules
+├── Welcome/Goodbye       — Visual config for every embed field
+├── Customization         — Themes, colors, glassmorphism, animations, backgrounds
+├── Statistics            — Growth charts, command usage, server trends
+├── Activity Insights     — Top users & channels by message count
+├── Commands Explorer     — Searchable command reference
+├── Bot Settings          — Change name, avatar, presence live
+├── Account / Sessions    — Profile, dashboard access management
+└── Real-Time Events      — Live SSE feed for message deletes/edits
 ```
 
 ### URL Structure
 
 ```
-/dashboard          → Login / landing
-/dashboard/{id}     → Server overview (includes Mod Tools tab)
-/dashboard/{id}/logs      → Logging config
-/dashboard/{id}/moderation → Mod actions
-/dashboard/{id}/audit      → Audit log viewer
-/dashboard/{id}/settings   → Server customization
-/dashboard/admin           → Bot-wide settings
+/dashboard                    → Login / landing
+/dashboard/{id}               → Server overview + Mod Tools
+/dashboard/{id}/logs          → Logging configuration
+/dashboard/{id}/moderation    → Mod action panel
+/dashboard/{id}/audit         → Audit log viewer
+/dashboard/{id}/settings      → Server & dashboard customization
+/dashboard/{id}/automod       → Auto-mod configuration
+/dashboard/{id}/greetings     → Welcome/goodbye config
+/dashboard/admin              → Bot-wide settings & stats
 ```
 
 ### Screenshots
@@ -203,25 +231,30 @@ Dashboard
 
 ---
 
-## Architecture
+## Under the Hood
 
 ```
 Discord
   │
-Discord.js v14
+Discord.js v14 (9 intents, 4 partials)
   │
-┌─────────────────┐
-│   Bot Process    │
-│  (single thread) │
-│  80–100 MB RAM   │
-└─────────────────┘
+┌──────────────────────────────┐
+│      Bot Process             │
+│   (single-threaded Node.js)  │
+│   80–120 MB RAM (typical)    │
+│   Cooldown system            │
+│   Friendly error handling    │
+│   Graceful shutdown (SIG*)   │
+└──────────────────────────────┘
   │
 SQLite Database (better-sqlite3)
+  │   └── bot.db stores everything
   │
 Express Dashboard (web UI)
+  │   └── SSE real-time events
+  │   └── Multer file uploads
+  │   └── Rate-limited auth (password OR Discord token)
 ```
-
-A single Node.js process handles both the Discord bot and the web dashboard. No microservices, no containers required—just one process, one database, and a flat file structure.
 
 ### Tech Stack
 
@@ -233,6 +266,7 @@ A single Node.js process handles both the Discord bot and the web dashboard. No 
 | Database | SQLite (better-sqlite3) |
 | File Uploads | Multer |
 | Dashboard Frontend | Vanilla HTML/CSS/JS |
+| Deployment | Docker · Railway · Discloud |
 
 ---
 
@@ -240,40 +274,46 @@ A single Node.js process handles both the Discord bot and the web dashboard. No 
 
 - **SQLite** — No external database server needed. Everything lives in a single file inside your `DATA_DIR`.
 - **Single process** — The bot and dashboard share one Node.js instance. No extra overhead.
-- **Memory usage** — ~80–100 MB on a server with 200+ members. Tested and stable over weeks of uptime.
-- **Graceful shutdown** — Catches SIGTERM/SIGINT, closes database connections cleanly, and writes pending data. No corruption on restart.
-- **Designed for long-term hosting** — Runs for weeks without issues on Railway, Fly.io, or a $5 VPS.
+- **Memory usage** — ~80–120 MB on a server with 200+ members. Tested and stable over weeks of uptime.
+- **Cooldown system** — Per-command cooldowns prevent abuse and API rate limits.
+- **Temp ban persistence** — Pending unbans survive bot restarts. Auto-restored on next boot.
+- **Graceful shutdown** — Catches SIGTERM/SIGINT, closes database cleanly.
+- **Designed for long-term hosting** — Runs for weeks on Railway, Fly.io, or a $5 VPS.
 
 ---
 
 ## Security
 
-- **Rate-limited login** — The dashboard login endpoint is rate-limited per IP. Nobody can brute force your password.
-- **Session tokens** — Dashboard sessions use cryptographically random tokens. Revoking a user's access immediately invalidates all their sessions.
-- **Ephemeral commands** — Sensitive operations (permissions, deployment, shutdown, config) reply privately so only you see them.
-- **Permission system** — Granular control over who can use which commands. No need to give out admin roles.
-- **Force leave** — `/server_leave` lets you remove the bot from any server instantly.
-- **No tracking** — No analytics, no telemetry, no external API calls except to Discord. Your data stays yours.
+- **Rate-limited login** — The dashboard login endpoint is rate-limited per IP (10 attempts/min).
+- **Dual auth** — Log in with a password OR your Discord ID + per-user access token.
+- **Session tokens** — Cryptographically random tokens. Revoking access instantly invalidates all sessions.
+- **Ephemeral commands** — Sensitive operations reply privately so only you see them.
+- **Granular permission system** — Grant specific commands to specific users. No need to give out admin roles.
+- **Force leave** — `/server_leave` removes the bot from any server instantly.
+- **Cross-guild channel validation** — Prevents accidental cross-server log leaks.
+- **No tracking** — No analytics, no telemetry, no external API calls except to Discord.
 
 ---
 
 ## Customization
 
-The bot and dashboard are designed to look and feel the way *you* want.
-
 **Dashboard customization includes:**
 - **Themes** — Light, dark, and custom presets
-- **Accent colors** — Pick any color for buttons, headers, and highlights
-- **Background effects** — Gradients, patterns, or solid colors
+- **Accent colors** — Any color for buttons, headers, highlights
+- **Backgrounds** — Gradients, patterns, solids, or upload your own image
 - **Glassmorphism** — Frosted glass card styles
 - **Card styles** — Flat, elevated, outlined, or glass
-- **Animation speed** — Slow, normal, fast, or no animations
+- **Animation speed & presets** — Slow/normal/fast or disable completely
 - **Rounded corners** — From sharp to fully pill-shaped
+- **Layout density** — Compact, normal, or spacious
+- **Card glow & ambient light** — Toggle visual effects
 
 **Bot customization includes:**
-- Change the bot's name, avatar, and presence status
+- Change the bot's name, avatar, and presence status (dashboard + commands)
 - Per-server prefix configuration
-- Per-server logging categories and channels
+- Per-server logging categories/channels and embed colors
+- Custom embed footer text and icon
+- 25+ placeholders for welcome/goodbye messages
 
 ---
 
@@ -291,8 +331,8 @@ The bot and dashboard are designed to look and feel the way *you* want.
 ## Requirements
 
 - **Node.js 20+** (required for Discord.js v14 features)
-- **A Discord bot token** from the [Developer Portal](https://discord.com/developers/applications) — enable **Message Content**, **Guild Members**, and **Presence Intent**
-- **A hosting provider** — I recommend Railway (free tier works), but any VPS, Fly.io, or Discloud works too
+- **A Discord bot token** from the [Developer Portal](https://discord.com/developers/applications) — enable **Message Content**, **Guild Members**, **Presence Intent**, **Guild Messages**, **Guild Message Reactions**, **Voice States**, **Guild Scheduled Events**, **Guild Moderation**, and **Guild Expressions**
+- **A hosting provider** — Railway (free tier works), any VPS, Fly.io, or Discloud
 
 ---
 
@@ -318,7 +358,7 @@ Run `/deploy` in your Discord server after first launch to register all commands
 
 1. Push the code to a private GitHub repo and connect it on Railway
 2. Go to **Volumes** → **Add Volume** → mount at `/data`
-3. Set your env vars in Railway's dashboard (not a .env file):
+3. Set your env vars in Railway's dashboard:
    - `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `DATA_DIR=/data`
 4. Go to **Settings** → **Networking** → **Generate Domain** for the dashboard
 5. Run `/deploy` in your server after deploy
@@ -334,13 +374,15 @@ docker run -p 3000:3000 --env-file .env -v /host/data:/data -e DATA_DIR=/data di
 
 ## Data Persistence
 
-Everything saves to a single SQLite database (`bot.db`) inside your `DATA_DIR`. That means warnings, configs, stats, reminders, dashboard settings — they all survive restarts, redeploys, and crashes as long as `DATA_DIR` points to persistent storage.
+Everything saves to a single SQLite database (`bot.db`) inside your `DATA_DIR`. Warnings, configs, stats, reminders, dashboard settings, poll votes, command usage, message history, activity counts, temp bans, staff notes, invite records, auto-mod rules, warning thresholds — they all survive restarts, redeploys, and crashes.
 
 On Railway this means setting up a volume. Takes 2 minutes and you never lose data again.
 
 ---
 
 ## License & Terms
+
+This software is distributed under a **Proprietary License**. See the [LICENSE](LICENSE) file for the full legal terms.
 
 When you purchase NLux Bot Premium, you get:
 
