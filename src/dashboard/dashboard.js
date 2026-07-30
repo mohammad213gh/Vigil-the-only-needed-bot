@@ -985,7 +985,7 @@ async function loadTickets(){
           '<button class="btn btn-s" onclick="deleteTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:3px 8px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
           '<div style="padding:8px 12px;">'+
           (typeRows||'<div style="font-size:11px;color:var(--text-dim);padding:4px 0;">No types yet.</div>')+
-          '<button class="btn btn-s" onclick="addTicketType(\''+serverId+'\',\''+p.id+'\')" style="width:100%;padding:5px;font-size:10px;margin-top:3px;">+ Add Type</button>'+
+          '<div style="display:flex;padding:4px 0 0 0;"><button class="btn" onclick="addTicketType(\''+serverId+'\',\''+p.id+'\')" style="padding:6px 16px;font-size:11px;margin-left:auto;">+ Add Type</button></div>'+
           '</div></div>';
       }
     }else{
