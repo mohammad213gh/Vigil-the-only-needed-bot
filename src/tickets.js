@@ -92,11 +92,48 @@ function deletePanel(panelId) {
     db.prepare('DELETE FROM ticket_panels WHERE id = ?').run(panelId);
 }
 
+function clonePanel(panelId) {
+    const db = getDb();
+    const panel = db.prepare('SELECT * FROM ticket_panels WHERE id = ?').get(panelId);
+    if (!panel) return null;
+    const newId = generateId();
+    const newName = (panel.name || 'Panel') + ' (copy)';
+    db.prepare(`INSERT INTO ticket_panels (id, guild_id, name, channel_id, panel_message_id, color, image_url, description, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        newId, panel.guild_id, newName, null, null, panel.color || '#5865F2',
+        panel.image_url || null, panel.description || '', Date.now()
+    );
+    // Clone all types
+    const types = db.prepare('SELECT * FROM ticket_panel_types WHERE panel_id = ?').all(panelId);
+    for (const t of types) {
+        const newTypeId = generateId();
+        db.prepare(`INSERT INTO ticket_panel_types (id, panel_id, guild_id, name, emoji, category_id, support_roles, welcome_message, ticket_name_format, questions, sort_order, created_at, inactivity_timeout, inactivity_grace)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+            newTypeId, newId, t.guild_id, t.name, t.emoji, t.category_id,
+            t.support_roles, t.welcome_message, t.ticket_name_format,
+            t.questions, t.sort_order, Date.now(), t.inactivity_timeout, t.inactivity_grace
+        );
+    }
+    return getPanel(newId);
+}
+
 // ──────────────────── Panel Type CRUD ────────────────────
 
 function getPanelTypes(panelId) {
     const db = getDb();
     return db.prepare('SELECT * FROM ticket_panel_types WHERE panel_id = ? ORDER BY sort_order ASC, created_at ASC').all(panelId);
+}
+
+function getPanelTicketCounter(panelId) {
+    const db = getDb();
+    const row = db.prepare('SELECT ticket_counter FROM ticket_panels WHERE id = ?').get(panelId);
+    return row ? row.ticket_counter : null;
+}
+
+function setPanelTicketCounter(panelId, count) {
+    const db = getDb();
+    db.prepare('UPDATE ticket_panels SET ticket_counter = ? WHERE id = ?').run(count, panelId);
+    return true;
 }
 
 function getPanelType(typeId) {
@@ -216,13 +253,15 @@ async function createTicket(guild, creator, panelType, answers) {
 
     updateTicketConfig(guild.id, { ticket_count: ticketNumber });
 
-    // Build channel name
+    // Build channel name (Feature 5 - extended tokens)
     const safeName = creator.username.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
     const nameFormat = type.ticket_name_format || 'ticket-{username}-{number}';
     const channelName = nameFormat
         .replace('{username}', safeName)
-        .replace('{number}', String(ticketNumber))
+        .replace('{number}', String(ticketNumber).padStart(4, '0'))
         .replace('{name}', safeName)
+        .replace('{type}', (type.name || 'ticket').toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20))
+        .replace('{category}', (type.name || 'ticket').toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 10))
         .replace(/[^a-z0-9-]/g, '')
         .slice(0, 96) || ('ticket-' + safeName + '-' + ticketNumber);
 
@@ -271,10 +310,10 @@ async function createTicket(guild, creator, panelType, answers) {
 
     // Store in DB
     const answersJson = answers ? JSON.stringify(answers) : null;
-    db.prepare(`INSERT INTO tickets (id, guild_id, ticket_number, channel_id, creator_id, creator_tag, panel_type_id, panel_type_name, status, reason, answers, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    db.prepare(`INSERT INTO tickets (id, guild_id, ticket_number, channel_id, creator_id, creator_tag, panel_type_id, panel_type_name, status, reason, answers, created_at, last_activity_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
         ticketId, guild.id, ticketNumber, channel.id, creator.id, creator.tag,
-        type.id, type.name, 'open', null, answersJson, Date.now()
+        type.id, type.name, 'open', null, answersJson, Date.now(), Date.now()
     );
 
     // Send welcome embed
@@ -292,11 +331,19 @@ async function createTicket(guild, creator, panelType, answers) {
         .setFooter({ text: guild.name, iconURL: guild.iconURL() })
         .setTimestamp();
 
-    // Add answers as fields if present
-    if (answers && Array.isArray(answers)) {
+    // Pin the answers embed to keep it visible (Feature 6 - Ticket Tool style)
+    if (answers && Array.isArray(answers) && answers.length > 0) {
+        const answersEmbed = new EmbedBuilder()
+            .setColor(hexToInt(type.color) || TICKET_COLORS.open)
+            .setTitle('📋 Ticket Form Answers')
+            .setDescription('Questions and answers submitted when creating this ticket:')
+            .setFooter({ text: 'Ticket #' + ticketNumber })
+            .setTimestamp();
         for (const a of answers) {
-            welcomeEmbed.addFields({ name: a.question || 'Question', value: a.answer || '*No answer*', inline: false });
+            answersEmbed.addFields({ name: a.question || 'Question', value: a.answer || '*No answer*', inline: false });
         }
+        const pinnedMsg = await channel.send({ embeds: [answersEmbed] });
+        try { await pinnedMsg.pin(); } catch {}
     }
 
     const closeBtn = new ActionRowBuilder().addComponents(
@@ -495,7 +542,19 @@ async function closeTicketById(guild, channel, closer, reason, ticket) {
                 .setDescription('Your ticket **#' + ticket.ticket_number + '** has been closed.')
                 .addFields({ name: 'Closed By', value: closer.tag, inline: true }, { name: 'Reason', value: closeReason, inline: true })
                 .setFooter({ text: 'Ticket #' + ticket.ticket_number }).setTimestamp();
-            await creator.send({ embeds: [dmEmbed] }).catch(() => {});
+            
+            // Feature 1: Send rating buttons with the DM
+            const ratingRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('tk_rate_' + ticket.id + '_1').setLabel('⭐').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('tk_rate_' + ticket.id + '_2').setLabel('⭐⭐').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('tk_rate_' + ticket.id + '_3').setLabel('⭐⭐⭐').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('tk_rate_' + ticket.id + '_4').setLabel('⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary),
+                new ButtonBuilder().setCustomId('tk_rate_' + ticket.id + '_5').setLabel('⭐⭐⭐⭐⭐').setStyle(ButtonStyle.Secondary)
+            );
+            const skipRow = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('tk_rateskip_' + ticket.id).setLabel('Skip').setStyle(ButtonStyle.Secondary)
+            );
+            await creator.send({ embeds: [dmEmbed], components: [ratingRow, skipRow] }).catch(() => {});
         }
     } catch {}
 
@@ -519,6 +578,21 @@ async function claimTicket(guild, channel, claimer) {
         new ButtonBuilder().setCustomId('tk_close_' + ticket.id).setLabel('Close Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒')
     );
     await channel.send({ components: [row] });
+
+    // Feature 4: Add Transfer + Add User buttons alongside Close
+    const actionRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('tk_adduser_' + ticket.id).setLabel('Add User').setStyle(ButtonStyle.Success).setEmoji('📌'),
+        new ButtonBuilder().setCustomId('tk_transfer_' + ticket.id).setLabel('Transfer').setStyle(ButtonStyle.Primary).setEmoji('🔄'),
+        new ButtonBuilder().setCustomId('tk_close_' + ticket.id).setLabel('Close Ticket').setStyle(ButtonStyle.Danger).setEmoji('🔒')
+    );
+    await channel.send({ components: [actionRow] }).catch(() => {});
+
+    // Broadcast SSE for dashboard
+    try {
+        if (global.broadcastDashboard) {
+            global.broadcastDashboard('ticket_claimed', { guildId: guild.id, ticketId: ticket.id, claimerId: claimer.id, claimerTag: claimer.tag });
+        }
+    } catch {}
 
     await logTicketAction(guild, '✋ Ticket Claimed', TICKET_COLORS.claimed, {
         'Ticket #': '#' + ticket.ticket_number, 'Claimed By': String(claimer),
@@ -691,6 +765,190 @@ async function handleMemberLeave(member) {
     }
 }
 
+// ──────────────────── Ticket Transfer (Feature 4) ────────────────────
+
+async function transferTicket(guild, channel, transferer, targetMember) {
+    const db = getDb();
+    const ticket = db.prepare('SELECT * FROM tickets WHERE channel_id = ? AND guild_id = ? AND status = ?').get(channel.id, guild.id, 'claimed');
+    if (!ticket) return { error: 'No claimed ticket found for this channel.' };
+
+    const previousClaimer = ticket.claimer_id;
+    db.prepare('UPDATE tickets SET claimer_id = ? WHERE id = ?').run(targetMember.id, ticket.id);
+
+    const transferEmbed = new EmbedBuilder()
+        .setColor(TICKET_COLORS.claimed)
+        .setTitle('🔄 Ticket Transferred')
+        .setDescription('**' + targetMember.user.tag + '** is now handling this ticket (transferred from <@' + previousClaimer + '>).')
+        .setFooter({ text: guild.name, iconURL: guild.iconURL() }).setTimestamp();
+    await channel.send({ embeds: [transferEmbed] });
+
+    // Update the claimer's channel permissions
+    try {
+        await channel.permissionOverwrites.edit(targetMember.id, {
+            ViewChannel: true, SendMessages: true, ReadMessageHistory: true, AttachFiles: true, AddReactions: true,
+        });
+    } catch {}
+
+    recordTicketMessage(ticket.id, '0', 'System', null, 'Ticket transferred from ' + transferer.tag + ' to ' + targetMember.user.tag, 1);
+
+    // SSE broadcast
+    try {
+        if (global.broadcastDashboard) {
+            global.broadcastDashboard('ticket_transferred', {
+                guildId: guild.id, ticketId: ticket.id,
+                previousClaimer: previousClaimer, newClaimer: targetMember.id,
+                newClaimerTag: targetMember.user.tag,
+            });
+        }
+    } catch {}
+
+    return { success: true, ticketNumber: ticket.ticket_number };
+}
+
+// ──────────────────── Blacklist (Feature 3) ────────────────────
+
+function getBlacklist(guildId) {
+    const db = getDb();
+    return db.prepare('SELECT * FROM ticket_blacklist WHERE guild_id = ? ORDER BY blacklisted_at DESC').all(guildId);
+}
+
+function addBlacklist(guildId, userId, reason, blacklistedBy) {
+    const db = getDb();
+    db.prepare('INSERT OR REPLACE INTO ticket_blacklist (guild_id, user_id, reason, blacklisted_by, blacklisted_at) VALUES (?, ?, ?, ?, ?)')
+        .run(guildId, userId, reason || '', blacklistedBy, Date.now());
+    return true;
+}
+
+function removeBlacklist(guildId, userId) {
+    const db = getDb();
+    db.prepare('DELETE FROM ticket_blacklist WHERE guild_id = ? AND user_id = ?').run(guildId, userId);
+    return true;
+}
+
+function isBlacklisted(guildId, userId) {
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM ticket_blacklist WHERE guild_id = ? AND user_id = ?').get(guildId, userId);
+    return row || null;
+}
+
+// ──────────────────── Inactivity Auto-Close (Feature 2) ────────────────────
+
+function updateLastActivity(ticketId) {
+    try {
+        const db = getDb();
+        db.prepare('UPDATE tickets SET last_activity_at = ? WHERE id = ?').run(Date.now(), ticketId);
+    } catch {}
+}
+
+// Check all open/claimed tickets for inactivity every 2 minutes
+let inactivityInterval = null;
+
+function startInactivityCheck(clientInstance) {
+    if (inactivityInterval) clearInterval(inactivityInterval);
+    inactivityInterval = setInterval(async () => {
+        try {
+            const db = getDb();
+            // Get all open/claimed tickets with their panel type info
+            const tickets = db.prepare(`
+                SELECT t.*, tp.inactivity_timeout
+                FROM tickets t
+                LEFT JOIN ticket_panel_types tp ON t.panel_type_id = tp.id
+                WHERE t.status IN ('open', 'claimed') AND tp.inactivity_timeout IS NOT NULL AND tp.inactivity_timeout > 0
+            `).all();
+
+            const now = Date.now();
+            for (const ticket of tickets) {
+                const guild = clientInstance.guilds.cache.get(ticket.guild_id);
+                if (!guild) continue;
+
+                const channel = guild.channels.cache.get(ticket.channel_id);
+                if (!channel) continue;
+
+                const lastActivity = ticket.last_activity_at || ticket.created_at;
+                const timeoutMs = ticket.inactivity_timeout * 60 * 60 * 1000;
+                const graceMs = (ticket.inactivity_grace || 6) * 60 * 60 * 1000;
+                const elapsed = now - lastActivity;
+
+                if (elapsed >= timeoutMs && elapsed < (timeoutMs + graceMs)) {
+                    // Check if we already sent a warning (look for system message)
+                    const warningSent = db.prepare(
+                        'SELECT id FROM ticket_messages WHERE ticket_id = ? AND content LIKE ? AND is_system = 1'
+                    ).get(ticket.id, '%inactivity%auto-close%');
+
+                    if (!warningSent) {
+                        // Send warning embed with "Still need help?" button
+                        const warningEmbed = new EmbedBuilder()
+                            .setColor(0xF1C40F)
+                            .setTitle('⏰ Inactivity Warning')
+                            .setDescription(
+                                'This ticket has been inactive for **' + ticket.inactivity_timeout + ' hour' +
+                                (ticket.inactivity_timeout === 1 ? '' : 's') + '**.' +
+                                '\n\nIf no response is received within the grace period, this ticket will be automatically closed.' +
+                                '\n\nClick **Still need help?** to keep this ticket open.'
+                            )
+                            .setFooter({ text: guild.name, iconURL: guild.iconURL() })
+                            .setTimestamp();
+
+                        const keepBtn = new ActionRowBuilder().addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('tk_keep_' + ticket.id)
+                                .setLabel('Still need help?')
+                                .setStyle(ButtonStyle.Success)
+                                .setEmoji('🙋')
+                        );
+
+                        try {
+                            await channel.send({ embeds: [warningEmbed], components: [keepBtn] });
+                            recordTicketMessage(ticket.id, '0', 'System', null,
+                                '⚠️ Inactivity auto-close warning sent (timeout: ' + ticket.inactivity_timeout + 'h)', 1);
+                        } catch {}
+                    }
+                } else if (elapsed >= (timeoutMs + graceMs)) {
+                    // Auto-close the ticket
+                    try {
+                        const closer = clientInstance.user;
+                        await closeTicketById(guild, channel, closer, 'Auto-closed due to inactivity', ticket);
+                    } catch (err) {
+                        require('./logError')(err, 'tickets', 'inactivityAutoClose');
+                    }
+                }
+            }
+        } catch (err) {
+            try {
+                const { logError } = require('./logError');
+                logError(err, 'tickets', 'inactivityCheck');
+            } catch {}
+        }
+    }, 120000); // Check every 2 minutes
+}
+
+function stopInactivityCheck() {
+    if (inactivityInterval) {
+        clearInterval(inactivityInterval);
+        inactivityInterval = null;
+    }
+}
+
+// ──────────────────── Save Rating (Feature 1) ────────────────────
+
+function saveRating(ticketId, guildId, rating, feedback) {
+    const db = getDb();
+    db.prepare('INSERT OR REPLACE INTO ticket_ratings (ticket_id, guild_id, rating, feedback, submitted_at) VALUES (?, ?, ?, ?, ?)')
+        .run(ticketId, guildId, rating, feedback || null, Date.now());
+    return true;
+}
+
+function getGuildRatings(guildId) {
+    const db = getDb();
+    return db.prepare('SELECT * FROM ticket_ratings WHERE guild_id = ? ORDER BY submitted_at DESC LIMIT 50').all(guildId);
+}
+
+function getAverageRating(guildId) {
+    const db = getDb();
+    const row = db.prepare('SELECT AVG(rating) as avg, COUNT(*) as total FROM ticket_ratings WHERE guild_id = ?').get(guildId);
+    return row || { avg: 0, total: 0 };
+}
+
 // ──────────────────── Exports ────────────────────
 
 module.exports = {
@@ -698,18 +956,28 @@ module.exports = {
     // Config
     getTicketConfig, updateTicketConfig,
     // Panels
-    getPanels, getPanel, createPanel, updatePanel, deletePanel,
+    getPanels, getPanel, createPanel, updatePanel, deletePanel, clonePanel,
     getPanelTypes, getPanelType, createPanelType, updatePanelType, deletePanelType,
+    getPanelTicketCounter, setPanelTicketCounter,
     parseQuestions, parseSupportRoles,
     // Ticket actions
     createTicket, closeTicket, claimTicket,
     addUserToTicket, removeUserFromTicket, renameTicket,
+    closeTicketById,
     // Panel flow
     sendTicketPanel, showTicketTypeModal, showQuestionsModal, handleQuestionsSubmit,
     // Transcript
     saveTranscript, recordTicketMessage,
     // Auto-close
     handleMemberLeave,
+    // Feature 1: Ratings
+    saveRating, getGuildRatings, getAverageRating,
+    // Feature 2: Inactivity
+    updateLastActivity, startInactivityCheck, stopInactivityCheck,
+    // Feature 3: Blacklist
+    getBlacklist, addBlacklist, removeBlacklist, isBlacklisted,
+    // Feature 4: Transfer
+    transferTicket,
     // UI
     TICKET_COLORS,
 };

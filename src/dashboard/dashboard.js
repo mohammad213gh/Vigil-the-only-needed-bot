@@ -957,41 +957,107 @@ async function loadTickets(){
       '<div style="font-size:11px;color:var(--text-dim);">Total tickets created: <strong>'+d.config.ticketCount+'</strong></div>'+
     '</div></div>';
 
-    // ── Panels Section with Drag-to-Reorder + Preview + Inline Questions ──
-    var panelsHtml='<div class="tw" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Ticket Panels <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+((d.panels||[]).length)+')</span></div><div style="padding:10px;">';
-    if(d.panels&&d.panels.length){
-      for(const p of d.panels){
-        var pTypes=p.types||[];
-        var typeRows=pTypes.map(function(t,i2){
-          var qCount=0;try{qCount=JSON.parse(t.questions||'[]').length}catch{}
-          var catName='No category';
-          if(t.category_id&&channelsById[t.category_id])catName='#'+channelsById[t.category_id].name;
-          var roleCount=0;try{roleCount=JSON.parse(t.support_roles||'[]').length}catch{}
-          return '<div draggable="true" data-type-id="'+t.id+'" class="tk-type-row" style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;margin-bottom:3px;cursor:grab;transition:all 0.2s;" ondragstart="tkDragStart(event,\''+serverId+'\',\''+p.id+'\')" ondragover="event.preventDefault();this.style.borderColor=&quot;var(--accent)&quot;;this.style.background=&quot;rgba(var(--accent-rgb),0.08)&quot;;" ondragleave="this.style.borderColor=&quot;&quot;;this.style.background=&quot;&quot;" ondrop="tkDrop(event,\''+serverId+'\',\''+p.id+'\')">'+
-            '<span style="font-size:10px;color:var(--text-dim);cursor:grab;user-select:none;">\u2261</span>'+
-            '<span style="font-size:14px;">'+(t.emoji||'\uD83C\uDFAB')+'</span>'+
-            '<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:600;">'+esc(t.name)+'</div><div style="font-size:9px;color:var(--text-dim);">'+catName+' | '+qCount+' Q | '+roleCount+' roles</div></div>'+
-            '<button class="btn btn-s" onclick="editQuestions(\''+serverId+'\',\''+p.id+'\',\''+t.id+'\')" style="padding:3px 7px;font-size:9px;">\uD83D\uDCDD Q</button>'+
-            '<button class="btn btn-s" onclick="editTicketTypeSettings(\''+serverId+'\',\''+p.id+'\',\''+t.id+'\')" style="padding:3px 7px;font-size:9px;">\u2699\uFE0F</button>'+
-            '<button class="btn btn-s" onclick="deleteTicketType(\''+serverId+'\',\''+p.id+'\',\''+t.id+'\')" style="padding:3px 7px;font-size:9px;color:#ed4245;">\u2716</button></div>';
-        }).join('');
-        panelsHtml+='<div class="tk-panel-card" style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;">'+
-          '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border);">'+
-          '<span style="font-weight:600;font-size:13px;flex:1;">'+esc(p.name||'Unnamed')+'</span>'+
-          '<span style="width:8px;height:8px;border-radius:50%;background:'+(p.color||'#5865F2')+';display:inline-block;"></span>'+
-          '<span class="badge" style="font-size:9px;">'+pTypes.length+' types</span>'+
-          '<button class="btn btn-s" onclick="editTicketPanel(\''+serverId+'\',\''+p.id+'\',\''+esc(p.name||'')+'\',\''+(p.color||'#5865F2')+'\',\''+esc(p.description||'')+'\')" style="padding:3px 8px;font-size:9px;">\u2699\uFE0F Edit</button>'+
-          '<button class="btn btn-s" onclick="previewTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:3px 8px;font-size:9px;">\uD83D\uDC40 Preview</button>'+
-          '<button class="btn btn-s" onclick="deleteTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:3px 8px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
-          '<div style="padding:8px 12px;">'+
-          (typeRows||'<div style="font-size:11px;color:var(--text-dim);padding:4px 0;">No types yet.</div>')+
-          '<div style="display:flex;padding:4px 0 0 0;"><button class="btn" onclick="addTicketType(\''+serverId+'\',\''+p.id+'\')" style="padding:6px 16px;font-size:11px;margin-left:auto;">+ Add Type</button></div>'+
-          '</div></div>';
-      }
+    // ── NEW: Panel Selector Bar + Detail View (replaces old panel cards) ──
+    var panels=d.panels||[];
+    var tkSelectedPanel=document.getElementById('tkSelPanel') && document.getElementById('tkSelPanel').value;
+    var selPanel=null;
+    for(var pi=0;pi<panels.length;pi++){if(panels[pi].id===tkSelectedPanel){selPanel=panels[pi];break}}
+    if(!selPanel&&panels.length>0)selPanel=panels[0];
+    
+    var panelsHtml='<div class="tw" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Panel Config <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+panels.length+')</span></div><div style="padding:12px;">'+
+      // Selector bar
+      '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
+        '<select id="tkSelPanel" onchange="loadTickets()" style="flex:1;padding:9px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:inherit;">'+
+          '<option value="">Select a panel...</option>'+
+          panels.map(function(p,i){return '<option value="'+p.id+'"'+(selPanel&&p.id===selPanel.id?' selected':'')+'>'+(i+1)+' | '+esc(p.name)+'</option>'}).join('')+
+        '</select>'+
+        '<button class="btn" onclick="tkCreatePanel(\''+serverId+'\')" style="padding:9px 14px;font-size:12px;">+</button></div>';
+    
+    if(!selPanel){
+      panelsHtml+='<div class="empty" style="padding:16px;"><p>No panel selected. Select or Create one.</p><p class="empty-act" style="margin-top:8px;">Use the dropdown to select a panel, or click + to create a new one.</p></div>';
     }else{
-      panelsHtml+='<div class="empty" style="padding:16px;"><p>No ticket panels yet. Create one below.</p></div>';
+      var pTypes=selPanel.types||[];
+      var panelIdx=0;for(var pi2=0;pi2<panels.length;pi2++){if(panels[pi2].id===selPanel.id){panelIdx=pi2+1;break}}
+      // Action row
+      panelsHtml+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'+
+        '<button class="btn btn-s" onclick="tkClonePanel(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDD04 Clone</button>'+
+        '<button class="btn btn-s" onclick="tkRenamePanel(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;">\u270F\uFE0F Rename</button>'+
+        '<button class="btn btn-s" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDCE8 Send</button>'+
+        '<button class="btn btn-s" onclick="tkSetCount(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDD22 Set Count</button>'+
+        '<button class="btn btn-s" onclick="editTicketPanel(\''+serverId+'\',\''+selPanel.id+'\',\''+esc(selPanel.name||'')+'\',\''+(selPanel.color||'#5865F2')+'\',\''+esc(selPanel.description||'')+'\')" style="padding:6px 12px;font-size:10px;">\u2699\uFE0F Update</button>'+
+        '<button class="btn btn-s" onclick="tkDeletePanel(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;color:#ed4245;border-color:rgba(237,66,69,0.3);">\u2716 Delete</button></div>';
+      
+      // ── Category Card Grids ──
+      function tkCardGrid(title,cards,desc){
+        var html='<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">'+title+'</div>'+(desc?'<div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;">'+desc+'</div>':'')+'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;">';
+        for(var ci=0;ci<cards.length;ci++){
+          var c=cards[ci];
+          html+='<div onclick="tkCardClick(\''+c.id+'\',\''+serverId+'\',\''+selPanel.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor=&#39;rgba(var(--accent-rgb),0.25)&#39;;this.style.background=&#39;rgba(var(--accent-rgb),0.04)&#39;" onmouseout="this.style.borderColor=&#39;&#39;;this.style.background=&#39;&#39;">'+
+            '<div><div style="font-size:12px;font-weight:600;">'+esc(c.label)+'</div><div style="font-size:9px;color:var(--text-dim);margin-top:1px;">'+esc(c.sub||'')+'</div></div>'+
+            '<span style="color:var(--text-dim);font-size:12px;">\u203A</span></div>';
+        }
+        html+='</div></div>';
+        return html;
+      }
+      
+      var generalCards=[
+        {id:'general',label:'General',sub:'General ticket settings'},
+        {id:'category',label:'Category',sub:'Per-type categories'},
+        {id:'ticket',label:'Ticket',sub:'Ticket display options'},
+        {id:'moderator',label:'Moderator',sub:'Moderator settings'},
+        {id:'permissions',label:'Permissions',sub:'Access control'},
+        {id:'buttons',label:'Buttons',sub:'Button customization'},
+        {id:'messages',label:'Messages',sub:'Message templates'},
+        {id:'escalate',label:'Escalate',sub:'Escalation settings'},
+      ];
+      var panelCards=[
+        {id:'panel',label:'Panel',sub:'Panel display options'},
+        {id:'commandstyle',label:'Command Style',sub:'Command appearance'},
+        {id:'dropdownstyle',label:'DropDown Style',sub:'Dropdown appearance'},
+        {id:'threadstyle',label:'Thread Style',sub:'Thread display'},
+        {id:'forms',label:'Forms',sub:'Custom questions ('+pTypes.reduce(function(a,t){var q=0;try{q=JSON.parse(t.questions||'[]').length}catch{};return a+q},0)+' total)'},
+      ];
+      var advancedCards=[
+        {id:'transcript',label:'Transcript',sub:'Message logging'},
+        {id:'logging',label:'Logging',sub:'Action logging'},
+        {id:'automation',label:'Automation',sub:'Auto-close settings'},
+        {id:'limits',label:'Limits',sub:'Rate limits'},
+        {id:'claiming',label:'Claiming',sub:'Claim system'},
+        {id:'integrations',label:'Integrations',sub:'External tools'},
+      ];
+      
+      panelsHtml+=tkCardGrid('General Ticket Options',generalCards)+tkCardGrid('Panel Settings',panelCards)+tkCardGrid('Advanced Settings',advancedCards);
+
+      // ── Frequently Used Configs ──
+      panelsHtml+='<div id="tk-freq-wr" style="margin-top:8px;">'+
+        '<div onclick="tkToggleFreq()" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 0;font-size:12px;font-weight:600;color:var(--text);user-select:none;">'+
+          '<span id="tk-freq-caret" style="transition:transform 0.2s;font-size:10px;">▼</span>Frequently Used Configs</div>'+
+        '<div id="tk-freq-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'+
+          // Left: Support Team Roles + Panel Message
+          '<div><div class="stg" style="margin-bottom:10px;"><label>Support Team Roles <span title="Roles that can view and manage tickets" style="cursor:help;color:var(--text-dim);font-size:11px;">ⓘ</span></label>'+
+            '<select id="tk-freq-roles" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;" onchange="tkMarkUnsaved()">'+
+            '</select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Hold Ctrl/Cmd to select multiple</div></div>'+
+            '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'panel\')" style="padding:6px 12px;font-size:10px;">💬 Edit Panel Message</button></div>'+
+          // Right: Category + Ticket Message
+          '<div><div class="stg" style="margin-bottom:10px;"><label>Category Created/Opened <span title="Categories where tickets can be created" style="cursor:help;color:var(--text-dim);font-size:11px;">ⓘ</span></label>'+
+            '<select id="tk-freq-cats" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;"></select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Per-type categories — configure in Type Settings</div></div>'+
+            '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'ticket\')" style="padding:6px 12px;font-size:10px;">💬 Edit Ticket Message</button></div>'+
+        '</div></div>';
+
+      // Populate roles multi-select after rendering
+      var allRoles=[];
+      for(var rk in rolesById)allRoles.push(rolesById[rk]);
+      if(allRoles.length){
+        var roleOpts='';
+        var curRoleIds=selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].support_roles||[]:[];
+        for(var ri=0;ri<allRoles.length;ri++){
+          var roleData=allRoles[ri];
+          roleOpts+='<option value="'+roleData.id+'"'+(curRoleIds.indexOf(roleData.id)>-1?' selected':'')+'>'+esc(roleData.name)+'</option>';
+        }
+      }
+      setTimeout(function(){var sel=document.getElementById('tk-freq-roles');if(sel)sel.innerHTML=roleOpts||'<option value="">No roles available</option>'},50);
     }
-    panelsHtml+='<button class="btn" onclick="createTicketPanel(\''+serverId+'\')" style="width:100%;padding:10px;font-size:13px;">+ Create Panel</button></div></div>';
+    panelsHtml+='</div></div>';
 
     // ── Recent Tickets ──
     var recentHtml='<div class="tw" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Recent Tickets <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+((d.tickets||[]).length)+')</span></div><div style="padding:8px 12px 12px;">';
@@ -1008,7 +1074,12 @@ async function loadTickets(){
 
     // ── Build layout ──
     var grid='<div class="grid grid-2" style="margin-top:0;"><div>'+cfgHtml+'</div><div>'+panelsHtml+'</div></div>';
-    el.innerHTML=grid+'<div style="margin-top:16px;max-width:600px;">'+recentHtml+'</div>';
+    el.innerHTML=grid+'<div style="margin-top:16px;max-width:600px;">'+recentHtml+'</div>'+
+      '<!-- Unsaved-changes bar --><div id="tk-unsaved-bar" style="display:none;position:sticky;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 16px;z-index:100;margin-top:16px;align-items:center;justify-content:space-between;">'+
+        '<span style="font-size:12px;color:var(--text-dim);">You have unsaved changes!</span>'+
+        '<div style="display:flex;gap:6px;">'+
+          '<button class="btn btn-s" onclick="tkResetChanges()" style="padding:6px 14px;font-size:11px;">Reset</button>'+
+          '<button class="btn" onclick="tkSaveChanges()" style="padding:6px 14px;font-size:11px;">Save</button></div></div>';
     updateRefreshTimestamp('tickets');
     setTimeout(function(){document.querySelectorAll('#sec-tickets .sr').forEach(function(el2){srObs.observe(el2)})},50);
   }catch(e){
@@ -1318,6 +1389,153 @@ function editTicketTypeSettings(serverId,panelId,typeId){
 function deleteTicketType(serverId,panelId,typeId){if(!confirm('Remove this ticket type?'))return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+typeId,{method:'DELETE'}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Type removed!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
 
 function tkCloseModal(btn){var overlay=btn.closest('[style*="fixed"]');if(overlay)document.body.removeChild(overlay)}
+
+// ── New helpers: Rename, Clone, Set Count, Card Click, Freq Config, Unsaved ──
+function tkRenamePanel(serverId,panelId){
+  // Fetch current name
+  fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+    var curName='';
+    for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){curName=d2.panels[pi].name||'';break}}
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
+    overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:380px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
+      '<h2 style="font-size:16px;font-weight:700;margin:0 0 14px 0;">\u270F\uFE0F Rename Panel</h2>'+
+      '<div class="stg" style="margin-bottom:16px;"><label>New Name</label><input id="tk-rnm-name" value="'+esc(curName)+'" style="width:100%;padding:8px 10px;font-size:13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
+      '<div style="display:flex;gap:8px;"><button class="btn btn-s" onclick="tkCloseModal(this)" style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-rnm-save" style="flex:1;padding:8px 12px;font-size:12px;">Rename</button></div></div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#tk-rnm-save').onclick=function(){
+      var name=document.getElementById('tk-rnm-name').value.trim();
+      if(!name){showToast('Enter a name',true);return}
+      var btn=this;btn.disabled=true;btn.textContent='Saving...';
+      fetch('/api/server/'+serverId+'/tickets/panels/'+panelId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})})
+      .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel renamed!');document.body.removeChild(overlay);loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true);btn.disabled=false;btn.textContent='Rename'}).catch(function(e){showToast('Failed: '+e.message,true);btn.disabled=false;btn.textContent='Rename'});
+    };
+  }).catch(function(e){showToast('Failed to load panel data',true)});
+}
+function tkClonePanel(serverId,panelId){
+  fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/clone',{method:'POST'})
+  .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel cloned!');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)})
+  .catch(function(){showToast('Failed to clone',true)});
+}
+function tkSetCount(serverId,panelId){
+  // Fetch current counter
+  fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+    var curCount=d2.config?d2.config.ticketCount||0:0;
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
+    overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:340px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
+      '<h2 style="font-size:16px;font-weight:700;margin:0 0 14px 0;">\uD83D\uDD22 Set Ticket Counter</h2>'+
+      '<div class="stg" style="margin-bottom:16px;"><label>Next ticket number</label><input id="tk-cnt-val" type="number" min="0" value="'+(curCount+1)+'" style="width:100%;padding:8px 10px;font-size:13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
+      '<div style="font-size:10px;color:var(--text-dim);margin-bottom:12px;">Current count: <strong>'+curCount+'</strong>. Set to 0 to auto-increment.</div>'+
+      '<div style="display:flex;gap:8px;"><button class="btn btn-s" onclick="tkCloseModal(this)" style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-cnt-save" style="flex:1;padding:8px 12px;font-size:12px;">Set</button></div></div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#tk-cnt-save').onclick=function(){
+      var val=parseInt(document.getElementById('tk-cnt-val').value);
+      if(isNaN(val)||val<0){showToast('Enter a valid number >= 0',true);return}
+      var btn=this;btn.disabled=true;btn.textContent='Saving...';
+      fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/count',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({count:val})})
+      .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Counter set!');document.body.removeChild(overlay);loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true);btn.disabled=false;btn.textContent='Set'}).catch(function(e){showToast('Failed: '+e.message,true);btn.disabled=false;btn.textContent='Set'});
+    };
+  }).catch(function(e){showToast('Failed to load counter data',true)});
+}
+function tkCardClick(cardId,serverId,panelId){
+  // Cards that map to real existing functionality
+  if(cardId==='category'||cardId==='forms'){
+    // Category and Forms are handled per-type in the type settings modal
+    showToast('Configure in type settings > Edit Type',true);
+    return;
+  }
+  if(cardId==='transcript'){
+    showToast('Transcript: log channel set in Global Config',true);
+    return;
+  }
+  if(cardId==='claiming'){
+    showToast('Claiming: claim a ticket via the Claim button in a ticket channel',true);
+    return;
+  }
+  // All other cards: placeholder modal
+  var names={general:'General Settings',ticket:'Ticket Settings',moderator:'Moderator Settings',permissions:'Permission Settings',buttons:'Button Settings',messages:'Message Settings',escalate:'Escalation Settings',panel:'Panel Settings',commandstyle:'Command Style Settings',dropdownstyle:'DropDown Style Settings',threadstyle:'Thread Style Settings',logging:'Logging Settings',automation:'Automation Settings',limits:'Limit Settings',integrations:'Integration Settings'};
+  var label=names[cardId]||cardId.charAt(0).toUpperCase()+cardId.slice(1)+' Settings';
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
+  overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:400px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);text-align:center;">'+
+    '<h2 style="font-size:16px;font-weight:700;margin:0 0 10px 0;">'+esc(label)+'</h2>'+
+    '<p style="font-size:12px;color:var(--text-dim);margin-bottom:18px;">Not yet configured</p>'+
+    '<button class="btn btn-s" onclick="tkCloseModal(this)" style="padding:8px 20px;font-size:12px;">Close</button></div>';
+  document.body.appendChild(overlay);
+}
+
+// ── Frequently Used Configs Helpers ──
+function tkToggleFreq(){
+  var body=document.getElementById('tk-freq-body');
+  var caret=document.getElementById('tk-freq-caret');
+  if(!body||!caret)return;
+  var vis=body.style.display!=='none';
+  body.style.display=vis?'none':'grid';
+  caret.style.transform=vis?'rotate(-90deg)':'rotate(0deg)';
+}
+function tkEditMessage(serverId,type){
+  var label=type==='panel'?'Panel Message':'Ticket Message';
+  var msgKey=type==='panel'?'panel_message':'ticket_message';
+  // Fetch current message from config
+  fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+    var curMsg=d2.config?d2.config[msgKey]||'':'';
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
+    overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
+      '<h2 style="font-size:16px;font-weight:700;margin:0 0 14px 0;">\uD83D\uDCAC Edit '+label+'</h2>'+
+      '<div class="stg" style="margin-bottom:16px;"><label>Message (supports Discord markdown)</label><textarea id="tk-msg-text" rows="5" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;resize:vertical;">'+esc(curMsg)+'</textarea></div>'+
+      '<div style="display:flex;gap:8px;"><button class="btn btn-s" onclick="tkCloseModal(this)" style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-msg-save" style="flex:2;padding:8px 12px;font-size:12px;">Save</button></div></div>';
+    document.body.appendChild(overlay);
+    overlay.querySelector('#tk-msg-save').onclick=function(){
+      var msg=document.getElementById('tk-msg-text').value;
+      var btn=this;btn.disabled=true;btn.textContent='Saving...';
+      fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[msgKey]:msg})})
+      .then(function(r){return r.json()}).then(function(d){if(d.success){showToast(label+' saved!');document.body.removeChild(overlay);loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true);btn.disabled=false;btn.textContent='Save'}).catch(function(e){showToast('Failed: '+e.message,true);btn.disabled=false;btn.textContent='Save'});
+    };
+  }).catch(function(e){showToast('Failed to load config',true)});
+}
+
+// ── Unsaved Changes Bar ──
+var tkUnsavedState=null;
+function tkMarkUnsaved(){
+  var bar=document.getElementById('tk-unsaved-bar');
+  if(bar){bar.style.display='flex'}
+}
+function tkResetChanges(){
+  var bar=document.getElementById('tk-unsaved-bar');
+  if(bar)bar.style.display='none';
+  loadTickets();
+  showToast('Changes reset');
+}
+function tkSaveChanges(){
+  var bar=document.getElementById('tk-unsaved-bar');
+  var roleSel=document.getElementById('tk-freq-roles');
+  var selRoles=[];
+  if(roleSel)selRoles=Array.from(roleSel.selectedOptions).map(function(o){return o.value});
+  var sel=document.getElementById('tkSelPanel');
+  var serverId=document.getElementById('tkSrvSelect')?document.getElementById('tkSrvSelect').value:'';
+  var panelId=sel?sel.value:'';
+  if(!serverId||!panelId){showToast('No panel selected',true);return}
+  fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+    var firstTypeId=null;
+    for(var pi=0;pi<(d2.panels||[]).length;pi++){
+      if(d2.panels[pi].id===panelId&&d2.panels[pi].types&&d2.panels[pi].types.length){
+        firstTypeId=d2.panels[pi].types[0].id;break;
+      }
+    }
+    if(!firstTypeId){showToast('No types to update',true);return}
+    fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+firstTypeId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({support_roles:selRoles})})
+    .then(function(r2){return r2.json()}).then(function(d3){
+      if(d3.success){showToast('Settings saved!');if(bar)bar.style.display='none';loadTickets()}
+      else showToast('Save failed: '+(d3.error||'unknown'),true);
+    }).catch(function(){showToast('Save failed',true)});
+  }).catch(function(){showToast('Save failed',true)});
+}
 
 // ═══ AUTO-MOD ═══
 async function loadAutomod(){

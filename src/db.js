@@ -351,6 +351,27 @@ function initSchema() {
         );
 
         CREATE INDEX IF NOT EXISTS idx_ticket_msgs ON ticket_messages(ticket_id, created_at);
+
+        CREATE TABLE IF NOT EXISTS ticket_ratings (
+            ticket_id TEXT PRIMARY KEY,
+            guild_id TEXT NOT NULL,
+            rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+            feedback TEXT,
+            submitted_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ticket_ratings_guild ON ticket_ratings(guild_id);
+
+        CREATE TABLE IF NOT EXISTS ticket_blacklist (
+            guild_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            reason TEXT NOT NULL DEFAULT '',
+            blacklisted_by TEXT NOT NULL,
+            blacklisted_at INTEGER NOT NULL,
+            PRIMARY KEY (guild_id, user_id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ticket_blacklist_guild ON ticket_blacklist(guild_id);
     `);
 
     // Add prefix column if not exists (safe on every boot)
@@ -366,6 +387,29 @@ function initSchema() {
     // Add embed_color column if not exists
     try {
         db.exec('ALTER TABLE guild_config ADD COLUMN embed_color TEXT');
+    } catch {}
+
+    // Add transcript column to tickets if not exists
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN transcript TEXT');
+    } catch {}
+
+    // Add last_activity_at column to tickets if not exists
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN last_activity_at INTEGER');
+    } catch {}
+
+    // Add inactivity columns to ticket_panel_types if not exists
+    try {
+        db.exec('ALTER TABLE ticket_panel_types ADD COLUMN inactivity_timeout INTEGER');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE ticket_panel_types ADD COLUMN inactivity_grace INTEGER DEFAULT 6');
+    } catch {}
+
+    // Add ticket_counter column to ticket_panels if not exists
+    try {
+        db.exec('ALTER TABLE ticket_panels ADD COLUMN ticket_counter INTEGER');
     } catch {}
 }
 

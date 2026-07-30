@@ -1441,6 +1441,56 @@ function createDashboard() {
     });
 
     // Reorder panel types (receives array of type IDs in new order)
+    app.post('/api/server/:id/tickets/panels/:panelId/clone', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const { clonePanel, getPanel, getPanelTypes } = require('./tickets');
+            const newPanel = clonePanel(req.params.panelId);
+            if (!newPanel) return res.status(404).json({ error: 'Panel not found' });
+            const types = getPanelTypes(newPanel.id);
+            res.json({ success: true, panel: { ...newPanel, types } });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.put('/api/server/:id/tickets/panels/:panelId/count', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const { count } = req.body;
+            if (count === undefined || count < 0 || !Number.isInteger(count)) {
+                return res.status(400).json({ error: 'Count must be a positive integer' });
+            }
+            const { setPanelTicketCounter } = require('./tickets');
+            setPanelTicketCounter(req.params.panelId, count);
+            res.json({ success: true, count });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.put('/api/server/:id/tickets/panels/:panelId/config', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const { updatePanel, getPanel } = require('./tickets');
+            const allowed = ['name', 'color', 'description', 'image_url'];
+            const updates = {};
+            for (const key of allowed) {
+                if (req.body[key] !== undefined) updates[key] = req.body[key];
+            }
+            const result = updatePanel(req.params.panelId, updates);
+            res.json({ success: true, panel: result });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     app.put('/api/server/:id/tickets/panels/:panelId/types/reorder', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
