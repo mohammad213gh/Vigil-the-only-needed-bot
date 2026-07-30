@@ -1440,6 +1440,28 @@ function createDashboard() {
         }
     });
 
+    // Reorder panel types (receives array of type IDs in new order)
+    app.put('/api/server/:id/tickets/panels/:panelId/types/reorder', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const { typeIds } = req.body;
+            if (!Array.isArray(typeIds)) return res.status(400).json({ error: 'typeIds must be an array' });
+            const db = getDb();
+            const update = db.prepare('UPDATE ticket_panel_types SET sort_order = ? WHERE id = ? AND panel_id = ?');
+            const tx = db.transaction(() => {
+                typeIds.forEach((typeId, index) => {
+                    update.run(index, typeId, req.params.panelId);
+                });
+            });
+            tx();
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // ── Message Search ──
     app.get('/api/server/:id/messages', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });

@@ -925,6 +925,9 @@ async function loadInvites(){
 }
 
 // ═══ TICKETS ═══
+// Drag-drop state
+var tkDragSrc=null;
+
 async function loadTickets(){
   const sel=document.getElementById('tkSrvSelect');
   if(!sel)return;
@@ -942,6 +945,10 @@ async function loadTickets(){
     const d=await r.json();
     if(!d||!d.config)throw new Error('Invalid data');
 
+    // Build channels lookup
+    var channelsById={};(d.channels||[]).forEach(function(c){channelsById[c.id]=c});
+    var rolesById={};(d.roles||[]).forEach(function(r2){rolesById[r2.id]=r2});
+
     // ── Config Section ──
     const cfgHtml='<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M9 21V9"/></svg>Global Config</div><div style="padding:14px;">'+
       '<div class="stg-inl" style="justify-content:space-between;margin-bottom:10px;"><span style="font-size:13px;">Ticket System</span><div class="tg-wr" onclick="ticketToggle(\''+serverId+'\','+(!d.config.enabled)+')"><div class="tg '+(d.config.enabled?'on':'')+'"></div><div class="tg-lbl">'+(d.config.enabled?'Enabled':'Disabled')+'</div></div></div>'+
@@ -950,27 +957,32 @@ async function loadTickets(){
       '<div style="font-size:11px;color:var(--text-dim);">Total tickets created: <strong>'+d.config.ticketCount+'</strong></div>'+
     '</div></div>';
 
-    // ── Panels Section ──
+    // ── Panels Section with Drag-to-Reorder + Preview + Inline Questions ──
     var panelsHtml='<div class="tw" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Ticket Panels <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+((d.panels||[]).length)+')</span></div><div style="padding:10px;">';
     if(d.panels&&d.panels.length){
       for(const p of d.panels){
-        const typeRows=(p.types||[]).map(function(t,i2){
+        var pTypes=p.types||[];
+        var typeRows=pTypes.map(function(t,i2){
           var qCount=0;try{qCount=JSON.parse(t.questions||'[]').length}catch{}
-          return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;">'+
-            '<span style="font-size:16px;">'+(t.emoji||'\uD83C\uDFAB')+'</span>'+
-            '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;">'+esc(t.name)+'</div><div style="font-size:10px;color:var(--text-dim);">'+(t.category_id?'<#'+t.category_id+'>':'No category')+' | Q: '+qCount+' | Roles: '+(t.support_roles?JSON.parse(t.support_roles||'[]').length:0)+'</div></div>'+
-            '<button class="btn btn-s" onclick="deleteTicketType(\''+serverId+'\',\''+p.id+'\',\''+t.id+'\')" style="padding:4px 8px;font-size:9px;color:#ed4245;">\u2716</button></div>';
+          var catName='No category';
+          if(t.category_id&&channelsById[t.category_id])catName='#'+channelsById[t.category_id].name;
+          var roleCount=0;try{roleCount=JSON.parse(t.support_roles||'[]').length}catch{}
+          return '<div draggable="true" data-type-id="'+t.id+'" class="tk-type-row" style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;margin-bottom:3px;cursor:grab;transition:all 0.2s;" ondragstart="tkDragStart(event,\''+serverId+'\',\''+p.id+'\')" ondragover="event.preventDefault();this.style.borderColor=&quot;var(--accent)&quot;;this.style.background=&quot;rgba(var(--accent-rgb),0.08)&quot;;" ondragleave="this.style.borderColor=&quot;&quot;;this.style.background=&quot;&quot;" ondrop="tkDrop(event,\''+serverId+'\',\''+p.id+'\')">'+
+            '<span style="font-size:10px;color:var(--text-dim);cursor:grab;user-select:none;">\u2261</span>'+
+            '<span style="font-size:14px;">'+(t.emoji||'\uD83C\uDFAB')+'</span>'+
+            '<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:600;">'+esc(t.name)+'</div><div style="font-size:9px;color:var(--text-dim);">'+catName+' | '+qCount+' Q | '+roleCount+' roles</div></div>'+
+            '<button class="btn btn-s" onclick="editQuestions(\''+serverId+'\',\''+p.id+'\',\''+t.id+'\')" style="padding:3px 7px;font-size:9px;">\uD83D\uDCDD Q</button>'+
+            '<button class="btn btn-s" onclick="deleteTicketType(\''+serverId+'\',\''+p.id+'\',\''+t.id+'\')" style="padding:3px 7px;font-size:9px;color:#ed4245;">\u2716</button></div>';
         }).join('');
-        var sendBtn='<button class="btn btn-s" onclick="sendTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:4px 10px;font-size:10px;">\uD83D\uDCE8 Send</button>';
-        panelsHtml+='<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;">'+
+        panelsHtml+='<div class="tk-panel-card" style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;">'+
           '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border);">'+
           '<span style="font-weight:600;font-size:13px;flex:1;">'+esc(p.name||'Unnamed')+'</span>'+
-          '<span class="badge" style="font-size:9px;">'+(p.types||[]).length+' types</span>'+
-          sendBtn+
-          '<button class="btn btn-s" onclick="deleteTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:4px 8px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
+          '<span class="badge" style="font-size:9px;">'+pTypes.length+' types</span>'+
+          '<button class="btn btn-s" onclick="previewTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:3px 8px;font-size:9px;">\uD83D\uDC40 Preview</button>'+
+          '<button class="btn btn-s" onclick="deleteTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:3px 8px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
           '<div style="padding:8px 12px;">'+
-          (typeRows||'<div style="font-size:11px;color:var(--text-dim);padding:4px 0;">No types yet.</div>')+
-          '<button class="btn btn-s" onclick="addTicketType(\''+serverId+'\',\''+p.id+'\')" style="width:100%;padding:6px;font-size:10px;margin-top:4px;">+ Add Type</button>'+
+          (typeRows||'<div style="font-size:11px;color:var(--text-dim);padding:4px 0;">No types yet. Drag types cannot be added without types.</div>')+
+          '<button class="btn btn-s" onclick="addTicketType(\''+serverId+'\',\''+p.id+'\')" style="width:100%;padding:5px;font-size:10px;margin-top:3px;">+ Add Type</button>'+
           '</div></div>';
       }
     }else{
@@ -995,11 +1007,154 @@ async function loadTickets(){
     var grid='<div class="grid grid-2" style="margin-top:0;"><div>'+cfgHtml+'</div><div>'+panelsHtml+'</div></div>';
     el.innerHTML=grid+'<div style="margin-top:16px;max-width:600px;">'+recentHtml+'</div>';
     updateRefreshTimestamp('tickets');
-    setTimeout(function(){document.querySelectorAll('#sec-tickets .sr').forEach(function(el){srObs.observe(el)})},50);
+    setTimeout(function(){document.querySelectorAll('#sec-tickets .sr').forEach(function(el2){srObs.observe(el2)})},50);
   }catch(e){
     el.innerHTML='<div class="empty"><p>Failed to load ticket data.</p><p class="empty-act">'+esc(e.message)+'</p></div>';
     updateRefreshTimestamp('tickets');
   }
+}
+
+// ── Drag-to-Reorder ──
+function tkDragStart(ev,serverId,panelId){
+  tkDragSrc={serverId:serverId,panelId:panelId,typeId:ev.target.closest('[data-type-id]').dataset.typeId};
+  ev.dataTransfer.effectAllowed='move';
+  ev.dataTransfer.setData('text/plain',tkDragSrc.typeId);
+}
+function tkDrop(ev,serverId,panelId){
+  ev.preventDefault();
+  ev.currentTarget.style.borderColor='';ev.currentTarget.style.background='';
+  if(!tkDragSrc||tkDragSrc.serverId!==serverId||tkDragSrc.panelId!==panelId)return;
+  // Collect all type rows in current visual order
+  var container=ev.currentTarget.closest('[data-panel-id]')||document.querySelector('.tk-panel-card');
+  // Get the parent that holds types for this panel
+  var parent=ev.currentTarget.parentNode;
+  if(!parent)return;
+  // Extract the current order from DOM
+  var rows=parent.querySelectorAll('[data-type-id]');
+  var typeIds=[];
+  rows.forEach(function(r){typeIds.push(r.dataset.typeId)});
+  if(typeIds.length<2)return;
+  fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/reorder',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({typeIds:typeIds})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Types reordered!');loadTickets()}else showToast('Reorder failed',true)}).catch(function(){showToast('Reorder failed',true)});
+}
+
+// ── Inline Question Editor ──
+function editQuestions(serverId,panelId,typeId){
+  var overlay=document.createElement('div');
+  overlay.className='tk-overlay';
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick=function(e){if(e.target===overlay)close()}
+  
+  function close(){document.body.removeChild(overlay)}
+  
+  var questions=[];
+  // Fetch type data to get current questions
+  fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+    for(var pi=0;pi<(d2.panels||[]).length;pi++){
+      if(d2.panels[pi].id===panelId){
+        for(var ti=0;ti<(d2.panels[pi].types||[]).length;ti++){
+          if(d2.panels[pi].types[ti].id===typeId){
+            try{questions=JSON.parse(d2.panels[pi].types[ti].questions||'[]')}catch{}
+            break;
+          }
+        }
+        break;
+      }
+    }
+    var name='';
+    for(var pi=0;pi<(d2.panels||[]).length;pi++){
+      if(d2.panels[pi].id===panelId){
+        for(var ti=0;ti<(d2.panels[pi].types||[]).length;ti++){
+          if(d2.panels[pi].types[ti].id===typeId){name=d2.panels[pi].types[ti].name;break}
+        }
+        break;
+      }
+    }
+    overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;width:480px;max-width:90vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'+
+        '<h2 style="font-size:16px;font-weight:700;margin:0;">\uD83D\uDCDD Questions for '+esc(name)+'</h2>'+
+        '<button class="tk-q-close-btn" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">\u2716</button></div>'+
+      '<input type="hidden" id="tk-q-data" value=\''+JSON.stringify(questions)+'\'>'+
+      '<div id="tk-q-list" style="margin-bottom:12px;"></div>'+
+      '<div style="display:flex;gap:8px;">'+
+        '<button id="tk-q-add" class="btn btn-s" style="flex:1;padding:8px;font-size:11px;">+ Add Question</button>'+
+        '<button id="tk-q-save" class="btn" style="flex:2;padding:8px;font-size:11px;">\u2714\uFE0F Save</button></div></div>';
+    overlay.querySelector('.tk-q-close-btn').onclick=function(){close()};
+    renderQuestions(questions);
+  }).catch(function(){showToast('Failed to load type data',true);close()});
+  
+  document.body.appendChild(overlay);
+}
+// Called by inline editor to re-render the question list
+function renderQuestions(qs){document.getElementById('tk-q-data').value=JSON.stringify(qs);var list=document.getElementById('tk-q-list');if(!list)return;var qHtml=qs.map(function(q,i){
+  return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);" data-idx="'+i+'">'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'+
+      '<span style="font-size:10px;color:var(--text-dim);width:20px;">'+(i+1)+'.</span>'+
+      '<input class="tk-q-label" value="'+esc(q.label||q.question||'')+'" placeholder="Question label..." style="flex:1;padding:5px 8px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">'+
+      '<button class="btn btn-s" onclick="(function(){var qs2=JSON.parse(document.getElementById(\'tk-q-data\').value||\'[]\');qs2.splice('+i+',1);renderQuestions(qs2)})()" style="padding:3px 7px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
+    '<div style="display:flex;gap:8px;align-items:center;">'+
+      '<input class="tk-q-placeholder" value="'+esc(q.placeholder||'')+'" placeholder="Placeholder text" style="flex:1;padding:4px 8px;font-size:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">'+
+      '<label style="font-size:10px;display:flex;align-items:center;gap:4px;white-space:nowrap;"><input type="checkbox" class="tk-q-req" '+(q.required!==false?'checked':'')+'> Required</label></div></div>';
+}).join('')||'<div style="text-align:center;padding:16px;color:var(--text-dim);font-size:12px;">No questions yet. Add one below.</div>';
+list.innerHTML=qHtml;
+}
+
+// ── Panel Preview Modal ──
+function previewTicketPanel(serverId,panelId){
+  fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+    var panel=null;
+    for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
+    if(!panel){showToast('Panel not found',true);return}
+    var types=panel.types||[];
+    var channels=(d2.channels||[]).filter(function(c){return c.type===0||c.type===5});
+    
+    // Build preview embed
+    var color=panel.color||'#5865F2';
+    var desc=panel.description||'';
+    var typeList=types.length?(types.map(function(t,i){return (i+1)+'. '+t.emoji+' '+esc(t.name)}).join('\n')):'No types configured yet.';
+    
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)}
+    
+    overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;width:520px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'+
+        '<h2 style="font-size:16px;font-weight:700;margin:0;">\uD83D\uDC40 Panel Preview: '+esc(panel.name||'Unnamed')+'</h2>'+
+        '<button class="tk-preview-close" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">\u2716</button></div>'+
+      // Preview card mimicking Discord embed
+      '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0;overflow:hidden;margin-bottom:14px;">'+
+        '<div style="display:flex;">'+
+          '<div style="width:4px;flex-shrink:0;background:'+color+';border-radius:3px 0 0 3px;"></div>'+
+          '<div style="padding:14px 16px;flex:1;">'+
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
+              '<span style="font-weight:700;font-size:15px;">\uD83C\uDFAB '+esc(panel.name||'Support Tickets')+'</span></div>'+
+            (desc?'<div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;line-height:1.4;">'+esc(desc)+'</div>':'')+
+            (types.length>0?'<div style="font-size:11px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:10px;"><div style="font-weight:600;margin-bottom:6px;">Ticket Types:</div>'+typeList.replace(/\n/g,'<br>')+'</div>':'')+
+            '<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">'+
+              (types.length>1?'<span style="padding:4px 10px;background:rgba(88,101,242,0.12);color:#5865F2;border-radius:20px;font-size:10px;">\u25BC Type selector</span>':'')+
+              '<span style="padding:4px 10px;background:rgba(59,165,92,0.12);color:#3ba55c;border-radius:20px;font-size:10px;">\uD83C\uDFAB Create Ticket</span></div></div></div></div>'+
+      // Send controls
+      '<div style="border-top:1px solid var(--border);padding-top:14px;">'+
+        '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Send to channel:</label>'+
+        '<div style="display:flex;gap:8px;">'+
+          '<select id="tk-preview-ch" style="flex:1;padding:8px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;">'+
+            '<option value="">Select a channel...</option>'+
+            channels.map(function(ch){return '<option value="'+ch.id+'">#'+ch.name+'</option>'}).join('')+
+          '</select>'+
+          '<button class="btn tk-preview-send-btn" style="padding:8px 16px;font-size:11px;">\uD83D\uDCE4 Send</button></div></div></div>';
+    overlay.querySelector('.tk-preview-close').onclick=function(){document.body.removeChild(overlay)};
+    overlay.querySelector('.tk-preview-send-btn').onclick=function(){
+      var chId=document.getElementById('tk-preview-ch').value;
+      if(!chId){showToast('Select a channel first',true);return}
+      var btn=this;btn.disabled=true;btn.textContent='Sending...';
+      fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channelId:chId})})
+      .then(function(r){return r.json()}).then(function(d3){
+        if(d3.success){showToast('Panel sent!');document.body.removeChild(overlay);loadTickets()}
+        else showToast('Failed: '+d3.error,true);
+        btn.disabled=false;btn.textContent='Send';
+      }).catch(function(e){showToast('Failed: '+e.message,true);btn.disabled=false;btn.textContent='Send'});
+    };
+    document.body.appendChild(overlay);
+  }).catch(function(e){showToast('Failed to preview: '+e.message,true)});
 }
 
 // ── Ticket Dashboard CRUD Helpers ──
@@ -1010,7 +1165,6 @@ function createTicketPanel(serverId){var name=prompt('Panel name:');if(!name||!n
 function deleteTicketPanel(serverId,panelId){if(!confirm('Delete this panel and all its types?'))return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId,{method:'DELETE'}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel deleted!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
 function addTicketType(serverId,panelId){var name=prompt('Type name (e.g. Support):');if(!name||!name.trim())return;var emoji=prompt('Emoji (optional, default \uD83C\uDFAB):')||'\uD83C\uDFAB';var catId=prompt('Category ID (optional, leave blank for none):')||null;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),emoji:emoji,category_id:catId})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Type added!');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)}).catch(function(e){showToast('Failed: '+e.message,true)})}
 function deleteTicketType(serverId,panelId,typeId){if(!confirm('Remove this ticket type?'))return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+typeId,{method:'DELETE'}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Type removed!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
-function sendTicketPanel(serverId,panelId){var chId=prompt('Channel ID to send the panel to:');if(!chId||!chId.trim())return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channelId:chId.trim()})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel sent!');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)}).catch(function(e){showToast('Failed: '+e.message,true)})}
 
 // ═══ AUTO-MOD ═══
 async function loadAutomod(){
