@@ -1276,17 +1276,155 @@ const commandDefs = [
                         .setMaxValue(50))),
 
     // ── Reaction Roles (owner only) ──
-    // ── Tickets (owner only) ──
+    // ── Tickets v2: Multi-Panel (owner only) ──
     new SlashCommandBuilder()
         .setName('ticket')
-        .setDescription('Manage support tickets')
+        .setDescription('Manage the ticket system with multi-panel support')
+        // ── Panel CRUD ──
         .addSubcommand(sub =>
-            sub.setName('panel')
-                .setDescription('Send the ticket creation panel to a channel')
+            sub.setName('panel_create')
+                .setDescription('Create a new ticket panel')
+                .addStringOption(opt =>
+                    opt.setName('name')
+                        .setDescription('Panel name (e.g. "Support", "Applications")')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('panel_delete')
+                .setDescription('Delete a ticket panel and all its types')
+                .addStringOption(opt =>
+                    opt.setName('name')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('panel_list')
+                .setDescription('List all ticket panels'))
+        .addSubcommand(sub =>
+            sub.setName('panel_send')
+                .setDescription('Send a ticket panel to a channel')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true))
                 .addChannelOption(opt =>
                     opt.setName('channel')
                         .setDescription('Channel to send the panel to (defaults to current)')
                         .setRequired(false)))
+        // ── Panel Type CRUD ──
+        .addSubcommand(sub =>
+            sub.setName('type_add')
+                .setDescription('Add a ticket type to a panel')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('name')
+                        .setDescription('Ticket type name (e.g. "Support", "Appeals")')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('emoji')
+                        .setDescription('Emoji for this type (default: 🎫)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('type_remove')
+                .setDescription('Remove a ticket type from a panel')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type name, emoji, or ID')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('type_list')
+                .setDescription('List all types in a panel')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('type_category')
+                .setDescription('Set the category for a ticket type')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type name or ID')
+                        .setRequired(true))
+                .addChannelOption(opt =>
+                    opt.setName('channel')
+                        .setDescription('Category channel (leave empty to clear)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('type_role')
+                .setDescription('Set which role can see tickets for a type')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type name or ID')
+                        .setRequired(true))
+                .addRoleOption(opt =>
+                    opt.setName('role')
+                        .setDescription('Support role (leave empty to clear)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('type_welcome')
+                .setDescription('Set the welcome message for a ticket type')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('message')
+                        .setDescription('Welcome message text')
+                        .setRequired(true)
+                        .setMaxLength(1000)))
+        .addSubcommand(sub =>
+            sub.setName('type_question')
+                .setDescription('Add a custom question to a ticket type')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('label')
+                        .setDescription('Question label (e.g. "What is your issue?")')
+                        .setRequired(true))
+                .addBooleanOption(opt =>
+                    opt.setName('required')
+                        .setDescription('Whether this question is required (default: true)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('type_question_remove')
+                .setDescription('Remove a question from a ticket type')
+                .addStringOption(opt =>
+                    opt.setName('panel')
+                        .setDescription('Panel name or ID')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type name or ID')
+                        .setRequired(true))
+                .addIntegerOption(opt =>
+                    opt.setName('number')
+                        .setDescription('Question number to remove')
+                        .setRequired(true)
+                        .setMinValue(1)))
+        // ── Global Config ──
         .addSubcommand(sub =>
             sub.setName('config_show')
                 .setDescription('Show current ticket configuration'))
@@ -1297,28 +1435,6 @@ const commandDefs = [
                     opt.setName('enabled')
                         .setDescription('Enable or disable tickets')
                         .setRequired(true)))
-        .addSubcommand(sub =>
-            sub.setName('category')
-                .setDescription('Set the category for ticket channels')
-                .addChannelOption(opt =>
-                    opt.setName('channel')
-                        .setDescription('The category channel (leave empty to clear)')
-                        .setRequired(false)))
-        .addSubcommand(sub =>
-            sub.setName('support_role')
-                .setDescription('Set the staff role that can see tickets')
-                .addRoleOption(opt =>
-                    opt.setName('role')
-                        .setDescription('The support role (leave empty to clear)')
-                        .setRequired(false)))
-        .addSubcommand(sub =>
-            sub.setName('welcome')
-                .setDescription('Set the welcome message for new tickets')
-                .addStringOption(opt =>
-                    opt.setName('message')
-                        .setDescription('The welcome message text')
-                        .setRequired(true)
-                        .setMaxLength(1000)))
         .addSubcommand(sub =>
             sub.setName('close_on_leave')
                 .setDescription('Auto-close tickets when members leave')
@@ -1333,16 +1449,17 @@ const commandDefs = [
                     opt.setName('channel')
                         .setDescription('Channel for ticket logs (leave empty to clear)')
                         .setRequired(false)))
+        // ── Ticket Actions ──
         .addSubcommand(sub =>
             sub.setName('add')
-                .setDescription('Add a user to a ticket channel')
+                .setDescription('Add a user to the current ticket channel')
                 .addUserOption(opt =>
                     opt.setName('user')
                         .setDescription('The user to add')
                         .setRequired(true)))
         .addSubcommand(sub =>
             sub.setName('remove')
-                .setDescription('Remove a user from a ticket channel')
+                .setDescription('Remove a user from the current ticket channel')
                 .addUserOption(opt =>
                     opt.setName('user')
                         .setDescription('The user to remove')

@@ -280,13 +280,41 @@ function initSchema() {
         CREATE TABLE IF NOT EXISTS ticket_config (
             guild_id TEXT PRIMARY KEY,
             enabled INTEGER NOT NULL DEFAULT 0,
-            category_id TEXT,
-            support_role_id TEXT,
             ticket_count INTEGER NOT NULL DEFAULT 0,
-            welcome_message TEXT NOT NULL DEFAULT 'Thank you for creating a ticket. Please describe your issue and a staff member will be with you shortly.',
             close_on_leave INTEGER NOT NULL DEFAULT 0,
             log_channel_id TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS ticket_panels (
+            id TEXT PRIMARY KEY,
+            guild_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            channel_id TEXT,
+            panel_message_id TEXT,
+            color TEXT NOT NULL DEFAULT '#5865F2',
+            image_url TEXT,
+            description TEXT NOT NULL DEFAULT 'Click the button below to create a ticket and a staff member will assist you.',
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ticket_panels_guild ON ticket_panels(guild_id);
+
+        CREATE TABLE IF NOT EXISTS ticket_panel_types (
+            id TEXT PRIMARY KEY,
+            panel_id TEXT NOT NULL,
+            guild_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            emoji TEXT NOT NULL DEFAULT '🎫',
+            category_id TEXT,
+            support_roles TEXT NOT NULL DEFAULT '[]',
+            welcome_message TEXT NOT NULL DEFAULT 'Thank you for creating a ticket. A staff member will be with you shortly.',
+            ticket_name_format TEXT NOT NULL DEFAULT 'ticket-{username}-{number}',
+            questions TEXT NOT NULL DEFAULT '[]',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ticket_panel_types_panel ON ticket_panel_types(panel_id);
 
         CREATE TABLE IF NOT EXISTS tickets (
             id TEXT PRIMARY KEY,
@@ -295,8 +323,11 @@ function initSchema() {
             channel_id TEXT NOT NULL,
             creator_id TEXT NOT NULL,
             creator_tag TEXT NOT NULL,
+            panel_type_id TEXT,
+            panel_type_name TEXT,
             status TEXT NOT NULL DEFAULT 'open',
             reason TEXT,
+            answers TEXT,
             created_at INTEGER NOT NULL,
             closed_by_id TEXT,
             closed_by_tag TEXT,

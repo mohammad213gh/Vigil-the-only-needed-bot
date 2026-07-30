@@ -642,7 +642,7 @@ function initSSE(){
 
 window.addEventListener('beforeunload',()=>{if(bgAnimId)cancelAnimationFrame(bgAnimId)});
 
-checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadCommands();await loadRm();await loadSys();loadCmdUsage();loadBrand();stRf();initSSE()});
+checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadCommands();await loadRm();await loadSys();await loadTickets();loadCmdUsage();loadBrand();stRf();initSSE()});
 
 
 // ═══ MOD TOOLS ═══
@@ -923,6 +923,94 @@ async function loadInvites(){
     list.innerHTML='<div class="empty"><p>Failed to load invites</p><p class="empty-act">'+e.message+'</p></div>';
   }
 }
+
+// ═══ TICKETS ═══
+async function loadTickets(){
+  const sel=document.getElementById('tkSrvSelect');
+  if(!sel)return;
+  if(sel.options.length<=1&&allServers.length){
+    sel.innerHTML='<option value="">Select a server...</option>'+allServers.map(function(s){return '<option value="'+s.id+'"'+(curSrv===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('');
+  }
+  const serverId=sel.value;
+  const el=document.getElementById('ticketsContent');
+  if(!el)return;
+  if(!serverId){el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:32px;height:32px;"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg><p>Select a server to manage tickets</p><p class="empty-act">Create ticket panels, configure ticket types, and view recent tickets.</p></div>';updateRefreshTimestamp('tickets');return;}
+  el.innerHTML='<div class="loading" style="padding:24px;"><div class="spin"></div></div>';
+  try{
+    const r=await fetch('/api/server/'+serverId+'/tickets');
+    if(!r.ok)throw new Error('Failed to fetch');
+    const d=await r.json();
+    if(!d||!d.config)throw new Error('Invalid data');
+
+    // ── Config Section ──
+    const cfgHtml='<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M9 21V9"/></svg>Global Config</div><div style="padding:14px;">'+
+      '<div class="stg-inl" style="justify-content:space-between;margin-bottom:10px;"><span style="font-size:13px;">Ticket System</span><div class="tg-wr" onclick="ticketToggle(\''+serverId+'\','+(!d.config.enabled)+')"><div class="tg '+(d.config.enabled?'on':'')+'"></div><div class="tg-lbl">'+(d.config.enabled?'Enabled':'Disabled')+'</div></div></div>'+
+      '<div class="stg-inl" style="justify-content:space-between;margin-bottom:10px;"><span style="font-size:13px;">Auto-Close on Leave</span><div class="tg-wr" onclick="ticketToggleLeave(\''+serverId+'\','+(!d.config.closeOnLeave)+')"><div class="tg '+(d.config.closeOnLeave?'on':'')+'"></div><div class="tg-lbl">'+(d.config.closeOnLeave?'On':'Off')+'</div></div></div>'+
+      '<div class="stg" style="margin-bottom:10px;"><label>Transcript Log Channel</label><select id="tkLogCh" onchange="ticketSetLog(\''+serverId+'\')"><option value="">None</option>'+((d.channels||[]).filter(function(c){return c.type===0||c.type===5}).map(function(c){return '<option value="'+c.id+'"'+(c.id===d.config.logChannelId?' selected':'')+'>#'+c.name+'</option>';}).join(''))+'</select></div>'+
+      '<div style="font-size:11px;color:var(--text-dim);">Total tickets created: <strong>'+d.config.ticketCount+'</strong></div>'+
+    '</div></div>';
+
+    // ── Panels Section ──
+    var panelsHtml='<div class="tw" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Ticket Panels <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+((d.panels||[]).length)+')</span></div><div style="padding:10px;">';
+    if(d.panels&&d.panels.length){
+      for(const p of d.panels){
+        const typeRows=(p.types||[]).map(function(t,i2){
+          var qCount=0;try{qCount=JSON.parse(t.questions||'[]').length}catch{}
+          return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;">'+
+            '<span style="font-size:16px;">'+(t.emoji||'\uD83C\uDFAB')+'</span>'+
+            '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;">'+esc(t.name)+'</div><div style="font-size:10px;color:var(--text-dim);">'+(t.category_id?'<#'+t.category_id+'>':'No category')+' | Q: '+qCount+' | Roles: '+(t.support_roles?JSON.parse(t.support_roles||'[]').length:0)+'</div></div>'+
+            '<button class="btn btn-s" onclick="deleteTicketType(\''+serverId+'\',\''+p.id+'\',\''+t.id+'\')" style="padding:4px 8px;font-size:9px;color:#ed4245;">\u2716</button></div>';
+        }).join('');
+        var sendBtn='<button class="btn btn-s" onclick="sendTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:4px 10px;font-size:10px;">\uD83D\uDCE8 Send</button>';
+        panelsHtml+='<div style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;">'+
+          '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--border);">'+
+          '<span style="font-weight:600;font-size:13px;flex:1;">'+esc(p.name||'Unnamed')+'</span>'+
+          '<span class="badge" style="font-size:9px;">'+(p.types||[]).length+' types</span>'+
+          sendBtn+
+          '<button class="btn btn-s" onclick="deleteTicketPanel(\''+serverId+'\',\''+p.id+'\')" style="padding:4px 8px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
+          '<div style="padding:8px 12px;">'+
+          (typeRows||'<div style="font-size:11px;color:var(--text-dim);padding:4px 0;">No types yet.</div>')+
+          '<button class="btn btn-s" onclick="addTicketType(\''+serverId+'\',\''+p.id+'\')" style="width:100%;padding:6px;font-size:10px;margin-top:4px;">+ Add Type</button>'+
+          '</div></div>';
+      }
+    }else{
+      panelsHtml+='<div class="empty" style="padding:16px;"><p>No ticket panels yet. Create one below.</p></div>';
+    }
+    panelsHtml+='<button class="btn" onclick="createTicketPanel(\''+serverId+'\')" style="width:100%;padding:10px;font-size:13px;">+ Create Panel</button></div></div>';
+
+    // ── Recent Tickets ──
+    var recentHtml='<div class="tw" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Recent Tickets <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+((d.tickets||[]).length)+')</span></div><div style="padding:8px 12px 12px;">';
+    if(d.tickets&&d.tickets.length){
+      recentHtml+=d.tickets.slice(0,15).map(function(tk){
+        var statusColor=tk.status==='open'?'#3ba55c':(tk.status==='claimed'?'#f59e0b':'#ed4245');
+        var panelType=tk.panelTypeName?' <span style="font-size:10px;color:var(--text-dim)">'+esc(tk.panelTypeName)+'</span>':'';
+        return '<div class="mod-item"><div class="mod-body"><div class="mod-top"><span class="mod-type">#'+tk.ticketNumber+' '+esc(tk.creatorTag||'Unknown')+panelType+'</span></div></div><div class="mod-count"><span style="color:'+statusColor+';font-size:10px;">'+tk.status+'</span></div></div>';
+      }).join('');
+    }else{
+      recentHtml+='<div class="empty" style="padding:16px;"><p>No tickets have been created yet.</p></div>';
+    }
+    recentHtml+='</div></div>';
+
+    // ── Build layout ──
+    var grid='<div class="grid grid-2" style="margin-top:0;"><div>'+cfgHtml+'</div><div>'+panelsHtml+'</div></div>';
+    el.innerHTML=grid+'<div style="margin-top:16px;max-width:600px;">'+recentHtml+'</div>';
+    updateRefreshTimestamp('tickets');
+    setTimeout(function(){document.querySelectorAll('#sec-tickets .sr').forEach(function(el){srObs.observe(el)})},50);
+  }catch(e){
+    el.innerHTML='<div class="empty"><p>Failed to load ticket data.</p><p class="empty-act">'+esc(e.message)+'</p></div>';
+    updateRefreshTimestamp('tickets');
+  }
+}
+
+// ── Ticket Dashboard CRUD Helpers ──
+function ticketToggle(serverId,newVal){fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:newVal})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Ticket system '+(newVal?'enabled':'disabled')+'!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
+function ticketToggleLeave(serverId,newVal){fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({closeOnLeave:newVal})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Auto-close '+(newVal?'enabled':'disabled')+'!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
+function ticketSetLog(serverId){var v=document.getElementById('tkLogCh').value;fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({logChannelId:v||null})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Log channel updated!')}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
+function createTicketPanel(serverId){var name=prompt('Panel name:');if(!name||!name.trim())return;fetch('/api/server/'+serverId+'/tickets/panels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim()})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel created!');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)}).catch(function(e){showToast('Failed: '+e.message,true)})}
+function deleteTicketPanel(serverId,panelId){if(!confirm('Delete this panel and all its types?'))return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId,{method:'DELETE'}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel deleted!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
+function addTicketType(serverId,panelId){var name=prompt('Type name (e.g. Support):');if(!name||!name.trim())return;var emoji=prompt('Emoji (optional, default \uD83C\uDFAB):')||'\uD83C\uDFAB';var catId=prompt('Category ID (optional, leave blank for none):')||null;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim(),emoji:emoji,category_id:catId})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Type added!');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)}).catch(function(e){showToast('Failed: '+e.message,true)})}
+function deleteTicketType(serverId,panelId,typeId){if(!confirm('Remove this ticket type?'))return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+typeId,{method:'DELETE'}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Type removed!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
+function sendTicketPanel(serverId,panelId){var chId=prompt('Channel ID to send the panel to:');if(!chId||!chId.trim())return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channelId:chId.trim()})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel sent!');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)}).catch(function(e){showToast('Failed: '+e.message,true)})}
 
 // ═══ AUTO-MOD ═══
 async function loadAutomod(){

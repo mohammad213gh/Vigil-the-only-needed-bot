@@ -53,8 +53,9 @@ async function handleButton(interaction) {
         return handlePollVoters(interaction);
     }
     // Ticket create — anyone can use (no initiator check)
+    // Format: tk_create_{panelId}_{typeId} OR tk_create_{panelId}
     if (prefix === 'tk_create') {
-        return handleTicketCreate(interaction);
+        return handleTicketCreate(interaction, parts);
     }
     // Ticket close — anyone in the channel can use
     if (prefix === 'tk_close') {
@@ -297,8 +298,9 @@ async function handleModal(interaction) {
     if (prefix === 'wr') {
         return handleWarnSubmit(interaction, parts);
     }
-    if (prefix === 'tk_reason') {
-        return handleTicketReasonSubmit(interaction);
+    if (prefix === 'tk_questions') {
+        const { handleQuestionsSubmit } = require('./tickets');
+        return handleQuestionsSubmit(interaction);
     }
 }
 
@@ -571,13 +573,39 @@ async function handlePollVoters(interaction) {
 // ──────────────────── Select Menu Handler ────────────────────
 
 const { handleRoleMenuSelect } = require('./commands/roleMenu');
+const { getPanel, getPanelTypes } = require('./tickets');
 
 async function handleSelectMenu(interaction) {
     const parts = interaction.customId.split('_');
     if (parts[0] === 'rm') {
         return handleRoleMenuSelect(interaction);
     }
+    // Ticket panel type selection
+    if (parts[0] === 'tk' && parts[1] === 'select') {
+        return handleTicketTypeSelect(interaction, parts);
+    }
     await interaction.reply({ content: 'Select menu received.', ephemeral: true });
+}
+
+async function handleTicketTypeSelect(interaction, parts) {
+    // tk_select_{panelId}
+    const panelId = parts.slice(2).join('_');
+    const typeId = interaction.values[0];
+
+    const { showQuestionsModal } = require('./tickets');
+    const type = require('./tickets').getPanelType(typeId);
+    if (!type) {
+        return interaction.reply({ content: '❌ This ticket type no longer exists.', ephemeral: true });
+    }
+
+    // Update the ephemeral message to show selected type
+    await interaction.update({
+        content: '✅ You selected **' + type.emoji + ' ' + type.name + '**. Loading form...',
+        components: [],
+    });
+
+    // Show the questions modal
+    await showQuestionsModal(interaction, type);
 }
 
 // ──────────────────── Ticket Handlers ────────────────────
@@ -585,7 +613,11 @@ async function handleSelectMenu(interaction) {
 // These don't use the initiatorId prefix pattern because anyone can
 // create a ticket, and close/claim use the actual button-presser.
 
-async function handleTicketCreate(interaction) {
+async function handleTicketCreate(interaction, parts) {
+    // tk_create_{panelId}_{typeId} OR tk_create_{panelId}
+    const panelId = parts[2];
+    const typeId = parts[3];
+
     const guild = interaction.guild;
     const config = require('./tickets').getTicketConfig(guild.id);
 
@@ -593,69 +625,28 @@ async function handleTicketCreate(interaction) {
         return interaction.reply({ content: '❌ Tickets are not enabled in this server.', ephemeral: true });
     }
 
-    // Ask the user for a reason via modal
-    const modal = new ModalBuilder()
-        .setCustomId('tk_reason_' + interaction.user.id)
-        .setTitle('Create a Ticket');
-
-    const reasonInput = new TextInputBuilder()
-        .setCustomId('ticket_reason')
-        .setLabel('Briefly describe your issue')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Tell us what you need help with...')
-        .setMaxLength(1000)
-        .setRequired(false);
-
-    modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
-
-    await interaction.showModal(modal);
-}
-
-async function handleTicketReasonSubmit(interaction) {
-    const reason = interaction.fields.getTextInputValue('ticket_reason') || null;
-    const guild = interaction.guild;
-
-    // Check the user doesn't already have an open ticket
+    // Check for existing open ticket
     const db = getDb();
     const existing = db.prepare('SELECT * FROM tickets WHERE guild_id = ? AND creator_id = ? AND status IN (?, ?)')
         .get(guild.id, interaction.user.id, 'open', 'claimed');
 
     if (existing) {
-        return interaction.reply({
-            content: '❌ You already have an open ticket! <#' + existing.channel_id + '>',
-            ephemeral: true,
-        });
+        return interaction.reply({ content: '❌ You already have an open ticket! <#' + existing.channel_id + '>', ephemeral: true });
     }
 
-    let config;
-    try {
-        config = require('./tickets').getTicketConfig(guild.id);
-    } catch (err) {
-        logError(err, 'interactions', 'ticketConfig');
-        return interaction.reply({ content: '❌ Failed to load ticket configuration.', ephemeral: true });
+    if (typeId) {
+        // Direct type specified — show questions modal
+        const type = require('./tickets').getPanelType(typeId);
+        if (!type) return interaction.reply({ content: '❌ This ticket type no longer exists.', ephemeral: true });
+        const { showQuestionsModal } = require('./tickets');
+        return showQuestionsModal(interaction, type);
     }
 
-    // Defer reply because creating channels takes time
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-        const { createTicket } = require('./tickets');
-        const result = await createTicket(guild, interaction.user, reason, config);
-
-        const embed = new EmbedBuilder()
-            .setColor(0x5865F2)
-            .setTitle('🎫 Ticket Created')
-            .setDescription('Your ticket has been created! Channel: <#' + result.channel.id + '>')
-            .setFooter({ text: 'Ticket #' + result.ticketNumber })
-            .setTimestamp();
-
-        if (reason) embed.addFields({ name: 'Reason', value: reason });
-
-        await interaction.editReply({ embeds: [embed] });
-    } catch (err) {
-        logError(err, 'interactions', 'createTicket');
-        await interaction.editReply({ content: '❌ Failed to create ticket: ' + err.message });
-    }
+    // No type — show panel type selector
+    const { showTicketTypeModal } = require('./tickets');
+    const panel = require('./tickets').getPanel(panelId);
+    if (!panel) return interaction.reply({ content: '❌ This panel no longer exists.', ephemeral: true });
+    await showTicketTypeModal(interaction, panel);
 }
 
 async function handleTicketClose(interaction, parts) {
