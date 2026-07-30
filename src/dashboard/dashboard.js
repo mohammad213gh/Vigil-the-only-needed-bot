@@ -978,61 +978,36 @@ async function loadTickets(){
     }else{
       var pTypes=selPanel.types||[];
       var panelIdx=0;for(var pi2=0;pi2<panels.length;pi2++){if(panels[pi2].id===selPanel.id){panelIdx=pi2+1;break}}
-      // Action row
-      panelsHtml+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">'+
-        '<button class="btn btn-s" onclick="tkClonePanel(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDD04 Clone</button>'+
-        '<button class="btn btn-s" onclick="tkRenamePanel(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;">\u270F\uFE0F Rename</button>'+
-        '<button class="btn btn-s" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDCE8 Send</button>'+
-        '<button class="btn btn-s" onclick="tkSetCount(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDD22 Set Count</button>'+
-        '<button class="btn btn-s" onclick="editTicketPanel(\''+serverId+'\',\''+selPanel.id+'\',\''+esc(selPanel.name||'')+'\',\''+(selPanel.color||'#5865F2')+'\',\''+esc(selPanel.description||'')+'\')" style="padding:6px 12px;font-size:10px;">\u2699\uFE0F Update</button>'+
-        '<button class="btn btn-s" onclick="tkDeletePanel(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:6px 12px;font-size:10px;color:#ed4245;border-color:rgba(237,66,69,0.3);">\u2716 Delete</button></div>';
+      // Action row — compact 2-row layout that works on mobile
+      panelsHtml+='<div class="tk-act-row">'+
+        '<button class="btn btn-s" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDCE8 Send</button>'+
+        '<button class="btn btn-s" onclick="editTicketPanel(\''+serverId+'\',\''+selPanel.id+'\',\''+esc(selPanel.name||'')+'\',\''+(selPanel.color||'#5865F2')+'\',\''+esc(selPanel.description||'')+'\')">\u2699\uFE0F Edit</button>'+
+        '<button class="btn btn-s" onclick="tkClonePanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD04 Clone</button>'+
+        '<button class="btn btn-s" onclick="tkRenamePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u270F\uFE0F Rename</button>'+
+        '<button class="btn btn-s" onclick="tkSetCount(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD22 Count</button>'+
+        '<button class="tk-del-btn" onclick="tkDeletePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2716 Delete</button></div>';
       
-      // ── Category Card Grids ──
-      function tkCardGrid(title,cards,desc){
-        var html='<div style="margin-bottom:12px;"><div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;">'+title+'</div>'+(desc?'<div style="font-size:10px;color:var(--text-dim);margin-bottom:8px;">'+desc+'</div>':'')+'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;">';
-        for(var ci=0;ci<cards.length;ci++){
-          var c=cards[ci];
-          html+='<div onclick="tkCardClick(\''+c.id+'\',\''+serverId+'\',\''+selPanel.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor=&#39;rgba(var(--accent-rgb),0.25)&#39;;this.style.background=&#39;rgba(var(--accent-rgb),0.04)&#39;" onmouseout="this.style.borderColor=&#39;&#39;;this.style.background=&#39;&#39;">'+
-            '<div><div style="font-size:12px;font-weight:600;">'+esc(c.label)+'</div><div style="font-size:9px;color:var(--text-dim);margin-top:1px;">'+esc(c.sub||'')+'</div></div>'+
-            '<span style="color:var(--text-dim);font-size:12px;">\u203A</span></div>';
-        }
-        html+='</div></div>';
-        return html;
+      // ── Only keep cards with real functionality ──
+      var realCards=[
+        {id:'types',label:'\uD83D\uDD04 Ticket Types',sub:'Configure types, categories, questions, roles'},
+        {id:'forms',label:'\uD83D\uDCDD Custom Questions',sub:'Up to 5 questions per type'},
+        {id:'transcript',label:'\uD83D\uDCC4 Transcript & Logging',sub:'Ticket transcripts and log channel'},
+        {id:'claiming',label:'\uD83D\uDC4B Claim System',sub:'Staff claiming and transfers'},
+      ];
+      panelsHtml+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:12px;">';
+      for(var ci=0;ci<realCards.length;ci++){
+        var c=realCards[ci];
+        panelsHtml+='<div onclick="tkCardClick(\''+c.id+'\',\''+serverId+'\',\''+selPanel.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor=&#39;rgba(var(--accent-rgb),0.3)&#39;;this.style.background=&#39;rgba(var(--accent-rgb),0.06)&#39;" onmouseout="this.style.borderColor=&#39;&#39;;this.style.background=&#39;&#39;">'+
+          '<div><div style="font-size:13px;font-weight:600;">'+c.label+'</div><div style="font-size:10px;color:var(--text-dim);margin-top:2px;">'+c.sub+'</div></div>'+
+          '<span style="color:var(--text-dim);font-size:14px;">\u203A</span></div>';
       }
-      
-      var generalCards=[
-        {id:'general',label:'General',sub:'General ticket settings'},
-        {id:'category',label:'Category',sub:'Per-type categories'},
-        {id:'ticket',label:'Ticket',sub:'Ticket display options'},
-        {id:'moderator',label:'Moderator',sub:'Moderator settings'},
-        {id:'permissions',label:'Permissions',sub:'Access control'},
-        {id:'buttons',label:'Buttons',sub:'Button customization'},
-        {id:'messages',label:'Messages',sub:'Message templates'},
-        {id:'escalate',label:'Escalate',sub:'Escalation settings'},
-      ];
-      var panelCards=[
-        {id:'panel',label:'Panel',sub:'Panel display options'},
-        {id:'commandstyle',label:'Command Style',sub:'Command appearance'},
-        {id:'dropdownstyle',label:'DropDown Style',sub:'Dropdown appearance'},
-        {id:'threadstyle',label:'Thread Style',sub:'Thread display'},
-        {id:'forms',label:'Forms',sub:'Custom questions ('+pTypes.reduce(function(a,t){var q=0;try{q=JSON.parse(t.questions||'[]').length}catch{};return a+q},0)+' total)'},
-      ];
-      var advancedCards=[
-        {id:'transcript',label:'Transcript',sub:'Message logging'},
-        {id:'logging',label:'Logging',sub:'Action logging'},
-        {id:'automation',label:'Automation',sub:'Auto-close settings'},
-        {id:'limits',label:'Limits',sub:'Rate limits'},
-        {id:'claiming',label:'Claiming',sub:'Claim system'},
-        {id:'integrations',label:'Integrations',sub:'External tools'},
-      ];
-      
-      panelsHtml+=tkCardGrid('General Ticket Options',generalCards)+tkCardGrid('Panel Settings',panelCards)+tkCardGrid('Advanced Settings',advancedCards);
+      panelsHtml+='</div>';
 
       // ── Frequently Used Configs ──
       panelsHtml+='<div id="tk-freq-wr" style="margin-top:8px;">'+
         '<div onclick="tkToggleFreq()" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 0;font-size:12px;font-weight:600;color:var(--text);user-select:none;">'+
           '<span id="tk-freq-caret" style="transition:transform 0.2s;font-size:10px;">▼</span>Frequently Used Configs</div>'+
-        '<div id="tk-freq-body" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'+
+        '<div id="tk-freq-body" class="tk-freq-grid">'+
           // Left: Support Team Roles + Panel Message
           '<div><div class="stg" style="margin-bottom:10px;"><label>Support Team Roles <span title="Roles that can view and manage tickets" style="cursor:help;color:var(--text-dim);font-size:11px;">ⓘ</span></label>'+
             '<select id="tk-freq-roles" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;" onchange="tkMarkUnsaved()">'+
@@ -1441,31 +1416,44 @@ function tkSetCount(serverId,panelId){
   }).catch(function(e){showToast('Failed to load counter data',true)});
 }
 function tkCardClick(cardId,serverId,panelId){
-  // Cards that map to real existing functionality
-  if(cardId==='category'||cardId==='forms'){
-    // Category and Forms are handled per-type in the type settings modal
-    showToast('Configure in type settings > Edit Type',true);
+  if(cardId==='types'){
+    fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+      var panel=null;
+      for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
+      if(!panel||!panel.types||!panel.types.length){showToast('No types yet — use /ticket type_add or + Add Type',true);return}
+      editTicketTypeSettings(serverId,panelId,panel.types[0].id);
+    }).catch(function(){showToast('Failed to load',true)});
+    return;
+  }
+  if(cardId==='forms'){
+    fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+      var panel=null;
+      for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
+      if(!panel||!panel.types||!panel.types.length){showToast('No types configured',true);return}
+      editQuestions(serverId,panelId,panel.types[0].id);
+    }).catch(function(){showToast('Failed to load',true)});
     return;
   }
   if(cardId==='transcript'){
-    showToast('Transcript: log channel set in Global Config',true);
+    var logCh=document.getElementById('tkLogCh');
+    if(logCh){logCh.scrollIntoView({behavior:'smooth',block:'center'});logCh.style.outline='2px solid var(--accent)';logCh.style.outlineOffset='2px';setTimeout(function(){logCh.style.outline=''},2000)}
+    showToast('Set transcript log channel in the Global Config panel above');
     return;
   }
   if(cardId==='claiming'){
-    showToast('Claiming: claim a ticket via the Claim button in a ticket channel',true);
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
+    overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:420px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
+      '<h2 style="font-size:16px;font-weight:700;margin:0 0 12px 0;">\uD83D\uDC4B Claim System</h2>'+
+      '<div style="font-size:12px;color:var(--text-dim);line-height:1.6;margin-bottom:16px;">'+
+        '<p style="margin:0 0 8px 0;">Staff claim tickets via the <strong>Claim</strong> button in a ticket channel.</p>'+
+        '<p style="margin:0 0 8px 0;">Claimed tickets show the claiming staff member. Only the claimer or Support Team role can close/transfer.</p>'+
+        '<p style="margin:0;">Set <strong>Support Team Roles</strong> below to allow claiming.</p></div>'+
+      '<button class="btn btn-s" onclick="tkCloseModal(this)" style="padding:8px 20px;font-size:12px;">Close</button></div>';
+    document.body.appendChild(overlay);
     return;
   }
-  // All other cards: placeholder modal
-  var names={general:'General Settings',ticket:'Ticket Settings',moderator:'Moderator Settings',permissions:'Permission Settings',buttons:'Button Settings',messages:'Message Settings',escalate:'Escalation Settings',panel:'Panel Settings',commandstyle:'Command Style Settings',dropdownstyle:'DropDown Style Settings',threadstyle:'Thread Style Settings',logging:'Logging Settings',automation:'Automation Settings',limits:'Limit Settings',integrations:'Integration Settings'};
-  var label=names[cardId]||cardId.charAt(0).toUpperCase()+cardId.slice(1)+' Settings';
-  var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
-  overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
-  overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:400px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);text-align:center;">'+
-    '<h2 style="font-size:16px;font-weight:700;margin:0 0 10px 0;">'+esc(label)+'</h2>'+
-    '<p style="font-size:12px;color:var(--text-dim);margin-bottom:18px;">Not yet configured</p>'+
-    '<button class="btn btn-s" onclick="tkCloseModal(this)" style="padding:8px 20px;font-size:12px;">Close</button></div>';
-  document.body.appendChild(overlay);
 }
 
 // ── Frequently Used Configs Helpers ──
