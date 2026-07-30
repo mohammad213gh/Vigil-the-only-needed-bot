@@ -1227,6 +1227,68 @@ function createDashboard() {
         }
     });
 
+    // ── Ticket System API ──
+    const { getTicketConfig, updateTicketConfig } = require('./tickets');
+
+    app.get('/api/server/:id/tickets', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const db = getDb();
+            const config = getTicketConfig(guild.id);
+            const tickets = db.prepare('SELECT * FROM tickets WHERE guild_id = ? ORDER BY created_at DESC LIMIT 50').all(guild.id);
+            res.json({
+                config: {
+                    enabled: !!config.enabled,
+                    categoryId: config.category_id,
+                    supportRoleId: config.support_role_id,
+                    ticketCount: config.ticket_count || 0,
+                    welcomeMessage: config.welcome_message,
+                    closeOnLeave: !!config.close_on_leave,
+                    logChannelId: config.log_channel_id,
+                },
+                tickets: tickets.map(t => ({
+                    id: t.id,
+                    ticketNumber: t.ticket_number,
+                    channelId: t.channel_id,
+                    creatorId: t.creator_id,
+                    creatorTag: t.creator_tag,
+                    status: t.status,
+                    reason: t.reason,
+                    createdAt: t.created_at,
+                    closedById: t.closed_by_id,
+                    closedByTag: t.closed_by_tag,
+                    closedAt: t.closed_at,
+                    claimerId: t.claimer_id,
+                    closedReason: t.closed_reason,
+                })),
+            });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/tickets/config', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const { enabled, categoryId, supportRoleId, welcomeMessage, closeOnLeave, logChannelId } = req.body;
+            const updates = {};
+            if (enabled !== undefined) updates.enabled = enabled;
+            if (categoryId !== undefined) updates.category_id = categoryId;
+            if (supportRoleId !== undefined) updates.support_role_id = supportRoleId;
+            if (welcomeMessage !== undefined) updates.welcome_message = welcomeMessage;
+            if (closeOnLeave !== undefined) updates.close_on_leave = closeOnLeave;
+            if (logChannelId !== undefined) updates.log_channel_id = logChannelId;
+            const result = updateTicketConfig(guild.id, updates);
+            res.json({ success: true, config: result });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // ── Message Search ──
     app.get('/api/server/:id/messages', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });

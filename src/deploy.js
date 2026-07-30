@@ -1276,6 +1276,95 @@ const commandDefs = [
                         .setMaxValue(50))),
 
     // ── Reaction Roles (owner only) ──
+    // ── Tickets (owner only) ──
+    new SlashCommandBuilder()
+        .setName('ticket')
+        .setDescription('Manage support tickets')
+        .addSubcommand(sub =>
+            sub.setName('panel')
+                .setDescription('Send the ticket creation panel to a channel')
+                .addChannelOption(opt =>
+                    opt.setName('channel')
+                        .setDescription('Channel to send the panel to (defaults to current)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('config_show')
+                .setDescription('Show current ticket configuration'))
+        .addSubcommand(sub =>
+            sub.setName('toggle')
+                .setDescription('Enable or disable the ticket system')
+                .addBooleanOption(opt =>
+                    opt.setName('enabled')
+                        .setDescription('Enable or disable tickets')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('category')
+                .setDescription('Set the category for ticket channels')
+                .addChannelOption(opt =>
+                    opt.setName('channel')
+                        .setDescription('The category channel (leave empty to clear)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('support_role')
+                .setDescription('Set the staff role that can see tickets')
+                .addRoleOption(opt =>
+                    opt.setName('role')
+                        .setDescription('The support role (leave empty to clear)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('welcome')
+                .setDescription('Set the welcome message for new tickets')
+                .addStringOption(opt =>
+                    opt.setName('message')
+                        .setDescription('The welcome message text')
+                        .setRequired(true)
+                        .setMaxLength(1000)))
+        .addSubcommand(sub =>
+            sub.setName('close_on_leave')
+                .setDescription('Auto-close tickets when members leave')
+                .addBooleanOption(opt =>
+                    opt.setName('enabled')
+                        .setDescription('Enable or disable auto-close on leave')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('log_channel')
+                .setDescription('Set the channel for ticket transcripts')
+                .addChannelOption(opt =>
+                    opt.setName('channel')
+                        .setDescription('Channel for ticket logs (leave empty to clear)')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('add')
+                .setDescription('Add a user to a ticket channel')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to add')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('remove')
+                .setDescription('Remove a user from a ticket channel')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to remove')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('close')
+                .setDescription('Close the current ticket channel')
+                .addStringOption(opt =>
+                    opt.setName('reason')
+                        .setDescription('Reason for closing')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('claim')
+                .setDescription('Claim the current ticket as your responsibility'))
+        .addSubcommand(sub =>
+            sub.setName('rename')
+                .setDescription('Rename the ticket channel')
+                .addStringOption(opt =>
+                    opt.setName('name')
+                        .setDescription('New channel name')
+                        .setRequired(true))),
+
     new SlashCommandBuilder()
         .setName('reactionrole')
         .setDescription('Manage self-assignable reaction roles')

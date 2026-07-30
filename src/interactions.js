@@ -19,6 +19,9 @@ const { logError } = require('./logError');
 //   pv_vote_{optionIndex}               = single poll vote (NO initiatorId — anyone can vote)
 //   pm_vote_{optionIndex}               = multi poll vote (can vote for multiple)
 //   pa_vote_{optionIndex}               = anonymous poll vote (votes hidden)
+//   tk_create                           = create ticket (no security, any user)
+//   tk_close_{ticketId}                 = close ticket (no initiator check — uses interaction.user)
+//   tk_claim_{ticketId}                 = claim ticket (no initiator check — uses interaction.user)
 
 // ──────────────────── Main Router ────────────────────
 
@@ -48,6 +51,18 @@ async function handleButton(interaction) {
     // Poll voters button
     if (prefix === 'pvv') {
         return handlePollVoters(interaction);
+    }
+    // Ticket create — anyone can use (no initiator check)
+    if (prefix === 'tk_create') {
+        return handleTicketCreate(interaction);
+    }
+    // Ticket close — anyone in the channel can use
+    if (prefix === 'tk_close') {
+        return handleTicketClose(interaction, parts);
+    }
+    // Ticket claim — anyone can claim
+    if (prefix === 'tk_claim') {
+        return handleTicketClaim(interaction, parts);
     }
 
     // All other buttons: only the person who initiated the action can interact
@@ -281,6 +296,9 @@ async function handleModal(interaction) {
 
     if (prefix === 'wr') {
         return handleWarnSubmit(interaction, parts);
+    }
+    if (prefix === 'tk_reason') {
+        return handleTicketReasonSubmit(interaction);
     }
 }
 
@@ -560,6 +578,124 @@ async function handleSelectMenu(interaction) {
         return handleRoleMenuSelect(interaction);
     }
     await interaction.reply({ content: 'Select menu received.', ephemeral: true });
+}
+
+// ──────────────────── Ticket Handlers ────────────────────
+
+// These don't use the initiatorId prefix pattern because anyone can
+// create a ticket, and close/claim use the actual button-presser.
+
+async function handleTicketCreate(interaction) {
+    const guild = interaction.guild;
+    const config = require('./tickets').getTicketConfig(guild.id);
+
+    if (!config.enabled) {
+        return interaction.reply({ content: '❌ Tickets are not enabled in this server.', ephemeral: true });
+    }
+
+    // Ask the user for a reason via modal
+    const modal = new ModalBuilder()
+        .setCustomId('tk_reason_' + interaction.user.id)
+        .setTitle('Create a Ticket');
+
+    const reasonInput = new TextInputBuilder()
+        .setCustomId('ticket_reason')
+        .setLabel('Briefly describe your issue')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Tell us what you need help with...')
+        .setMaxLength(1000)
+        .setRequired(false);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
+
+    await interaction.showModal(modal);
+}
+
+async function handleTicketReasonSubmit(interaction) {
+    const reason = interaction.fields.getTextInputValue('ticket_reason') || null;
+    const guild = interaction.guild;
+
+    // Check the user doesn't already have an open ticket
+    const db = getDb();
+    const existing = db.prepare('SELECT * FROM tickets WHERE guild_id = ? AND creator_id = ? AND status IN (?, ?)')
+        .get(guild.id, interaction.user.id, 'open', 'claimed');
+
+    if (existing) {
+        return interaction.reply({
+            content: '❌ You already have an open ticket! <#' + existing.channel_id + '>',
+            ephemeral: true,
+        });
+    }
+
+    let config;
+    try {
+        config = require('./tickets').getTicketConfig(guild.id);
+    } catch (err) {
+        logError(err, 'interactions', 'ticketConfig');
+        return interaction.reply({ content: '❌ Failed to load ticket configuration.', ephemeral: true });
+    }
+
+    // Defer reply because creating channels takes time
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        const { createTicket } = require('./tickets');
+        const result = await createTicket(guild, interaction.user, reason, config);
+
+        const embed = new EmbedBuilder()
+            .setColor(0x5865F2)
+            .setTitle('🎫 Ticket Created')
+            .setDescription('Your ticket has been created! Channel: <#' + result.channel.id + '>')
+            .setFooter({ text: 'Ticket #' + result.ticketNumber })
+            .setTimestamp();
+
+        if (reason) embed.addFields({ name: 'Reason', value: reason });
+
+        await interaction.editReply({ embeds: [embed] });
+    } catch (err) {
+        logError(err, 'interactions', 'createTicket');
+        await interaction.editReply({ content: '❌ Failed to create ticket: ' + err.message });
+    }
+}
+
+async function handleTicketClose(interaction, parts) {
+    const ticketId = parts.slice(2).join('_');
+    const guild = interaction.guild;
+    const channel = interaction.channel;
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        const { closeTicket } = require('./tickets');
+        const result = await closeTicket(guild, channel, interaction.user, null);
+        if (result.error) {
+            return interaction.editReply({ content: '❌ ' + result.error });
+        }
+        await interaction.editReply({ content: '✅ Closing ticket **#' + result.ticketNumber + '**...' });
+    } catch (err) {
+        logError(err, 'interactions', 'ticketClose');
+        await interaction.editReply({ content: '❌ Failed to close ticket.' });
+    }
+}
+
+async function handleTicketClaim(interaction, parts) {
+    const ticketId = parts.slice(2).join('_');
+    const guild = interaction.guild;
+    const channel = interaction.channel;
+
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+        const { claimTicket } = require('./tickets');
+        const result = await claimTicket(guild, channel, interaction.user);
+        if (result.error) {
+            return interaction.editReply({ content: '❌ ' + result.error });
+        }
+        await interaction.editReply({ content: '✅ You claimed ticket **#' + result.ticketNumber + '**.' });
+    } catch (err) {
+        logError(err, 'interactions', 'ticketClaim');
+        await interaction.editReply({ content: '❌ Failed to claim ticket.' });
+    }
 }
 
 // ──────────────────── Exports ────────────────────

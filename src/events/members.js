@@ -123,6 +123,14 @@ async function sendGreeting(member, type) {
                 // ── Send goodbye message ──
                 await sendGreeting(member, 'goodbye');
 
+                // ── Auto-close tickets if configured ──
+                try {
+                    const { handleMemberLeave } = require('../tickets');
+                    await handleMemberLeave(member);
+                } catch (err) {
+                    logError(err, 'events', 'members/ticketAutoClose');
+                }
+
                 // ── Check if kicked or banned by someone ──
                 let removedBy = '';
                 let removeType = 'left the server';

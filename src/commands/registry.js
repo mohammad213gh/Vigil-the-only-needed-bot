@@ -56,6 +56,9 @@ const { executeLogs } = require('./logs');
 // ── Warning Thresholds ──
 const { executeThresholds } = require('./thresholds');
 
+// ── Tickets ──
+const { executeTicket } = require('./tickets');
+
 // ──────────────────── Registry Map ────────────────────
 
 const commandRegistry = {
@@ -155,6 +158,9 @@ const commandRegistry = {
 
     // Warning Thresholds
     thresholds: executeThresholds,
+
+    // Tickets
+    ticket: executeTicket,
 };
 
 // Commands that anyone can use (no owner guard)

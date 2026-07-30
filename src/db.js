@@ -276,6 +276,50 @@ function initSchema() {
             status TEXT NOT NULL DEFAULT 'pending',
             created_at INTEGER NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS ticket_config (
+            guild_id TEXT PRIMARY KEY,
+            enabled INTEGER NOT NULL DEFAULT 0,
+            category_id TEXT,
+            support_role_id TEXT,
+            ticket_count INTEGER NOT NULL DEFAULT 0,
+            welcome_message TEXT NOT NULL DEFAULT 'Thank you for creating a ticket. Please describe your issue and a staff member will be with you shortly.',
+            close_on_leave INTEGER NOT NULL DEFAULT 0,
+            log_channel_id TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS tickets (
+            id TEXT PRIMARY KEY,
+            guild_id TEXT NOT NULL,
+            ticket_number INTEGER NOT NULL,
+            channel_id TEXT NOT NULL,
+            creator_id TEXT NOT NULL,
+            creator_tag TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            reason TEXT,
+            created_at INTEGER NOT NULL,
+            closed_by_id TEXT,
+            closed_by_tag TEXT,
+            closed_at INTEGER,
+            claimer_id TEXT,
+            closed_reason TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_tickets_guild ON tickets(guild_id, status);
+        CREATE INDEX IF NOT EXISTS idx_tickets_creator ON tickets(creator_id);
+
+        CREATE TABLE IF NOT EXISTS ticket_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id TEXT NOT NULL,
+            author_id TEXT NOT NULL,
+            author_tag TEXT NOT NULL,
+            author_avatar TEXT,
+            content TEXT,
+            is_system INTEGER NOT NULL DEFAULT 0,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_ticket_msgs ON ticket_messages(ticket_id, created_at);
     `);
 
     // Add prefix column if not exists (safe on every boot)
