@@ -525,14 +525,17 @@ body.light-mode.look-minimal .card{border-color:rgba(0,0,0,0.04)}
 
 /* ═══ Panel Config (Ticket section) ═══ */
 .tk-act-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
-.tk-act-row .btn-s{padding:5px 10px;font-size:9px;white-space:nowrap}
-.tk-act-row .tk-del-btn{padding:5px 10px;font-size:9px;white-space:nowrap;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.2);border-radius:8px;color:#ed4245;cursor:pointer;transition:all 0.15s;font-family:inherit;display:inline-flex;align-items:center;gap:4px}
+.tk-act-row .btn-s{padding:7px 14px;font-size:12px;white-space:nowrap}
+.tk-act-row .tk-del-btn{padding:7px 14px;font-size:12px;white-space:nowrap;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.2);border-radius:8px;color:#ed4245;cursor:pointer;transition:all 0.15s;font-family:inherit;display:inline-flex;align-items:center;gap:4px}
 .tk-act-row .tk-del-btn:hover{background:rgba(237,66,69,0.15);border-color:rgba(237,66,69,0.35)}
 
-.tk-freq-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tk-main-grid{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:14px;align-items:start;margin-top:0}
+.tk-freq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 
+@media(max-width:900px){
+  .tk-main-grid{grid-template-columns:1fr}
+}
 @media(max-width:768px){
-  .tk-freq-grid{grid-template-columns:1fr}
   .tk-act-row{gap:4px}
-  .tk-act-row .btn-s,.tk-act-row .tk-del-btn{font-size:8px;padding:4px 8px}
+  .tk-act-row .btn-s,.tk-act-row .tk-del-btn{font-size:10px;padding:6px 10px}
 }

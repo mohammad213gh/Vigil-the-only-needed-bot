@@ -971,7 +971,7 @@ async function loadTickets(){
           '<option value="">Select a panel...</option>'+
           panels.map(function(p,i){return '<option value="'+p.id+'"'+(selPanel&&p.id===selPanel.id?' selected':'')+'>'+(i+1)+' | '+esc(p.name)+'</option>'}).join('')+
         '</select>'+
-        '<button class="btn" onclick="tkCreatePanel(\''+serverId+'\')" style="padding:9px 14px;font-size:12px;">+</button></div>';
+        '<button class="btn" onclick="createTicketPanel(\''+serverId+'\')" style="padding:9px 14px;font-size:12px;">+</button></div>';
     
     if(!selPanel){
       panelsHtml+='<div class="empty" style="padding:16px;"><p>No panel selected. Select or Create one.</p><p class="empty-act" style="margin-top:8px;">Use the dropdown to select a panel, or click + to create a new one.</p></div>';
@@ -981,7 +981,7 @@ async function loadTickets(){
       // Action row — compact 2-row layout that works on mobile
       panelsHtml+='<div class="tk-act-row">'+
         '<button class="btn btn-s" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDCE8 Send</button>'+
-        '<button class="btn btn-s" onclick="editTicketPanel(\''+serverId+'\',\''+selPanel.id+'\',\''+esc(selPanel.name||'')+'\',\''+(selPanel.color||'#5865F2')+'\',\''+esc(selPanel.description||'')+'\')">\u2699\uFE0F Edit</button>'+
+        '<button class="btn btn-s" onclick="tkEditPanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2699\uFE0F Edit</button>'+
         '<button class="btn btn-s" onclick="tkClonePanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD04 Clone</button>'+
         '<button class="btn btn-s" onclick="tkRenamePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u270F\uFE0F Rename</button>'+
         '<button class="btn btn-s" onclick="tkSetCount(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD22 Count</button>'+
@@ -1048,8 +1048,8 @@ async function loadTickets(){
     recentHtml+='</div></div>';
 
     // ── Build layout ──
-    var grid='<div class="grid grid-2" style="margin-top:0;"><div>'+cfgHtml+'</div><div>'+panelsHtml+'</div></div>';
-    el.innerHTML=grid+'<div style="margin-top:16px;max-width:600px;">'+recentHtml+'</div>'+
+    var grid='<div class="tk-main-grid"><div>'+cfgHtml+'</div><div>'+panelsHtml+'</div></div>';
+    el.innerHTML=grid+'<div style="margin-top:16px;">'+recentHtml+'</div>'+
       '<!-- Unsaved-changes bar --><div id="tk-unsaved-bar" style="display:none;position:sticky;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 16px;z-index:100;margin-top:16px;align-items:center;justify-content:space-between;">'+
         '<span style="font-size:12px;color:var(--text-dim);">You have unsaved changes!</span>'+
         '<div style="display:flex;gap:6px;">'+
@@ -1265,8 +1265,6 @@ function editTicketPanel(serverId,panelId,panelName,panelColor,panelDesc){
   };
 }
 
-function deleteTicketPanel(serverId,panelId){if(!confirm('Delete this panel and all its types?'))return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId,{method:'DELETE'}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel deleted!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
-
 // ── Modern Modal: Add Type ──
 function addTicketType(serverId,panelId){
   // Fetch server data for dropdowns
@@ -1392,6 +1390,20 @@ function tkClonePanel(serverId,panelId){
   fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/clone',{method:'POST'})
   .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel cloned!');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)})
   .catch(function(){showToast('Failed to clone',true)});
+}
+function tkDeletePanel(serverId,panelId){
+  if(!confirm('Delete this panel and all its types? This cannot be undone.'))return;
+  fetch('/api/server/'+serverId+'/tickets/panels/'+panelId,{method:'DELETE'})
+  .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel deleted');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)})
+  .catch(function(e){showToast('Failed: '+e.message,true)});
+}
+function tkEditPanel(serverId,panelId){
+  fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
+    var panel=null;
+    for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
+    if(!panel){showToast('Panel not found',true);return}
+    editTicketPanel(serverId,panelId,panel.name||'',panel.color||'#5865F2',panel.description||'');
+  }).catch(function(e){showToast('Failed to load panel data',true)});
 }
 function tkSetCount(serverId,panelId){
   // Fetch current counter

@@ -1335,6 +1335,11 @@ function createDashboard() {
             if (color) updatePanel(panel.id, { color });
             if (description) updatePanel(panel.id, { description });
             if (image_url) updatePanel(panel.id, { image_url });
+            // Seed a default ticket type so the panel can open tickets right away
+            const existingTypes = getPanelTypes(panel.id);
+            if (!existingTypes.length) {
+                createPanelType(panel.id, guild.id, 'General Support', '🎫');
+            }
             res.json({ success: true, panel });
         } catch (err) {
             res.status(500).json({ error: err.message });
