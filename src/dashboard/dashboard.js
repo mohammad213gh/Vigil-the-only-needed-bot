@@ -997,7 +997,7 @@ async function loadTickets(){
       panelsHtml+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:12px;">';
       for(var ci=0;ci<realCards.length;ci++){
         var c=realCards[ci];
-        panelsHtml+='<div onclick="tkCardClick(\''+c.id+'\',\''+serverId+'\',\''+selPanel.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor=&#39;rgba(var(--accent-rgb),0.3)&#39;;this.style.background=&#39;rgba(var(--accent-rgb),0.06)&#39;" onmouseout="this.style.borderColor=&#39;&#39;;this.style.background=&#39;&#39;">'+
+        panelsHtml+='<div onclick="tkCardClick(\''+c.id+'\',\''+serverId+'\',\''+selPanel.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor=&#39;rgba(var(--accent-rgb),0.3)&#39;;this.style.background=&#39;rgba(var(--accent-rgb),0.06)&#39;" onmouseout="this.style.borderColor=&#39;&#39;;this.style.background=&#39;&#39;">'+
           '<div><div style="font-size:13px;font-weight:600;">'+c.label+'</div><div style="font-size:10px;color:var(--text-dim);margin-top:2px;">'+c.sub+'</div></div>'+
           '<span style="color:var(--text-dim);font-size:14px;">\u203A</span></div>';
       }
@@ -1010,12 +1010,12 @@ async function loadTickets(){
         '<div id="tk-freq-body" class="tk-freq-grid">'+
           // Left: Support Team Roles + Panel Message
           '<div><div class="stg" style="margin-bottom:10px;"><label>Support Team Roles <span title="Roles that can view and manage tickets" style="cursor:help;color:var(--text-dim);font-size:11px;">ⓘ</span></label>'+
-            '<select id="tk-freq-roles" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;" onchange="tkMarkUnsaved()">'+
+            '<select id="tk-freq-roles" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;" onchange="tkMarkUnsaved()">'+
             '</select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Hold Ctrl/Cmd to select multiple</div></div>'+
             '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'panel\')" style="padding:6px 12px;font-size:10px;">💬 Edit Panel Message</button></div>'+
           // Right: Category + Ticket Message
           '<div><div class="stg" style="margin-bottom:10px;"><label>Category Created/Opened <span title="Categories where tickets can be created" style="cursor:help;color:var(--text-dim);font-size:11px;">ⓘ</span></label>'+
-            '<select id="tk-freq-cats" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;"></select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Per-type categories — configure in Type Settings</div></div>'+
+            '<select id="tk-freq-cats" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;"></select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Per-type categories — configure in Type Settings</div></div>'+
             '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'ticket\')" style="padding:6px 12px;font-size:10px;">💬 Edit Ticket Message</button></div>'+
         '</div></div>';
 
@@ -1128,6 +1128,30 @@ function editQuestions(serverId,panelId,typeId){
         '<button id="tk-q-add" class="btn btn-s" style="flex:1;padding:8px;font-size:11px;">+ Add Question</button>'+
         '<button id="tk-q-save" class="btn" style="flex:2;padding:8px;font-size:11px;">\u2714\uFE0F Save</button></div></div>';
     overlay.querySelector('.tk-q-close-btn').onclick=function(){close()};
+    overlay.querySelector('#tk-q-add').onclick=function(){
+      var cur=JSON.parse(document.getElementById('tk-q-data').value||'[]');
+      if(cur.length>=5){showToast('Maximum 5 questions per type',true);return}
+      cur.push({label:'',placeholder:'',required:true});
+      renderQuestions(cur);
+    };
+    overlay.querySelector('#tk-q-save').onclick=function(){
+      var rows=overlay.querySelectorAll('#tk-q-list > div[data-idx]');
+      var qs=[];
+      rows.forEach(function(row){
+        var label=row.querySelector('.tk-q-label').value.trim();
+        if(!label)return;
+        qs.push({label:label,placeholder:row.querySelector('.tk-q-placeholder').value.trim(),required:row.querySelector('.tk-q-req').checked});
+      });
+      if(!qs.length){showToast('Add at least one question with a label',true);return}
+      if(qs.length<rows.length){showToast((rows.length-qs.length)+' empty question(s) skipped',true)}
+      var btn=overlay.querySelector('#tk-q-save');btn.disabled=true;btn.textContent='Saving...';
+      fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+typeId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({questions:qs})})
+      .then(function(r){return r.json()}).then(function(d){
+        if(d.success){showToast('Questions saved!');close();loadTickets()}
+        else showToast('Failed: '+(d.error||'unknown'),true);
+        btn.disabled=false;btn.textContent='\u2714\uFE0F Save';
+      }).catch(function(e){showToast('Failed: '+e.message,true);btn.disabled=false;btn.textContent='\u2714\uFE0F Save'});
+    };
     renderQuestions(questions);
   }).catch(function(){showToast('Failed to load type data',true);close()});
   
@@ -1135,13 +1159,13 @@ function editQuestions(serverId,panelId,typeId){
 }
 // Called by inline editor to re-render the question list
 function renderQuestions(qs){document.getElementById('tk-q-data').value=JSON.stringify(qs);var list=document.getElementById('tk-q-list');if(!list)return;var qHtml=qs.map(function(q,i){
-  return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.02);" data-idx="'+i+'">'+
+  return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.05);" data-idx="'+i+'">'+
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'+
       '<span style="font-size:10px;color:var(--text-dim);width:20px;">'+(i+1)+'.</span>'+
-      '<input class="tk-q-label" value="'+esc(q.label||q.question||'')+'" placeholder="Question label..." style="flex:1;padding:5px 8px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">'+
+      '<input class="tk-q-label" value="'+esc(q.label||q.question||'')+'" placeholder="Question label..." style="flex:1;padding:5px 8px;font-size:12px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">'+
       '<button class="btn btn-s" onclick="(function(){var qs2=JSON.parse(document.getElementById(\'tk-q-data\').value||\'[]\');qs2.splice('+i+',1);renderQuestions(qs2)})()" style="padding:3px 7px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
     '<div style="display:flex;gap:8px;align-items:center;">'+
-      '<input class="tk-q-placeholder" value="'+esc(q.placeholder||'')+'" placeholder="Placeholder text" style="flex:1;padding:4px 8px;font-size:10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">'+
+      '<input class="tk-q-placeholder" value="'+esc(q.placeholder||'')+'" placeholder="Placeholder text" style="flex:1;padding:4px 8px;font-size:10px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">'+
       '<label style="font-size:10px;display:flex;align-items:center;gap:4px;white-space:nowrap;"><input type="checkbox" class="tk-q-req" '+(q.required!==false?'checked':'')+'> Required</label></div></div>';
 }).join('')||'<div style="text-align:center;padding:16px;color:var(--text-dim);font-size:12px;">No questions yet. Add one below.</div>';
 list.innerHTML=qHtml;

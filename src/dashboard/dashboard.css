@@ -1,5 +1,5 @@
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--accent:#5865F2;--accent-rgb:88,101,242;--bg:#07070d;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.1);--border-hover:rgba(255,255,255,0.17);--text:#e8e8ee;--text-dim:rgba(255,255,255,0.55);--text-muted:rgba(255,255,255,0.35);--radius:14px;--radius-sm:10px;--radius-xs:8px;--sb-track:transparent;--sb-thumb:rgba(255,255,255,0.08);--sb-thumb-hover:rgba(255,255,255,0.15);--anim-speed:1;--anim-preset:smooth;--card-border-width:1px;--notch-h:68px}
+:root{--accent:#5865F2;--accent-rgb:88,101,242;--bg:#07070d;--surface:rgba(255,255,255,0.06);--border:rgba(255,255,255,0.14);--border-hover:rgba(255,255,255,0.24);--text:#eef0f7;--text-dim:rgba(255,255,255,0.72);--text-muted:rgba(255,255,255,0.5);--bg-card:#12121c;--radius:14px;--radius-sm:10px;--radius-xs:8px;--sb-track:transparent;--sb-thumb:rgba(255,255,255,0.12);--sb-thumb-hover:rgba(255,255,255,0.2);--anim-speed:1;--anim-preset:smooth;--card-border-width:1px;--notch-h:68px}
 body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--sb-thumb)var(--sb-track)}
 body::-webkit-scrollbar{width:5px}
 body::-webkit-scrollbar-track{background:var(--sb-track)}
@@ -152,7 +152,7 @@ body.light-mode .notch-mobile-link{color:rgba(0,0,0,0.4)}
 .card-stat .info .s{font-size:10px;color:var(--text-muted);margin-top:1px}
 
 /* ═══ LIGHT MODE ═══ */
-body.light-mode{--bg:#f5f5fa;--surface:rgba(0,0,0,0.03);--border:rgba(0,0,0,0.08);--border-hover:rgba(0,0,0,0.15);--text:#1a1a2e;--text-dim:rgba(0,0,0,0.5);--text-muted:rgba(0,0,0,0.3);--sb-thumb:rgba(0,0,0,0.08);--sb-thumb-hover:rgba(0,0,0,0.15)}
+body.light-mode{--bg:#f5f5fa;--surface:rgba(0,0,0,0.03);--border:rgba(0,0,0,0.08);--border-hover:rgba(0,0,0,0.15);--text:#1a1a2e;--text-dim:rgba(0,0,0,0.5);--text-muted:rgba(0,0,0,0.3);--bg-card:#ffffff;--sb-thumb:rgba(0,0,0,0.08);--sb-thumb-hover:rgba(0,0,0,0.15)}
 body.light-mode .card{background:rgba(255,255,255,0.8);--surface:rgba(0,0,0,0.02)}
 body.light-mode .card-solid{background:rgba(255,255,255,0.9)}
 body.light-mode .card:hover{background:rgba(255,255,255,0.88)}
