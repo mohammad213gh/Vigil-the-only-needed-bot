@@ -13,6 +13,7 @@ const { deployCommands } = require('./src/deploy');
 const { setLoggerClient, sendLog } = require('./src/logging');
 const { findReactionRole } = require('./src/reactionRoles');
 const { setInviteClient, cacheAllInvites, handleInviteCreate, handleInviteDelete } = require('./src/invites');
+const { setTicketClient, startInactivityCheck, stopInactivityCheck } = require('./src/tickets');
 
 // ─── Command Registry ───
 const { commandRegistry, publicCommands } = require('./src/commands/registry');
@@ -284,6 +285,7 @@ try {
 
 const { createDashboard, setDashboardClient } = require('./src/dashboard');
 setDashboardClient(client, process.env.DASHBOARD_PASSWORD);
+setTicketClient(client);
 const app = createDashboard();
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
@@ -298,6 +300,7 @@ const { closeDb } = require('./src/db');
 
 function shutdown(signal) {
     console.log('\n[Bot] Received ' + signal + '. Shutting down gracefully...');
+    stopInactivityCheck();
     closeDb();
     client.destroy();
     console.log('[Bot] Goodbye!');
@@ -310,4 +313,10 @@ process.on('SIGQUIT', () => shutdown('SIGQUIT'));
 
 // ──────────────────── Login ────────────────────
 
-client.login(process.env.BOT_TOKEN);
+client.login(process.env.BOT_TOKEN).then(() => {
+    startInactivityCheck(client);
+    console.log('[Bot] Ticket inactivity auto-close check started.');
+}).catch(err => {
+    console.error('[Bot] Failed to login:', err.message || err);
+    process.exit(1);
+});

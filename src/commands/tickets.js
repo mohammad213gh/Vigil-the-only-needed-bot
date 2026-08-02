@@ -9,6 +9,8 @@ const {
     parseQuestions, parseSupportRoles,
     closeTicket, claimTicket, addUserToTicket, removeUserFromTicket, renameTicket,
     sendTicketPanel, createTicket,
+    // Feature 2 & 3
+    getBlacklist, addBlacklist, removeBlacklist,
 } = require('../tickets');
 const { logError } = require('../logError');
 const { getDb } = require('../db');
@@ -41,6 +43,12 @@ async function executeTicket(interaction) {
         case 'toggle': return handleConfigToggle(interaction);
         case 'close_on_leave': return handleConfigCloseOnLeave(interaction);
         case 'log_channel': return handleConfigLogChannel(interaction);
+        // Blacklist (Feature 3)
+        case 'blacklist_add': return handleBlacklistAdd(interaction);
+        case 'blacklist_remove': return handleBlacklistRemove(interaction);
+        case 'blacklist_list': return handleBlacklistList(interaction);
+        // Inactivity (Feature 2)
+        case 'type_inactivity': return handleTypeInactivity(interaction);
         // Ticket actions
         case 'add': return handleAdd(interaction);
         case 'remove': return handleRemove(interaction);
@@ -376,6 +384,74 @@ async function handleRename(interaction) {
     const result = await renameTicket(interaction.guild, interaction.channel, interaction.user, name);
     if (result.error) return interaction.reply({ content: '❌ ' + result.error, ephemeral: true });
     await interaction.reply({ content: '✅ Channel renamed to `' + name + '`.', ephemeral: true });
+}
+
+// ──────────────────── Blacklist Handlers (Feature 3) ────────────────────
+
+async function handleBlacklistAdd(interaction) {
+    const user = interaction.options.getUser('user');
+    const reason = interaction.options.getString('reason') || '';
+    if (!user) return interaction.reply({ content: '❌ Please specify a user.', ephemeral: true });
+    addBlacklist(interaction.guild.id, user.id, reason, interaction.user.tag);
+    await interaction.reply({ content: '✅ **' + user.tag + '** has been blacklisted from creating tickets.' + (reason ? ' Reason: ' + reason : ''), ephemeral: false });
+}
+
+async function handleBlacklistRemove(interaction) {
+    const user = interaction.options.getUser('user');
+    if (!user) return interaction.reply({ content: '❌ Please specify a user.', ephemeral: true });
+    removeBlacklist(interaction.guild.id, user.id);
+    await interaction.reply({ content: '✅ **' + user.tag + '** has been removed from the ticket blacklist.', ephemeral: false });
+}
+
+async function handleBlacklistList(interaction) {
+    const list = getBlacklist(interaction.guild.id);
+    if (list.length === 0) {
+        return interaction.reply({ content: '📋 **Ticket Blacklist**\nThe blacklist is empty.', ephemeral: true });
+    }
+    const lines = list.map((b, i) =>
+        '**' + (i + 1) + '.** <@' + b.user_id + '> (' + b.user_id + ')' +
+        (b.reason ? ' — ' + b.reason : '') +
+        ' — Blacklisted by ' + b.blacklisted_by
+    );
+    await interaction.reply({ content: '📋 **Ticket Blacklist** (' + list.length + ')\n' + lines.join('\n').slice(0, 1900), ephemeral: true });
+}
+
+// ──────────────────── Inactivity Handler (Feature 2) ────────────────────
+
+async function handleTypeInactivity(interaction) {
+    const panelType = interaction.options.getString('type');
+    const hours = interaction.options.getInteger('hours');
+
+    if (!panelType) return interaction.reply({ content: '❌ Please specify a type name.', ephemeral: true });
+
+    // Find the type by name
+    const types = getPanelTypes('__all__'); // We need to search differently
+    // Actually, let's search all panels for this type name
+    const panels = getPanels(interaction.guild.id);
+    let foundType = null;
+    for (const p of panels) {
+        const pTypes = getPanelTypes(p.id);
+        for (const t of pTypes) {
+            if (t.name.toLowerCase() === panelType.toLowerCase()) {
+                foundType = t;
+                break;
+            }
+        }
+        if (foundType) break;
+    }
+
+    if (!foundType) {
+        return interaction.reply({ content: '❌ No ticket type found with name "' + panelType + '". Use `/ticket type_list` to see types.', ephemeral: true });
+    }
+
+    const db = getDb();
+    db.prepare('UPDATE ticket_panel_types SET inactivity_timeout = ? WHERE id = ?').run(hours > 0 ? hours : null, foundType.id);
+
+    if (hours > 0) {
+        await interaction.reply({ content: '✅ Inactivity auto-close set to **' + hours + ' hour' + (hours === 1 ? '' : 's') + '** for type **' + foundType.name + '**.', ephemeral: false });
+    } else {
+        await interaction.reply({ content: '✅ Inactivity auto-close **disabled** for type **' + foundType.name + '**.', ephemeral: false });
+    }
 }
 
 module.exports = { executeTicket };

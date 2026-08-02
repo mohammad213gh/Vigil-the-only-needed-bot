@@ -2,7 +2,7 @@
 // Handles button clicks, modal submissions, and select menu interactions
 // for commands that use Discord's modern component system.
 
-const { EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
+const { EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, PermissionFlagsBits } = require('discord.js');
 const { addWarning } = require('./warnings');
 const { createCase, closeCase } = require('./modCases');
 const { getDb } = require('./db');
@@ -35,6 +35,9 @@ async function handleInteraction(interaction) {
     if (interaction.isStringSelectMenu()) {
         return handleSelectMenu(interaction);
     }
+    if (interaction.isUserSelect()) {
+        return handleUserSelect(interaction);
+    }
 }
 
 // ──────────────────── Button Handler ────────────────────
@@ -52,18 +55,43 @@ async function handleButton(interaction) {
     if (prefix === 'pvv') {
         return handlePollVoters(interaction);
     }
-    // Ticket create — anyone can use (no initiator check)
-    // Format: tk_create_{panelId}_{typeId} OR tk_create_{panelId}
-    if (prefix === 'tk_create') {
-        return handleTicketCreate(interaction, parts);
-    }
-    // Ticket close — anyone in the channel can use
-    if (prefix === 'tk_close') {
-        return handleTicketClose(interaction, parts);
-    }
-    // Ticket claim — anyone can claim
-    if (prefix === 'tk_claim') {
-        return handleTicketClaim(interaction, parts);
+    // Ticket buttons — custom IDs are tk_{action}_{...} (anyone can interact, no initiator check)
+    if (prefix === 'tk') {
+        const tkAction = parts[1];
+        // Ticket create — anyone can use (no initiator check)
+        // Format: tk_create_{panelId}_{typeId} OR tk_create_{panelId}
+        if (tkAction === 'create') {
+            return handleTicketCreate(interaction, parts);
+        }
+        // Ticket close — anyone in the channel can use
+        if (tkAction === 'close') {
+            return handleTicketClose(interaction, parts);
+        }
+        // Ticket claim — anyone can claim
+        if (tkAction === 'claim') {
+            return handleTicketClaim(interaction, parts);
+        }
+        // Ticket rating — anyone can rate (no initiator check)
+        if (tkAction === 'rate') {
+            return handleTicketRating(interaction, parts);
+        }
+        // Ticket rating skip
+        if (tkAction === 'rateskip') {
+            return handleTicketRateSkip(interaction, parts);
+        }
+        // Ticket keep-alive (inactivity reset)
+        if (tkAction === 'keep') {
+            return handleTicketKeep(interaction, parts);
+        }
+        // Ticket transfer
+        if (tkAction === 'transfer') {
+            return handleTicketTransfer(interaction, parts);
+        }
+        // Ticket add user
+        if (tkAction === 'adduser') {
+            return handleTicketAddUser(interaction, parts);
+        }
+        return interaction.reply({ content: '❌ Unknown ticket button.', ephemeral: true });
     }
 
     // All other buttons: only the person who initiated the action can interact
@@ -298,9 +326,22 @@ async function handleModal(interaction) {
     if (prefix === 'wr') {
         return handleWarnSubmit(interaction, parts);
     }
-    if (prefix === 'tk_questions') {
-        const { handleQuestionsSubmit } = require('./tickets');
-        return handleQuestionsSubmit(interaction);
+    if (prefix === 'tk') {
+        const tkAction = parts[1];
+        if (tkAction === 'questions') {
+            const { handleQuestionsSubmit } = require('./tickets');
+            return handleQuestionsSubmit(interaction);
+        }
+        if (tkAction === 'feedback') {
+            return handleFeedbackModal(interaction, parts);
+        }
+        if (tkAction === 'transfer') {
+            return handleTransferModal(interaction, parts);
+        }
+        if (tkAction === 'adduser') {
+            return handleAddUserModal(interaction, parts);
+        }
+        return interaction.reply({ content: '❌ Unknown ticket form.', ephemeral: true });
     }
 }
 
@@ -592,20 +633,274 @@ async function handleTicketTypeSelect(interaction, parts) {
     const panelId = parts.slice(2).join('_');
     const typeId = interaction.values[0];
 
+    const guild = interaction.guild;
+    const config = require('./tickets').getTicketConfig(guild.id);
+    if (!config.enabled) {
+        return interaction.reply({ content: '❌ Tickets are not enabled in this server.', ephemeral: true });
+    }
+
+    // Feature 3: Check blacklist
+    const { isBlacklisted } = require('./tickets');
+    const blacklisted = isBlacklisted(guild.id, interaction.user.id);
+    if (blacklisted) {
+        return interaction.reply({
+            content: '❌ You are blacklisted from creating tickets.\nReason: ' + (blacklisted.reason || 'No reason provided'),
+            ephemeral: true,
+        });
+    }
+
+    // Check for existing open ticket
+    const db = getDb();
+    const existing = db.prepare('SELECT * FROM tickets WHERE guild_id = ? AND creator_id = ? AND status IN (?, ?)')
+        .get(guild.id, interaction.user.id, 'open', 'claimed');
+    if (existing) {
+        return interaction.reply({ content: '❌ You already have an open ticket! <#' + existing.channel_id + '>', ephemeral: true });
+    }
+
     const { showQuestionsModal } = require('./tickets');
     const type = require('./tickets').getPanelType(typeId);
     if (!type) {
         return interaction.reply({ content: '❌ This ticket type no longer exists.', ephemeral: true });
     }
 
-    // Update the ephemeral message to show selected type
-    await interaction.update({
-        content: '✅ You selected **' + type.emoji + ' ' + type.name + '**. Loading form...',
-        components: [],
-    });
-
-    // Show the questions modal
+    // Show the questions modal (must be the first response — do NOT update() first)
     await showQuestionsModal(interaction, type);
+}
+
+// ──────────────────── Rating Handlers (Feature 1) ────────────────────
+
+async function handleTicketRating(interaction, parts) {
+    // tk_rate_{ticketId}_{rating}
+    const ticketId = parts.slice(2, -1).join('_');
+    const rating = parseInt(parts[parts.length - 1]);
+
+    if (rating < 1 || rating > 5) {
+        return interaction.reply({ content: '❌ Invalid rating.', ephemeral: true });
+    }
+
+    const { saveRating } = require('./tickets');
+
+    // Get guild ID from the ticket record
+    const db = getDb();
+    const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
+    if (!ticket) {
+        return interaction.reply({ content: '❌ Ticket not found.', ephemeral: true });
+    }
+
+    // Show feedback modal (must be the first response — do NOT update() first)
+    const modal = new ModalBuilder()
+        .setCustomId('tk_feedback_' + ticketId + '_' + rating)
+        .setTitle('Rate Your Experience — ' + rating + '/5');
+
+    const feedbackInput = new TextInputBuilder()
+        .setCustomId('tk_feedback_text')
+        .setLabel('Any additional feedback? (optional)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Tell us about your experience...')
+        .setMaxLength(1000)
+        .setRequired(false);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(feedbackInput));
+
+    try {
+        await interaction.showModal(modal);
+    } catch (err) {
+        // If modal fails (e.g. message deleted), save rating without feedback
+        saveRating(ticketId, ticket.guild_id, rating, null);
+        await interaction.reply({ content: '✅ Thanks for your rating!', ephemeral: true }).catch(() => {});
+    }
+}
+
+// ──────────────────── Rating Skip Handler (Feature 1) ────────────────────
+
+async function handleTicketRateSkip(interaction, parts) {
+    // tk_rateskip_{ticketId} — dismiss the rating prompt and disable the buttons
+    try {
+        const disabledComponents = interaction.message.components.map(row =>
+            new ActionRowBuilder().addComponents(
+                row.components.map(btn =>
+                    ButtonBuilder.from(btn).setDisabled(true)
+                )
+            )
+        );
+        await interaction.update({ components: disabledComponents });
+    } catch {
+        await interaction.deferUpdate().catch(() => {});
+    }
+}
+
+// ──────────────────── Feedback Modal Handler (Feature 1) ────────────────────
+
+async function handleFeedbackModal(interaction, parts) {
+    // tk_feedback_{ticketId}_{rating}
+    const ticketId = parts.slice(2, -1).join('_');
+    const rating = parseInt(parts[parts.length - 1]);
+    const feedback = interaction.fields.getTextInputValue('tk_feedback_text');
+
+    const db = getDb();
+    const ticket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId);
+    if (!ticket) {
+        return interaction.reply({ content: '❌ Ticket not found.', ephemeral: true });
+    }
+
+    const { saveRating } = require('./tickets');
+    saveRating(ticketId, ticket.guild_id, rating, feedback || null);
+
+    // Disable the rating buttons on the DM message
+    let disabled = false;
+    try {
+        const disabledComponents = interaction.message.components.map(row =>
+            new ActionRowBuilder().addComponents(
+                row.components.map(btn =>
+                    ButtonBuilder.from(btn).setDisabled(true)
+                )
+            )
+        );
+        await interaction.update({ components: disabledComponents });
+        disabled = true;
+    } catch {}
+
+    if (disabled) {
+        await interaction.followUp({ content: '✅ Thanks for your feedback!', ephemeral: true }).catch(() => {});
+    } else {
+        await interaction.reply({ content: '✅ Thanks for your feedback!', ephemeral: true }).catch(() => {});
+    }
+}
+
+// ──────────────────── Inactivity Keep-Alive (Feature 2) ────────────────────
+
+async function handleTicketKeep(interaction, parts) {
+    // tk_keep_{ticketId}
+    const ticketId = parts.slice(2).join('_');
+
+    const { updateLastActivity } = require('./tickets');
+    updateLastActivity(ticketId);
+
+    // Update the warning embed
+    try {
+        const embed = EmbedBuilder.from(interaction.message.embeds[0])
+            .setColor(0x5865F2)
+            .setTitle('✅ Still Active')
+            .setDescription('This ticket has been marked as still active. The inactivity timer has been reset.')
+            .setFooter({ text: 'Reset by ' + interaction.user.tag });
+
+        const disabledRow = new ActionRowBuilder().addComponents(
+            interaction.message.components[0].components.map(btn =>
+                ButtonBuilder.from(btn).setDisabled(true)
+            )
+        );
+
+        await interaction.update({ embeds: [embed], components: [disabledRow] });
+    } catch {}
+
+    await interaction.followUp({ content: '✅ The inactivity timer has been reset.', ephemeral: true }).catch(() => {});
+}
+
+// ──────────────────── Ticket Transfer (Feature 4) ────────────────────
+
+async function handleTicketTransfer(interaction, parts) {
+    // tk_transfer_{ticketId}
+    const ticketId = parts.slice(2).join('_');
+
+    // Show user select modal
+    const modal = new ModalBuilder()
+        .setCustomId('tk_transfer_modal_' + ticketId)
+        .setTitle('Transfer Ticket');
+
+    const userInput = new TextInputBuilder()
+        .setCustomId('tk_transfer_user')
+        .setLabel('User ID to transfer to')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Enter the Discord ID of the staff member')
+        .setRequired(true)
+        .setMaxLength(30);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(userInput));
+
+    await interaction.showModal(modal);
+}
+
+async function handleTransferModal(interaction, parts) {
+    // tk_transfer_modal_{ticketId}
+    const ticketId = parts.slice(3).join('_');
+    const targetId = interaction.fields.getTextInputValue('tk_transfer_user').trim();
+
+    if (!targetId) {
+        return interaction.reply({ content: '❌ Please enter a valid user ID.', ephemeral: true });
+    }
+
+    const guild = interaction.guild;
+    const channel = interaction.channel;
+
+    const targetMember = await guild.members.fetch(targetId).catch(() => null);
+    if (!targetMember) {
+        return interaction.reply({ content: '❌ Could not find a member with that ID in this server.', ephemeral: true });
+    }
+
+    const { transferTicket } = require('./tickets');
+    const result = await transferTicket(guild, channel, interaction.user, targetMember);
+
+    if (result.error) {
+        return interaction.reply({ content: '❌ ' + result.error, ephemeral: true });
+    }
+
+    await interaction.reply({ content: '✅ Ticket transferred to **' + targetMember.user.tag + '**.', ephemeral: true });
+}
+
+// ──────────────────── Ticket Add User ────────────────────
+
+async function handleTicketAddUser(interaction, parts) {
+    const ticketId = parts.slice(2).join('_');
+
+    const modal = new ModalBuilder()
+        .setCustomId('tk_adduser_modal_' + ticketId)
+        .setTitle('Add User to Ticket');
+
+    const userInput = new TextInputBuilder()
+        .setCustomId('tk_adduser_id')
+        .setLabel('User ID to add')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Enter the Discord ID of the user')
+        .setRequired(true)
+        .setMaxLength(30);
+
+    modal.addComponents(new ActionRowBuilder().addComponents(userInput));
+
+    await interaction.showModal(modal);
+}
+
+async function handleAddUserModal(interaction, parts) {
+    // tk_adduser_modal_{ticketId}
+    const ticketId = parts.slice(3).join('_');
+    const targetId = interaction.fields.getTextInputValue('tk_adduser_id').trim();
+
+    if (!targetId) {
+        return interaction.reply({ content: '❌ Please enter a valid user ID.', ephemeral: true });
+    }
+
+    const guild = interaction.guild;
+    const channel = interaction.channel;
+
+    const targetMember = await guild.members.fetch(targetId).catch(() => null);
+    if (!targetMember) {
+        return interaction.reply({ content: '❌ Could not find a member with that ID in this server.', ephemeral: true });
+    }
+
+    const { addUserToTicket } = require('./tickets');
+    const result = await addUserToTicket(guild, channel, interaction.user, targetMember);
+
+    if (result.error) {
+        return interaction.reply({ content: '❌ ' + result.error, ephemeral: true });
+    }
+
+    await interaction.reply({ content: '✅ Added **' + targetMember.user.tag + '** to this ticket.', ephemeral: true });
+}
+
+// ──────────────────── User Select Handler ────────────────────
+
+async function handleUserSelect(interaction) {
+    // Currently unused but needed for future user-select menus
+    await interaction.reply({ content: 'User selected.', ephemeral: true });
 }
 
 // ──────────────────── Ticket Handlers ────────────────────
@@ -623,6 +918,16 @@ async function handleTicketCreate(interaction, parts) {
 
     if (!config.enabled) {
         return interaction.reply({ content: '❌ Tickets are not enabled in this server.', ephemeral: true });
+    }
+
+    // Feature 3: Check blacklist
+    const { isBlacklisted } = require('./tickets');
+    const blacklisted = isBlacklisted(guild.id, interaction.user.id);
+    if (blacklisted) {
+        return interaction.reply({
+            content: '❌ You are blacklisted from creating tickets.\nReason: ' + (blacklisted.reason || 'No reason provided'),
+            ephemeral: true,
+        });
     }
 
     // Check for existing open ticket

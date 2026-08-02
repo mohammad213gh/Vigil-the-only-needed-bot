@@ -159,13 +159,34 @@ function isDashUser(userId, accessToken) {
 }
 
 // ──── Sessions ────
-const sessions = new Map(); // token → { method: 'password'|'discord', userId?: string }
+const sessions = new Map(); // token → { method: 'password'|'discord', userId?: string, accessToken?: string, expiresAt: number }
+
+// Session lifetime — default 24h of inactivity (sliding renewal on each request).
+// Override with DASHBOARD_SESSION_HOURS env var.
+const SESSION_TTL_MS = (parseFloat(process.env.DASHBOARD_SESSION_HOURS) || 24) * 60 * 60 * 1000;
+
+// Absolute cap — a session can never live longer than this, even with constant
+// activity, so a stolen token can't be kept alive indefinitely by any traffic.
+// Default 7 days. Override with DASHBOARD_SESSION_MAX_DAYS env var.
+const SESSION_MAX_MS = Math.max(1, parseFloat(process.env.DASHBOARD_SESSION_MAX_DAYS) || 7) * 24 * 60 * 60 * 1000;
+
 function generateSession() {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let s = '';
     for (let i = 0; i < 32; i++) s += chars[Math.floor(Math.random() * chars.length)];
     return s;
 }
+
+// Reap expired sessions every 10 minutes so the Map doesn't grow unbounded.
+setInterval(() => {
+    const now = Date.now();
+    for (const [token, session] of sessions.entries()) {
+        const pastMax = session.createdAt && now > session.createdAt + SESSION_MAX_MS;
+        if (!session.expiresAt || now > session.expiresAt || pastMax) {
+            sessions.delete(token);
+        }
+    }
+}, 10 * 60 * 1000);
 
 // ──── File Upload Setup ────
 const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
@@ -197,6 +218,13 @@ function createDashboard() {
         const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
         if (token && sessions.has(token)) {
             const session = sessions.get(token);
+            // Expired session (idle TTL or absolute max) — drop and treat as unauthenticated
+            const pastMax = session.createdAt && Date.now() > session.createdAt + SESSION_MAX_MS;
+            if (!session.expiresAt || Date.now() > session.expiresAt || pastMax) {
+                sessions.delete(token);
+                req.authenticated = false;
+                return next();
+            }
             // Re-verify Discord-logged-in users against the dash_users table
             if (session.method === 'discord' && session.userId) {
                 if (!isDashUser(session.userId, session.accessToken)) {
@@ -205,6 +233,10 @@ function createDashboard() {
                     return next();
                 }
             }
+            // Sliding renewal — reset the expiry on every authenticated request
+            session.expiresAt = Date.now() + SESSION_TTL_MS;
+            req.discordUserId = session.userId || null;
+            req.sessionMethod = session.method;
             req.authenticated = true;
         } else {
             req.authenticated = false;
@@ -222,9 +254,11 @@ function createDashboard() {
             return res.status(429).json({ success: false, error: 'Too many attempts. Please wait a minute.' });
         }
         const { password, discordId, accessToken } = req.body;
+        const now = Date.now();
+        const expiresAt = now + SESSION_TTL_MS;
         if (password && password === dashboardPassword) {
             const token = generateSession();
-            sessions.set(token, { method: 'password' });
+            sessions.set(token, { method: 'password', expiresAt, createdAt: now });
             return res.json({ success: true, token });
         }
         if (discordId && accessToken) {
@@ -236,7 +270,7 @@ function createDashboard() {
             }
             if (isDashUser(discordId, accessToken)) {
                 const token = generateSession();
-                sessions.set(token, { method: 'discord', userId: discordId, accessToken });
+                sessions.set(token, { method: 'discord', userId: discordId, accessToken, expiresAt, createdAt: now });
                 return res.json({ success: true, token, method: 'discord' });
             }
         }
@@ -255,16 +289,22 @@ function createDashboard() {
     }
 
     // ── Dashboard Users API ──
+    // Managing dashboard users grants access to the bot admin panel, so these
+    // routes are owner-only (password session or OWNER_ID). checkOwner is a
+    // hoisted function declaration defined further down in this scope.
     app.get('/api/dash/users', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage dashboard users' });
         res.json(getDashUsers());
     });
     app.post('/api/dash/users/add', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage dashboard users' });
         const { userId } = req.body;
         if (!userId) return res.status(400).json({ error: 'Missing userId' });
         addDashUser(userId, req.discordUserId || 'dashboard');
         res.json({ success: true, users: getDashUsers() });
     });
     app.post('/api/dash/users/remove', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage dashboard users' });
         const { userId } = req.body;
         removeDashUser(userId);
         res.json({ success: true, users: getDashUsers() });
@@ -1417,6 +1457,30 @@ function createDashboard() {
         }
     });
 
+    // Reorder panel types (receives array of type IDs in new order)
+    // NOTE: must be registered BEFORE the /types/:typeId route or Express
+    // will match 'reorder' as a typeId and return 404.
+    app.put('/api/server/:id/tickets/panels/:panelId/types/reorder', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const { typeIds } = req.body;
+            if (!Array.isArray(typeIds)) return res.status(400).json({ error: 'typeIds must be an array' });
+            const db = getDb();
+            const update = db.prepare('UPDATE ticket_panel_types SET sort_order = ? WHERE id = ? AND panel_id = ?');
+            const tx = db.transaction(() => {
+                typeIds.forEach((typeId, index) => {
+                    update.run(index, typeId, req.params.panelId);
+                });
+            });
+            tx();
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // Update a panel type
     app.put('/api/server/:id/tickets/panels/:panelId/types/:typeId', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
@@ -1445,7 +1509,7 @@ function createDashboard() {
         }
     });
 
-    // Reorder panel types (receives array of type IDs in new order)
+    // Clone a panel (with all its types)
     app.post('/api/server/:id/tickets/panels/:panelId/clone', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
@@ -1491,27 +1555,6 @@ function createDashboard() {
             }
             const result = updatePanel(req.params.panelId, updates);
             res.json({ success: true, panel: result });
-        } catch (err) {
-            res.status(500).json({ error: err.message });
-        }
-    });
-
-    app.put('/api/server/:id/tickets/panels/:panelId/types/reorder', requireAuth, (req, res) => {
-        if (!client) return res.status(503).json({ error: 'Bot not ready' });
-        const guild = client.guilds.cache.get(req.params.id);
-        if (!guild) return res.status(404).json({ error: 'Server not found' });
-        try {
-            const { typeIds } = req.body;
-            if (!Array.isArray(typeIds)) return res.status(400).json({ error: 'typeIds must be an array' });
-            const db = getDb();
-            const update = db.prepare('UPDATE ticket_panel_types SET sort_order = ? WHERE id = ? AND panel_id = ?');
-            const tx = db.transaction(() => {
-                typeIds.forEach((typeId, index) => {
-                    update.run(index, typeId, req.params.panelId);
-                });
-            });
-            tx();
-            res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
         }

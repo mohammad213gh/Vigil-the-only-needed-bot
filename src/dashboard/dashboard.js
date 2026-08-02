@@ -309,15 +309,14 @@ async function showSrv(id){curSrv=id;document.getElementById('srvList').style.di
       '<button class="mgmt-tab" data-tab="logging" onclick="showSrvTab(\'logging\',\''+id+'\')" >Logging</button>'+
       '<button class="mgmt-tab" data-tab="audit" onclick="showSrvTab(\'audit\',\''+id+'\')" >Audit Log</button>'+
       '<button class="mgmt-tab" data-tab="greetings" onclick="showSrvTab(\'greetings\',\''+id+'\')" >Greetings</button>'+
-      '</div></div>'+
       '<button class="mgmt-tab" data-tab="modtools" onclick="showSrvTab(\'modtools\',\'\'+id+\'\')" >Mod Tools</button>'+
+      '</div></div>'+
       '<div class="mgmt-panel" data-panel="overview"><div class="grid grid-2">'+(d.logging&&d.logging.perCategory?'<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>Logging</div><table class="tbl"><tr><th>Category</th><th>Channel</th><th>Status</th></tr>'+Object.entries(d.logging.perCategory).map(([cat,info])=>'<tr><td style="text-transform:capitalize;">'+cat+'</td><td>'+(info.channel?'<code>#'+info.channel+'</code>':'<span style="color:var(--text-muted);">Default</span>')+'</td><td><span class="tag '+(info.enabled?'green':'red')+'\">'+(info.enabled?'On':'Off')+'</span></td></tr>').join('')+'</table></div>':'')+'</div></div>'+
       '<div class="mgmt-panel" data-panel="roles" style="display:none;"><div id="mgmtRoles"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="channels" style="display:none;"><div id="mgmtChannels"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="logging" style="display:none;"><div id="mgmtLogging"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="audit" style="display:none;"><div id="mgmtAudit"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="greetings" style="display:none;"><div id="mgmtGreetings"><div class="loading"><div class="spin"></div></div></div></div>'+
-      '<div class="mgmt-panel" data-panel="modtools" style="display:none;"><div id="mgmtModTools"><div class="loading"><div class="spin"></div></div></div></div>'+
       '<div class="mgmt-panel" data-panel="modtools" style="display:none;"><div id="mgmtModTools"><div class="loading"><div class="spin"></div></div></div></div>'}catch{dt.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Couldn\'t load server details</p><p class="empty-act">The server may have been deleted or the bot lost access.</p></div>'}}
 function backSrv(){curSrv=null;document.getElementById('srvList').style.display='';document.getElementById('srvDetail').style.display='none'}
 
@@ -331,7 +330,7 @@ function showSrvTab(tab,serverId){
   if(tab==='channels'&&serverId)loadSrvChannels(serverId);
   if(tab==='logging'&&serverId)loadSrvLogging(serverId);
   if(tab==='audit'&&serverId)loadSrvAudit(serverId);
-  if(tab==='greetings'&&serverId)loadSrvGreetings(serverId);if(tab==='modtools'&&serverId)loadSrvModTools(serverId);if(tab==='modtools'&&serverId)loadSrvModTools(serverId)
+  if(tab==='greetings'&&serverId)loadSrvGreetings(serverId);if(tab==='modtools'&&serverId)loadSrvModTools(serverId)
 }
 async function loadSrvRoles(id){const el=document.getElementById('mgmtRoles');showSkeleton(el,'roles',4);try{const r=await fetch('/api/server/'+id+'/roles'),roles=await r.json();el.innerHTML=roles.slice(0,40).map(r=>'<div class="srv-card" style="cursor:default;padding:8px 12px;"><div style="width:10px;height:10px;border-radius:50%;background:'+(r.color||'rgba(255,255,255,0.1)')+';flex-shrink:0;"></div><div class="si"><h3>'+r.name+'</h3><p style="font-size:10px;">'+(r.managed?'Managed by integration':'ID: '+r.id)+'</p></div><span style="font-size:10px;color:var(--text-dim);">'+r.memberCount+' members</span></div>').join('')}catch{el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Couldn\'t load roles</p><p class="empty-act">The bot may need the \'Manage Roles\' permission.</p></div>'}
 }
@@ -341,11 +340,6 @@ async function toggleLogCat(serverId,category,enabled){
   try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,enabled})});showToast('Logging updated!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}
 }
 async function loadSrvLogging(id){const el=document.getElementById('mgmtLogging');showSkeleton(el,'logging',1);try{const[r,d]=await Promise.all([fetch('/api/server/'+id+'/channels'),fetch('/api/server/'+id)]),channels=await r.json(),server=await d.json();if(!server.logging||!server.logging.perCategory)return el.innerHTML='<div class="empty"><p>No logging config available.</p></div>';const catHtml=Object.entries(server.logging.perCategory).map(([cat,info])=>{const emojis={messages:'\uD83D\uDCE8',reactions:'\uD83D\uDC4D',members:'\uD83D\uDC65',roles:'\uD83C\uDFF7',server:'\uD83D\uDDA5',voice:'\uD83C\uDFA4',threads:'\uD83E\uDD9C',emojis:'\uD83D\uDE0E',bans:'\uD83D\uDEAB',invites:'\uD83D\uDD17',stickers:'\uD83D\uDC02',automod:'\uD83E\uDD16',scheduled:'\uD83D\uDCC5',stage:'\uD83C\uDF9F',webhooks:'\uD83D\uDD17',integrations:'\uD83D\uDD17'};const chOpts='<option value="">Default (auto)</option>'+channels.filter(c=>c.typeId===0||c.typeId===5||c.typeId===15).map(c=>'<option value="'+c.id+'"'+(c.id===info.channel?' selected':'')+'>#'+c.name+'</option>').join('');return'<div class="tg-wr" style="cursor:default;display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:4px;"><span style="font-size:12px;flex-shrink:0;">'+(emojis[cat]||'\uD83D\uDCCB')+'</span><div class="tg '+(info.enabled?'on':'')+'" onclick="toggleLogCat(\''+id+'\',\''+cat+'\','+(!info.enabled)+')" style="cursor:pointer;flex-shrink:0;"></div><div class="tg-lbl" style="text-transform:capitalize;flex:0 0 100px;font-size:12px;color:var(--text);">'+cat+'</div><select id="logCh-'+cat+'" style="flex:1;min-width:0;padding:5px 8px;font-size:11px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;cursor:pointer;">'+chOpts+'</select></div>'}).join('');const tracked=server.logging.trackedChannels||[];const trackedHtml=tracked.length?'<div style="margin-bottom:8px;display:flex;flex-direction:column;gap:4px;">'+tracked.map(function(cid){var ch=channels.find(function(c){return c.id===cid});return'<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;"><code style="flex:1;font-size:11px;">'+(ch?'#'+ch.name:cid)+'</code><button class="btn btn-s" onclick="removeTrackedChannel(\''+id+'\',\''+cid+'\')" style="padding:3px 8px;font-size:9px;">\u2716</button></div>'}).join('')+'</div>':'<div style="color:var(--text-muted);font-size:11px;margin-bottom:8px;">All channels are logged (no filter).</div>';el.innerHTML='<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>Categories</div><div style="padding:10px;">'+catHtml+'<button class="btn" onclick="saveAllLogSettings(\''+id+'\')" style="width:100%;margin-top:10px;padding:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#3ba55c,#2d8c47);border:none;border-radius:10px;color:#fff;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save All Changes</button></div></div><div class="tw" style="margin-top:10px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>Channel Filter <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+(tracked.length||'All')+' tracked)</span></div><div style="padding:10px;"><div class="stg-hint" style="margin-bottom:8px;">When channels are in the list, ONLY those channels get logged. Empty = all channels.</div>'+trackedHtml+'<div style="display:flex;gap:6px;"><select id="trackedChSelect" style="flex:1;min-width:0;padding:5px 8px;font-size:11px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;cursor:pointer;"><option value="">Select a channel...</option>'+channels.filter(function(c){return c.typeId===0||c.typeId===2||c.typeId===5||c.typeId===15}).map(function(c){return'<option value="'+c.id+'">#'+c.name+' ('+c.type+')</option>'}).join('')+'</select><button class="btn btn-s" onclick="addTrackedChannel(\''+id+'\')" style="padding:5px 10px;font-size:10px;">+ Add</button><button class="btn btn-s" onclick="clearTrackedChannels(\''+id+'\')" style="padding:5px 10px;font-size:10px;">Clear</button></div></div></div>'}catch(e){document.getElementById('mgmtLogging').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
-async function setLogChannel(serverId,category){const chId=document.getElementById('logCh-'+category).value;try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,channelId:chId||null})});showToast('Channel set!')}catch{showToast('Failed',true)}}
- async function saveAllLogSettings(serverId){const categories=[];const cats=["messages","reactions","members","roles","server","voice","threads","emojis","bans","invites","stickers","automod","scheduled","stage","webhooks","integrations"];for(const cat of cats){const sel=document.getElementById("logCh-"+cat);if(sel)categories.push({category:cat,channelId:sel.value||null});}try{const r=await fetch("/api/server/"+serverId+"/log/config/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({categories})});const d=await r.json();if(d.success){showToast("All log settings saved!");loadSrvLogging(serverId)}else showToast("Save failed",true)}catch{showToast("Save failed",true)}}
-async function addTrackedChannel(serverId){const chId=document.getElementById('trackedChSelect').value;if(!chId)return showToast('Select a channel',true);try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'add'})});showToast('Added!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
-async function removeTrackedChannel(serverId,chId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'remove'})});showToast('Removed!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
-async function clearTrackedChannels(serverId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannels:'clear'})});showToast('Cleared!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
 
 async function loadSrvAudit(id){const el=document.getElementById('mgmtAudit');showSkeleton(el,'audit',4);try{const[rd,rs]=await Promise.all([fetch('/api/server/'+id+'/audit'),fetch('/api/server/'+id)]),audit=await rd.json(),server=await rs.json();if(!audit||!audit.length)return el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><p>No recent audit log entries.</p><p style="font-size:10px;color:var(--text-muted);margin-top:6px;">The bot may lack the \'View Audit Log\' permission.</p></div>';el.innerHTML=audit.map(function(e){var time=Math.floor((Date.now()-e.createdTimestamp)/1000),timeStr=time<60?time+'s ago':time<3600?Math.floor(time/60)+'m ago':time<86400?Math.floor(time/3600)+'h ago':Math.floor(time/86400)+'d ago';var actNames={1:'Server Updated',10:'Channel Created',11:'Channel Updated',12:'Channel Deleted',13:'Channel Permission Update',14:'Channel Overwrite Delete',20:'Member Kicked',21:'Member Prune',22:'Member Banned',23:'Member Unbanned',24:'Member Updated',25:'Member Role Updated',26:'Member Move',27:'Member Disconnect',28:'Bot Added',30:'Role Created',31:'Role Updated',32:'Role Deleted',40:'Invite Created',41:'Invite Deleted',42:'Invite Updated',50:'Webhook Created',51:'Webhook Updated',52:'Webhook Deleted',60:'Emoji Created',61:'Emoji Updated',62:'Emoji Deleted',70:'Message Deleted',71:'Message Bulk Delete',72:'Message Pin',73:'Message Unpin',80:'Integration Created',81:'Integration Updated',82:'Integration Deleted',90:'Sticker Created',91:'Sticker Updated',92:'Sticker Deleted',100:'Stage Started',101:'Stage Ended',102:'Stage Updated',110:'Thread Created',111:'Thread Updated',112:'Thread Deleted',120:'Scheduled Event Created',121:'Scheduled Event Updated',122:'Scheduled Event Deleted',130:'Auto Mod Block',140:'Auto Mod Rule Created',141:'Auto Mod Rule Updated',142:'Auto Mod Rule Deleted',143:'Auto Mod Flag Message',144:'Auto Mod Timeout'};var actionName=actNames[e.action]||e.actionType||'Action';return'<div class="act-item"><img src="'+(e.executorAvatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" style="width:24px;height:24px;border-radius:6px;flex-shrink:0;"><div class="a-tx"><strong>'+(e.executorTag||'Unknown')+'</strong> &#8209; '+actionName+(e.reason?'<br><span style="font-size:10px;color:var(--text-dim);">Reason: '+e.reason+'</span>':'')+'</div><div class="a-tm">'+timeStr+'</div></div>'}).join('')}catch{el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Couldn\'t load audit log</p><p class="empty-act">The bot needs the \'View Audit Log\' permission. Check server settings.</p></div>'}}
 
@@ -601,14 +595,11 @@ async function resetGreetingConfig(serverId,type){
 }
 
 // ═══ Log Channel Config ═══
-async function setLogChannel(serverId,category){const chId=document.getElementById('logCh-'+category).value;try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category,channelId:chId||null})});showToast('Channel set!')}catch{showToast('Failed',true)}}
 async function saveAllLogSettings(serverId){const categories=[];const cats=["messages","reactions","members","roles","server","voice","threads","emojis","bans","invites","stickers","automod","scheduled","stage","webhooks","integrations"];for(const cat of cats){const sel=document.getElementById("logCh-"+cat);if(sel)categories.push({category:cat,channelId:sel.value||null});}try{const r=await fetch("/api/server/"+serverId+"/log/config/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({categories})});const d=await r.json();if(d.success){showToast("All log settings saved!");loadSrvLogging(serverId)}else showToast("Save failed",true)}catch{showToast("Save failed",true)}}
 async function addTrackedChannel(serverId){const chId=document.getElementById('trackedChSelect').value;if(!chId)return showToast('Select a channel',true);try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'add'})});showToast('Added!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
 async function removeTrackedChannel(serverId,chId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'remove'})});showToast('Removed!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
 async function clearTrackedChannels(serverId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannels:'clear'})});showToast('Cleared!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
 
-// ═══ Server Insights ═══
-async function loadSrvInsights(id){try{const r=await fetch('/api/insights/'+id),d=await r.json();if(!d)return;document.getElementById('mgmtInsights').innerHTML='<div class="grid grid-2"><div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Top Users by Messages</div><div style="padding:8px;">'+(d.topUsers.length?d.topUsers.map(function(u,i){return'<div class="act-item"><img src="'+(u.avatar||'https://cdn.discordapp.com/embed/avatars/0.png')+'" style="width:24px;height:24px;border-radius:6px;flex-shrink:0;"><div class="a-tx"><strong>'+(u.tag||u.userId)+'</strong></div><div class="a-tm">'+u.total+' msgs</div></div>'}).join(''):'<div class="empty" style="padding:16px;"><p>Not enough data yet.</p></div>')+'</div></div><div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Top Channels</div><div style="padding:8px;">'+(d.topChannels.length?d.topChannels.map(function(c,i){return'<div class="act-item"><div style="width:24px;height:24px;border-radius:6px;background:rgba(88,101,242,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent);font-size:10px;font-weight:700;">#'+(i+1)+'</div><div class="a-tx"><strong>#'+c.name+'</strong></div><div class="a-tm">'+c.total+' msgs</div></div>'}).join(''):'<div class="empty" style="padding:16px;"><p>Not enough data yet.</p></div>')+'</div></div></div>'}catch{document.getElementById('mgmtInsights').innerHTML='<div class="empty"><p>Failed to load insights.</p></div>'}}
 
 // ═══ Message Search ═══
 var msgSearchTimeout=null;
@@ -642,7 +633,7 @@ function initSSE(){
 
 window.addEventListener('beforeunload',()=>{if(bgAnimId)cancelAnimationFrame(bgAnimId)});
 
-checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadCommands();await loadRm();await loadSys();await loadTickets();loadCmdUsage();loadBrand();stRf();initSSE()});
+checkAuth().then(async ok=>{if(!ok)return;initThemes();initBgStyles();applyCompactPref();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadCommands();await loadRm();await loadSys();await loadTickets();loadCmdUsage();loadBrand();stRf();initSSE()});
 
 
 // ═══ MOD TOOLS ═══
@@ -767,8 +758,6 @@ async function timeoutSrvMember(serverId){
   }catch{document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ Request failed</div>';}
 }
 
-function getModResultEl(){return document.getElementById('modActionResult');}
-function setModResult(html){const el=getModResultEl();if(el)el.innerHTML=html;else showToast('Action complete',false);}
 
 // ═══ MOD STATS ═══
 async function loadMod(){
@@ -924,9 +913,25 @@ async function loadInvites(){
   }
 }
 
+// ── Compact Mode Toggle (settings) ──
+function toggleCompact(){
+  var t=document.getElementById('compactToggle');
+  if(!t)return;
+  var on=!t.classList.contains('on');
+  t.classList.toggle('on',on);
+  document.documentElement.style.setProperty('--layout-dense',on?'0.7':'1');
+  try{localStorage.setItem('layoutDensity',on?'compact':'normal')}catch(e){}
+}
+function applyCompactPref(){
+  var pref='normal';
+  try{pref=localStorage.getItem('layoutDensity')||'normal'}catch(e){}
+  var t=document.getElementById('compactToggle');
+  if(t)t.classList.toggle('on',pref==='compact');
+  document.documentElement.style.setProperty('--layout-dense',pref==='compact'?'0.7':'1');
+}
+
 // ═══ TICKETS ═══
 // Drag-drop state
-var tkDragSrc=null;
 
 async function loadTickets(){
   const sel=document.getElementById('tkSrvSelect');
@@ -1015,22 +1020,27 @@ async function loadTickets(){
             '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'panel\')" style="padding:6px 12px;font-size:10px;">💬 Edit Panel Message</button></div>'+
           // Right: Category + Ticket Message
           '<div><div class="stg" style="margin-bottom:10px;"><label>Category Created/Opened <span title="Categories where tickets can be created" style="cursor:help;color:var(--text-dim);font-size:11px;">ⓘ</span></label>'+
-            '<select id="tk-freq-cats" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;"></select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Per-type categories — configure in Type Settings</div></div>'+
+            '<select id="tk-freq-cats" style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:36px;" onchange="tkMarkUnsaved()"></select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Category for the first type (per-type settings override)</div></div>'+
             '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'ticket\')" style="padding:6px 12px;font-size:10px;">💬 Edit Ticket Message</button></div>'+
         '</div></div>';
 
-      // Populate roles multi-select after rendering
+      // Populate roles + category pickers after rendering
       var allRoles=[];
       for(var rk in rolesById)allRoles.push(rolesById[rk]);
-      if(allRoles.length){
-        var roleOpts='';
-        var curRoleIds=selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].support_roles||[]:[];
-        for(var ri=0;ri<allRoles.length;ri++){
-          var roleData=allRoles[ri];
-          roleOpts+='<option value="'+roleData.id+'"'+(curRoleIds.indexOf(roleData.id)>-1?' selected':'')+'>'+esc(roleData.name)+'</option>';
-        }
+      var curRoleIds=[];
+      try{curRoleIds=JSON.parse((selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].support_roles:'[]')||'[]')}catch(e){curRoleIds=[]}
+      var roleOpts='';
+      for(var ri=0;ri<allRoles.length;ri++){
+        var roleData=allRoles[ri];
+        roleOpts+='<option value="'+roleData.id+'"'+(curRoleIds.indexOf(roleData.id)>-1?' selected':'')+'>'+esc(roleData.name)+'</option>';
       }
-      setTimeout(function(){var sel=document.getElementById('tk-freq-roles');if(sel)sel.innerHTML=roleOpts||'<option value="">No roles available</option>'},50);
+      var curCatId=selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].category_id||'':' ';
+      var catOpts='';
+      (d.channels||[]).forEach(function(c){if(c.type===4)catOpts+='<option value="'+c.id+'"'+(c.id===curCatId?' selected':'')+'>'+esc(c.name)+'</option>'});
+      setTimeout(function(){
+        var sel=document.getElementById('tk-freq-roles');if(sel)sel.innerHTML=roleOpts||'<option value="">No roles available</option>';
+        var selC=document.getElementById('tk-freq-cats');if(selC)selC.innerHTML=catOpts||'<option value="">No categories</option>';
+      },50);
     }
     panelsHtml+='</div></div>';
 
@@ -1061,29 +1071,6 @@ async function loadTickets(){
     el.innerHTML='<div class="empty"><p>Failed to load ticket data.</p><p class="empty-act">'+esc(e.message)+'</p></div>';
     updateRefreshTimestamp('tickets');
   }
-}
-
-// ── Drag-to-Reorder ──
-function tkDragStart(ev,serverId,panelId){
-  tkDragSrc={serverId:serverId,panelId:panelId,typeId:ev.target.closest('[data-type-id]').dataset.typeId};
-  ev.dataTransfer.effectAllowed='move';
-  ev.dataTransfer.setData('text/plain',tkDragSrc.typeId);
-}
-function tkDrop(ev,serverId,panelId){
-  ev.preventDefault();
-  ev.currentTarget.style.borderColor='';ev.currentTarget.style.background='';
-  if(!tkDragSrc||tkDragSrc.serverId!==serverId||tkDragSrc.panelId!==panelId)return;
-  // Collect all type rows in current visual order
-  var container=ev.currentTarget.closest('[data-panel-id]')||document.querySelector('.tk-panel-card');
-  // Get the parent that holds types for this panel
-  var parent=ev.currentTarget.parentNode;
-  if(!parent)return;
-  // Extract the current order from DOM
-  var rows=parent.querySelectorAll('[data-type-id]');
-  var typeIds=[];
-  rows.forEach(function(r){typeIds.push(r.dataset.typeId)});
-  if(typeIds.length<2)return;
-  fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/reorder',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({typeIds:typeIds})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Types reordered!');loadTickets()}else showToast('Reorder failed',true)}).catch(function(){showToast('Reorder failed',true)});
 }
 
 // ── Inline Question Editor ──
@@ -1295,9 +1282,9 @@ function addTicketType(serverId,panelId){
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var categories=(d2.channels||[]).filter(function(c){return c.type===4}).map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'});
     var roles=(d2.roles||[]).map(function(r2){return '<option value="'+r2.id+'">'+esc(r2.name)+'</option>'});
-    var channels=(d2.channels||[]).filter(function(c){return c.type===0||c.type===5}).map(function(c){return '<option value="'+c.id+'">#'+c.name+'</option>'});
-    
+
     var overlay=document.createElement('div');
+    overlay.className='tk-overlay';
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
     overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
     overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:500px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
@@ -1318,7 +1305,7 @@ function addTicketType(serverId,panelId){
       if(!name){showToast('Enter a type name',true);return}
       var emoji=document.getElementById('tk-typ-emoji').value.trim()||'\uD83C\uDFAB';
       var catSel=document.getElementById('tk-typ-cat');
-      var catId=catSel?catSel.value:''||null;
+      var catId=catSel?catSel.value:null;
       var roleSel=document.getElementById('tk-typ-roles');
       var supportRoles=roleSel?Array.from(roleSel.selectedOptions).map(function(o){return o.value}):[];
       var welcome=document.getElementById('tk-typ-welcome').value.trim();
@@ -1346,7 +1333,9 @@ function editTicketTypeSettings(serverId,panelId,typeId){
     }
     if(!currentType){showToast('Type not found',true);return}
     var categories=(d2.channels||[]).filter(function(c){return c.type===4}).map(function(c){return '<option value="'+c.id+'"'+(c.id===currentType.category_id?' selected':'')+'>'+esc(c.name)+'</option>'});
-    var roles=(d2.roles||[]).map(function(r2){return '<option value="'+r2.id+'"'+(currentType.support_roles&&currentType.support_roles.indexOf(r2.id)>-1?' selected':'')+'>'+esc(r2.name)+'</option>'});
+    // support_roles comes back as a JSON string from the API — parse before membership checks
+    var curRoles=(function(){try{return JSON.parse(currentType.support_roles||'[]')}catch(e){return []}})();
+    var roles=(d2.roles||[]).map(function(r2){return '<option value="'+r2.id+'"'+(curRoles.indexOf(r2.id)>-1?' selected':'')+'>'+esc(r2.name)+'</option>'});
     var questions=(function(){try{return JSON.parse(currentType.questions||'[]')}catch{return []}})();
     
     var overlay=document.createElement('div');
@@ -1362,7 +1351,7 @@ function editTicketTypeSettings(serverId,panelId,typeId){
       (roles.length?'<div class="stg" style="margin-bottom:12px;"><label>Support Roles</label><select id="tk-typ-roles" multiple style="width:100%;padding:8px 10px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:80px;">'+roles.join('')+'</select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Hold Ctrl/Cmd to select multiple</div></div>':'')+
       '<div class="stg" style="margin-bottom:12px;"><label>Welcome Message</label><textarea id="tk-typ-welcome" rows="2" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;resize:vertical;">'+esc(currentType.welcome_message||'')+'</textarea></div>'+
       '<div class="stg" style="margin-bottom:16px;"><label>Channel Name Format</label><input id="tk-typ-format" value="'+esc(currentType.ticket_name_format||'ticket-{username}-{number}')+'" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Variables: {username}, {number}, {name}</div></div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn" onclick="editQuestions(\''+serverId+'\',\''+panelId+'\',\''+typeId+'\');document.body.removeChild(overlay)" style="flex:1;padding:8px;font-size:11px;">\uD83D\uDCDD Edit Questions ('+questions.length+')</button></div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn" onclick="editQuestions(\''+serverId+'\',\''+panelId+'\',\''+typeId+'\');tkCloseModal(this)" style="flex:1;padding:8px;font-size:11px;">\uD83D\uDCDD Edit Questions ('+questions.length+')</button></div>'+
       '<div style="display:flex;gap:8px;"><button class="tk-modal-close btn btn-s" style="flex:1;padding:10px;font-size:13px;">Cancel</button><button id="tk-typ-save" class="btn" style="flex:2;padding:10px;font-size:13px;">Save Settings</button></div></div>';
     document.body.appendChild(overlay);
     overlay.querySelector('.tk-modal-close').onclick=function(){document.body.removeChild(overlay)};
@@ -1383,7 +1372,6 @@ function editTicketTypeSettings(serverId,panelId,typeId){
   }).catch(function(e){showToast('Failed to load server data',true)});
 }
 
-function deleteTicketType(serverId,panelId,typeId){if(!confirm('Remove this ticket type?'))return;fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+typeId,{method:'DELETE'}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Type removed!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
 
 function tkCloseModal(btn){var overlay=btn.closest('[style*="fixed"]');if(overlay)document.body.removeChild(overlay)}
 
@@ -1451,22 +1439,40 @@ function tkSetCount(serverId,panelId){
     };
   }).catch(function(e){showToast('Failed to load counter data',true)});
 }
+function tkPickTypeGo(serverId,panelId,cardId,typeId){
+  var ov=document.querySelector('[data-tk-pick]');
+  if(ov)document.body.removeChild(ov);
+  if(cardId==='types')editTicketTypeSettings(serverId,panelId,typeId);
+  else if(cardId==='forms')editQuestions(serverId,panelId,typeId);
+}
 function tkCardClick(cardId,serverId,panelId){
-  if(cardId==='types'){
+  if(cardId==='types'||cardId==='forms'){
     fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
       var panel=null;
       for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
-      if(!panel||!panel.types||!panel.types.length){showToast('No types yet — use /ticket type_add or + Add Type',true);return}
-      editTicketTypeSettings(serverId,panelId,panel.types[0].id);
-    }).catch(function(){showToast('Failed to load',true)});
-    return;
-  }
-  if(cardId==='forms'){
-    fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
-      var panel=null;
-      for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
-      if(!panel||!panel.types||!panel.types.length){showToast('No types configured',true);return}
-      editQuestions(serverId,panelId,panel.types[0].id);
+      if(!panel||!panel.types||!panel.types.length){
+        // No types yet — open the Add Type modal right away
+        if(cardId==='types'){addTicketType(serverId,panelId);return}
+        showToast('No types configured',true);return
+      }
+      if(panel.types.length===1){
+        if(cardId==='types')editTicketTypeSettings(serverId,panelId,panel.types[0].id);
+        else editQuestions(serverId,panelId,panel.types[0].id);
+        return;
+      }
+      // Multiple types — show a type picker first
+      var overlay=document.createElement('div');
+      overlay.setAttribute('data-tk-pick','1');
+      overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+      overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
+      overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:380px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
+        '<h2 style="font-size:16px;font-weight:700;margin:0 0 12px 0;">'+(cardId==='types'?'\u2699\uFE0F Choose Type':'\uD83D\uDCDD Choose Type')+'</h2>'+
+        '<div style="display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;">'+
+        panel.types.map(function(t){return '<button class="btn btn-s" onclick="tkPickTypeGo(\''+serverId+'\',\''+panelId+'\',\''+cardId+'\',\''+t.id+'\')" style="padding:9px 12px;font-size:12px;text-align:left;">'+esc(t.emoji)+' '+esc(t.name)+'</button>';}).join('')+
+        '</div>'+
+        (cardId==='types'?'<button class="btn" onclick="addTicketType(\''+serverId+'\',\''+panelId+'\');tkCloseModal(this)" style="width:100%;margin-top:12px;padding:9px 12px;font-size:12px;">➕ Add New Type</button>':'')+
+        '</div></div>';
+      document.body.appendChild(overlay);
     }).catch(function(){showToast('Failed to load',true)});
     return;
   }
@@ -1503,10 +1509,21 @@ function tkToggleFreq(){
 }
 function tkEditMessage(serverId,type){
   var label=type==='panel'?'Panel Message':'Ticket Message';
-  var msgKey=type==='panel'?'panel_message':'ticket_message';
-  // Fetch current message from config
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
-    var curMsg=d2.config?d2.config[msgKey]||'':'';
+    var sel=document.getElementById('tkSelPanel');
+    var panelId=sel?sel.value:'';
+    var panel=null;
+    for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
+    if(!panel){showToast('No panel selected',true);return}
+    var curMsg='';
+    var targetTypeId=null;
+    if(type==='panel'){
+      curMsg=panel.description||'';
+    }else{
+      if(!panel.types||!panel.types.length){showToast('No ticket types on this panel',true);return}
+      targetTypeId=panel.types[0].id;
+      curMsg=panel.types[0].welcome_message||'';
+    }
     var overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
     overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
@@ -1518,7 +1535,15 @@ function tkEditMessage(serverId,type){
     overlay.querySelector('#tk-msg-save').onclick=function(){
       var msg=document.getElementById('tk-msg-text').value;
       var btn=this;btn.disabled=true;btn.textContent='Saving...';
-      fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[msgKey]:msg})})
+      var url,body;
+      if(type==='panel'){
+        url='/api/server/'+serverId+'/tickets/panels/'+panelId;
+        body={description:msg};
+      }else{
+        url='/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+targetTypeId;
+        body={welcome_message:msg};
+      }
+      fetch(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
       .then(function(r){return r.json()}).then(function(d){if(d.success){showToast(label+' saved!');document.body.removeChild(overlay);loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true);btn.disabled=false;btn.textContent='Save'}).catch(function(e){showToast('Failed: '+e.message,true);btn.disabled=false;btn.textContent='Save'});
     };
   }).catch(function(e){showToast('Failed to load config',true)});

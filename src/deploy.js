@@ -1420,10 +1420,44 @@ const commandDefs = [
                         .setDescription('Type name or ID')
                         .setRequired(true))
                 .addIntegerOption(opt =>
-                    opt.setName('number')
+                    opt.setName('index')
                         .setDescription('Question number to remove')
                         .setRequired(true)
                         .setMinValue(1)))
+        // ── Blacklist & Inactivity ──
+        .addSubcommand(sub =>
+            sub.setName('blacklist_add')
+                .setDescription('Blacklist a user from creating tickets')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to blacklist')
+                        .setRequired(true))
+                .addStringOption(opt =>
+                    opt.setName('reason')
+                        .setDescription('Reason for the blacklist')
+                        .setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('blacklist_remove')
+                .setDescription('Remove a user from the ticket blacklist')
+                .addUserOption(opt =>
+                    opt.setName('user')
+                        .setDescription('The user to unblacklist')
+                        .setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('blacklist_list')
+                .setDescription('List all blacklisted ticket users'))
+        .addSubcommand(sub =>
+            sub.setName('type_inactivity')
+                .setDescription('Set inactivity auto-close for a ticket type')
+                .addStringOption(opt =>
+                    opt.setName('type')
+                        .setDescription('Type name or ID')
+                        .setRequired(true))
+                .addIntegerOption(opt =>
+                    opt.setName('hours')
+                        .setDescription('Hours of inactivity before auto-close (0 disables)')
+                        .setRequired(true)
+                        .setMinValue(0)))
         // ── Global Config ──
         .addSubcommand(sub =>
             sub.setName('config_show')

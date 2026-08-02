@@ -154,11 +154,15 @@ function updatePanelType(typeId, updates) {
     const current = db.prepare('SELECT * FROM ticket_panel_types WHERE id = ?').get(typeId);
     if (!current) return null;
     const merged = { ...current, ...updates };
+    // Only stringify when the incoming value is not already a stored JSON string,
+    // otherwise partial updates (e.g. changing only support_roles) double-encode
+    // questions/support_roles and corrupt them.
+    const stringifyIfNotString = (v) => (typeof v === 'string' ? v : JSON.stringify(v || []));
     db.prepare(`UPDATE ticket_panel_types SET name = ?, emoji = ?, category_id = ?, support_roles = ?, welcome_message = ?, ticket_name_format = ?, questions = ?, sort_order = ? WHERE id = ?`)
         .run(merged.name, merged.emoji || '🎫', merged.category_id || null,
-            JSON.stringify(merged.support_roles || []),
+            stringifyIfNotString(merged.support_roles),
             merged.welcome_message || '', merged.ticket_name_format || 'ticket-{username}-{number}',
-            JSON.stringify(merged.questions || []), merged.sort_order || 0, typeId);
+            stringifyIfNotString(merged.questions), merged.sort_order || 0, typeId);
     return getPanelType(typeId);
 }
 
@@ -468,7 +472,9 @@ async function handleQuestionsSubmit(interaction) {
     const questions = parseQuestions(type.questions);
     const answers = [];
 
-    for (let i = 0; i < questions.length; i++) {
+    // The modal only renders up to 5 inputs — never read beyond that or it throws
+    const maxQuestions = Math.min(questions.length, 5);
+    for (let i = 0; i < maxQuestions; i++) {
         const val = interaction.fields.getTextInputValue('tq_' + i);
         answers.push({ question: questions[i].label || questions[i].question, answer: val || '' });
     }
