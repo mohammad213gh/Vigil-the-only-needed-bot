@@ -684,8 +684,12 @@ function createDashboard() {
             if (!member.moderatable) return res.status(403).json({ error: 'Cannot timeout this user' });
 
             const durationMap = { '60s': 60000, '5m': 300000, '10m': 600000, '1h': 3600000, '6h': 21600000, '24h': 86400000, '3d': 259200000, '7d': 604800000 };
-            const ms = durationMap[duration];
+            // Accept a named key ('10m', '1h', ...) or a raw number of minutes (the dashboard sends minutes)
+            const minutes = typeof duration === 'number' ? duration : parseInt(duration, 10);
+            const ms = durationMap[duration] || (Number.isInteger(minutes) && minutes > 0 ? minutes * 60000 : null);
             if (!ms) return res.status(400).json({ error: 'Invalid duration' });
+            // Discord caps timeout length at 28 days
+            if (ms > 28 * 24 * 60 * 60000) return res.status(400).json({ error: 'Timeout cannot exceed 28 days' });
 
             await member.timeout(ms, '[Dashboard] ' + reason);
             const { createCase } = require('./modCases');
@@ -701,9 +705,11 @@ function createDashboard() {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
-        const { getGuildNotesForDashboard } = require('./staffNotes');
-        const notes = getGuildNotesForDashboard(guild.id);
-        res.json(notes.map(n => ({
+        const { getNotesForUser, getGuildNotesForDashboard } = require('./staffNotes');
+        // ?userId= filters to a specific user (dashboard search); otherwise return recent guild notes
+        const userId = req.query.userId || null;
+        const notes = userId ? getNotesForUser(guild.id, userId) : getGuildNotesForDashboard(guild.id);
+        res.json({ notes: notes.map(n => ({
             id: n.id,
             targetUserId: n.target_user_id,
             targetTag: guild.members.cache.get(n.target_user_id)?.user?.tag || n.target_user_id,
@@ -711,7 +717,7 @@ function createDashboard() {
             note: n.note,
             createdAt: n.created_at,
             updatedAt: n.updated_at,
-        })));
+        })) });
     });
 
     app.post('/api/server/:id/notes', requireAuth, (req, res) => {
@@ -1032,6 +1038,23 @@ function createDashboard() {
         }
     };
 
+    // ── Ticket helpers ──
+    // Legacy rows may store questions/support_roles as a double-encoded JSON string
+    // (e.g. '"[]"' or '"[\"a\"]"'). Normalize to a plain array for the frontend.
+    function cleanJsonArray(v) {
+        if (Array.isArray(v)) return v;
+        if (v === null || v === undefined) return [];
+        if (typeof v !== 'string') return [];
+        try {
+            let parsed = JSON.parse(v);
+            // double-encoded: the string itself is a JSON-encoded value
+            if (typeof parsed === 'string') {
+                try { parsed = JSON.parse(parsed); } catch { return []; }
+            }
+            return Array.isArray(parsed) ? parsed : [];
+        } catch { return []; }
+    }
+
     // ── Server Insights: Moderation Stats ──
     app.get('/api/server/:id/modstats', requireAuth, async (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
@@ -1291,15 +1314,16 @@ function createDashboard() {
                 description: p.description,
                 channel_id: p.channel_id,
                 panel_message_id: p.panel_message_id,
+                ticket_counter: p.ticket_counter || 0,
                 types: getPanelTypes(p.id).map(t => ({
                     id: t.id,
                     name: t.name,
                     emoji: t.emoji,
                     category_id: t.category_id,
-                    support_roles: t.support_roles,
+                    support_roles: cleanJsonArray(t.support_roles),
                     welcome_message: t.welcome_message,
                     ticket_name_format: t.ticket_name_format,
-                    questions: t.questions,
+                    questions: cleanJsonArray(t.questions),
                     sort_order: t.sort_order,
                 })),
             }));

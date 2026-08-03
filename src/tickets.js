@@ -249,13 +249,27 @@ async function sendTicketPanel(panelInput, channel) {
 async function createTicket(guild, creator, panelType, answers) {
     const db = getDb();
     const config = getTicketConfig(guild.id);
-    const ticketNumber = (config.ticket_count || 0) + 1;
 
     // Resolve panel type
     const type = typeof panelType === 'string' ? getPanelType(panelType) : panelType;
     if (!type) return { error: 'Ticket type not found.' };
 
-    updateTicketConfig(guild.id, { ticket_count: ticketNumber });
+    // Numbering: when the panel has its own counter set (dashboard "Set Count"),
+    // use that; otherwise fall back to the global counter. Keep the global
+    // counter ahead of any manually-set number so ticket numbers don't collide
+    // across panels.
+    let ticketNumber;
+    const panelCounter = type.panel_id ? getPanelTicketCounter(type.panel_id) : null;
+    if (panelCounter && Number.isInteger(panelCounter) && panelCounter > 0) {
+        ticketNumber = panelCounter;
+        setPanelTicketCounter(type.panel_id, panelCounter + 1);
+        if (ticketNumber > (config.ticket_count || 0)) {
+            updateTicketConfig(guild.id, { ticket_count: ticketNumber });
+        }
+    } else {
+        ticketNumber = (config.ticket_count || 0) + 1;
+        updateTicketConfig(guild.id, { ticket_count: ticketNumber });
+    }
 
     // Build channel name (Feature 5 - extended tokens)
     const safeName = creator.username.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);

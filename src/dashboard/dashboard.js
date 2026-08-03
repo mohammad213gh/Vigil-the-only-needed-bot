@@ -61,8 +61,8 @@ async function loadCmdUsage(){
   if(!el)return;
   try{
     const r=await fetch('/api/stats/commands'),d=await r.json();
-    if(!d.commands||!d.commands.length){el.innerHTML='<div class="empty"><p>No command data yet.</p><p class="empty-act">Usage data will appear as people use commands.</p></div>';return}
-    const top=d.commands.slice(0,10);
+    if(!d.top||!d.top.length){el.innerHTML='<div class="empty"><p>No command data yet.</p><p class="empty-act">Usage data will appear as people use commands.</p></div>';return}
+    const top=d.top.slice(0,10);
     const maxCount=top[0].count;
     const ac=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#5865F2';
     const h=top.length*36+20;
@@ -75,7 +75,7 @@ async function loadCmdUsage(){
         '<span style="position:absolute;right:6px;top:1px;font-size:9px;color:#fff;font-family:monospace;font-weight:600;">'+c.count.toLocaleString()+'</span>'+
         '</div></div>';
     }).join('');
-    el.innerHTML='<div style="padding:2px 0;">'+bars+'<div style="margin-top:8px;font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;"><span>'+d.totalUses.toLocaleString()+' total uses</span><span>'+d.uniqueUsers.toLocaleString()+' unique users</span></div></div>';
+    el.innerHTML='<div style="padding:2px 0;">'+bars+'<div style="margin-top:8px;font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;"><span>'+((d.total||0)).toLocaleString()+' total uses</span><span>'+((d.users||0)).toLocaleString()+' unique users</span></div></div>';
   }catch{el.innerHTML='<div class="empty"><p>Could not load command data.</p></div>'}
 }
 
@@ -688,7 +688,7 @@ async function loadSrvNotes(id){
         return '<div style="display:flex;gap:10px;padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;">'
           +'<div style="flex:1;"><div style="font-size:12px;color:var(--text);line-height:1.4;">'+n.note+'</div>'
           +'<div style="display:flex;gap:8px;margin-top:4px;font-size:10px;color:var(--text-muted);">'
-          +'<span>By: '+n.author+'</span><span>'+new Date(n.createdAt).toLocaleDateString()+'</span></div></div></div>';
+          +'<span>By: '+n.authorTag+'</span><span>'+new Date(n.createdAt).toLocaleDateString()+'</span></div></div></div>';
       }).join('')+'</div>';
     }else{
       notesHtml='<div class="empty"><p>No notes for this user.</p></div>';
@@ -702,7 +702,7 @@ async function loadSrvNotes(id){
 async function addSrvNote(serverId,userId){
   const text=document.getElementById('newNoteText');if(!text||!text.value.trim())return showToast('Enter note text',true);
   try{
-    const r=await fetch('/api/server/'+serverId+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:userId,note:text.value.trim()})});
+    const r=await fetch('/api/server/'+serverId+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUserId:userId,note:text.value.trim()})});
     const d=await r.json();
     if(d.success){showToast('Note added!');loadSrvNotes(serverId);}
     else showToast(d.error||'Failed',true);
@@ -954,98 +954,107 @@ async function loadTickets(){
     var channelsById={};(d.channels||[]).forEach(function(c){channelsById[c.id]=c});
     var rolesById={};(d.roles||[]).forEach(function(r2){rolesById[r2.id]=r2});
 
-    // ── Config Section ──
-    const cfgHtml='<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M9 21V9"/></svg>Global Config</div><div style="padding:14px;">'+
-      '<div class="stg-inl" style="justify-content:space-between;margin-bottom:10px;"><span style="font-size:13px;">Ticket System</span><div class="tg-wr" onclick="ticketToggle(\''+serverId+'\','+(!d.config.enabled)+')"><div class="tg '+(d.config.enabled?'on':'')+'"></div><div class="tg-lbl">'+(d.config.enabled?'Enabled':'Disabled')+'</div></div></div>'+
-      '<div class="stg-inl" style="justify-content:space-between;margin-bottom:10px;"><span style="font-size:13px;">Auto-Close on Leave</span><div class="tg-wr" onclick="ticketToggleLeave(\''+serverId+'\','+(!d.config.closeOnLeave)+')"><div class="tg '+(d.config.closeOnLeave?'on':'')+'"></div><div class="tg-lbl">'+(d.config.closeOnLeave?'On':'Off')+'</div></div></div>'+
-      '<div class="stg" style="margin-bottom:10px;"><label>Transcript Log Channel</label><select id="tkLogCh" onchange="ticketSetLog(\''+serverId+'\')"><option value="">None</option>'+((d.channels||[]).filter(function(c){return c.type===0||c.type===5}).map(function(c){return '<option value="'+c.id+'"'+(c.id===d.config.logChannelId?' selected':'')+'>#'+c.name+'</option>';}).join(''))+'</select></div>'+
-      '<div style="font-size:11px;color:var(--text-dim);">Total tickets created: <strong>'+d.config.ticketCount+'</strong></div>'+
-    '</div></div>';
+    // ── General Ticket Options ──
+    var logChOpts=((d.channels||[]).filter(function(c){return c.type===0||c.type===5}).map(function(c){return '<option value="'+c.id+'"'+(c.id===d.config.logChannelId?' selected':'')+'>#'+esc(c.name)+'</option>'}).join(''));
+    var cfgHtml='<div class="tk-glass">'+
+      '<div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M9 21V9"/></svg>General Ticket Options</div>'+
+      '<div class="tk-glass-b">'+
+        '<div class="tk-opt-row"><div><div class="tk-opt-t">Ticket System</div><div class="tk-opt-d">Enable or disable tickets on this server</div></div>'+
+          '<div class="tg-wr" onclick="ticketToggle(\''+serverId+'\','+(!d.config.enabled)+')"><div class="tg '+(d.config.enabled?'on':'')+'"></div><div class="tg-lbl">'+(d.config.enabled?'Enabled':'Disabled')+'</div></div></div>'+
+        '<div class="stg" style="margin-bottom:10px;"><label>Transcript Log Channel</label><select id="tkLogCh" class="tk-select" onchange="ticketSetLog(\''+serverId+'\')"><option value="">None</option>'+logChOpts+'</select></div>'+
+        '<div class="tk-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><div class="tk-stat-v">'+d.config.ticketCount+'</div><div class="tk-stat-l">tickets created</div></div></div>'+
+      '</div></div>';
 
-    // ── NEW: Panel Selector Bar + Detail View (replaces old panel cards) ──
+    // Selected panel (persisted across reloads via the dropdown)
     var panels=d.panels||[];
     var tkSelectedPanel=document.getElementById('tkSelPanel') && document.getElementById('tkSelPanel').value;
     var selPanel=null;
     for(var pi=0;pi<panels.length;pi++){if(panels[pi].id===tkSelectedPanel){selPanel=panels[pi];break}}
     if(!selPanel&&panels.length>0)selPanel=panels[0];
-    
-    var panelsHtml='<div class="tw" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Panel Config <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+panels.length+')</span></div><div style="padding:12px;">'+
-      // Selector bar
-      '<div style="display:flex;gap:8px;margin-bottom:12px;">'+
-        '<select id="tkSelPanel" onchange="loadTickets()" style="flex:1;padding:9px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:inherit;">'+
-          '<option value="">Select a panel...</option>'+
-          panels.map(function(p,i){return '<option value="'+p.id+'"'+(selPanel&&p.id===selPanel.id?' selected':'')+'>'+(i+1)+' | '+esc(p.name)+'</option>'}).join('')+
-        '</select>'+
-        '<button class="btn" onclick="createTicketPanel(\''+serverId+'\')" style="padding:9px 14px;font-size:12px;">+</button></div>';
+    var noPanel=!selPanel;
+    var panelId=selPanel?selPanel.id:'';
+
+    // ── Advanced Settings ──
+    var advHtml='<div class="tk-glass">'+
+      '<div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Advanced Settings</div>'+
+      '<div class="tk-glass-b">'+
+        '<div class="tk-opt-row"><div><div class="tk-opt-t">Auto-Close on Leave</div><div class="tk-opt-d">Close tickets when the creator leaves the server</div></div>'+
+          '<div class="tg-wr" onclick="ticketToggleLeave(\''+serverId+'\','+(!d.config.closeOnLeave)+')"><div class="tg '+(d.config.closeOnLeave?'on':'')+'"></div><div class="tg-lbl">'+(d.config.closeOnLeave?'On':'Off')+'</div></div></div>'+
+        '<div class="tk-pill-group">'+
+          tkPill('Add Ticket Type','Create a new type on the selected panel',(noPanel?'showToast(\'Select a panel first\',true)':'addTicketType(\''+serverId+'\',\''+panelId+'\')'))+
+          tkPill('Transcript & Logging','Where transcripts are posted','tkCardClick(\'transcript\',\''+serverId+'\',\''+panelId+'\')')+
+          tkPill('Claim System','How staff claim tickets','tkCardClick(\'claiming\',\''+serverId+'\',\''+panelId+'\')')+
+        '</div>'+
+      '</div></div>';
+
+    // ── Panel Settings ──
+    var panelSelOpts=panels.map(function(p,i){return '<option value="'+p.id+'"'+(selPanel&&p.id===selPanel.id?' selected':'')+'>'+(i+1)+' | '+esc(p.name)+'</option>'}).join('');
+    var pTypes=selPanel?selPanel.types||[]:[];
+    var panelsHtml='<div class="tk-glass">'+
+      '<div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Panel Settings <span class="tk-h-count">'+panels.length+'</span></div>'+
+      '<div class="tk-glass-b">'+
+        '<div class="tk-sel-row">'+
+          '<select id="tkSelPanel" class="tk-select" onchange="loadTickets()"><option value="">Select a panel...</option>'+panelSelOpts+'</select>'+
+          '<button class="btn" onclick="createTicketPanel(\''+serverId+'\')" style="padding:9px 14px;font-size:12px;flex-shrink:0;" title="Create new panel">+</button></div>';
     
     if(!selPanel){
-      panelsHtml+='<div class="empty" style="padding:16px;"><p>No panel selected. Select or Create one.</p><p class="empty-act" style="margin-top:8px;">Use the dropdown to select a panel, or click + to create a new one.</p></div>';
+      panelsHtml+='<div class="tk-empty"><p>No panel selected.</p><p class="empty-act">Select a panel above, or click + to create a new one.</p></div>';
     }else{
-      var pTypes=selPanel.types||[];
-      var panelIdx=0;for(var pi2=0;pi2<panels.length;pi2++){if(panels[pi2].id===selPanel.id){panelIdx=pi2+1;break}}
-      // Action row — compact 2-row layout that works on mobile
+      // Action row — Clone, Rename, Send, Set Count, Update, Delete
       panelsHtml+='<div class="tk-act-row">'+
-        '<button class="btn btn-s" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDCE8 Send</button>'+
-        '<button class="btn btn-s" onclick="tkEditPanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2699\uFE0F Edit</button>'+
-        '<button class="btn btn-s" onclick="tkClonePanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD04 Clone</button>'+
-        '<button class="btn btn-s" onclick="tkRenamePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u270F\uFE0F Rename</button>'+
-        '<button class="btn btn-s" onclick="tkSetCount(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD22 Count</button>'+
-        '<button class="tk-del-btn" onclick="tkDeletePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2716 Delete</button></div>';
-      
-      // ── Only keep cards with real functionality ──
-      var realCards=[
-        {id:'types',label:'\uD83D\uDD04 Ticket Types',sub:'Configure types, categories, questions, roles'},
-        {id:'forms',label:'\uD83D\uDCDD Custom Questions',sub:'Up to 5 questions per type'},
-        {id:'transcript',label:'\uD83D\uDCC4 Transcript & Logging',sub:'Ticket transcripts and log channel'},
-        {id:'claiming',label:'\uD83D\uDC4B Claim System',sub:'Staff claiming and transfers'},
-      ];
-      panelsHtml+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:12px;">';
-      for(var ci=0;ci<realCards.length;ci++){
-        var c=realCards[ci];
-        panelsHtml+='<div onclick="tkCardClick(\''+c.id+'\',\''+serverId+'\',\''+selPanel.id+'\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor=&#39;rgba(var(--accent-rgb),0.3)&#39;;this.style.background=&#39;rgba(var(--accent-rgb),0.06)&#39;" onmouseout="this.style.borderColor=&#39;&#39;;this.style.background=&#39;&#39;">'+
-          '<div><div style="font-size:13px;font-weight:600;">'+c.label+'</div><div style="font-size:10px;color:var(--text-dim);margin-top:2px;">'+c.sub+'</div></div>'+
-          '<span style="color:var(--text-dim);font-size:14px;">\u203A</span></div>';
-      }
-      panelsHtml+='</div>';
+        '<button type="button" class="tk-act-btn tk-act-green" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDCE8 Send</button>'+
+        '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkClonePanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD04 Clone</button>'+
+        '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkRenamePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u270F\uFE0F Rename</button>'+
+        '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkSetCount(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD22 Set Count</button>'+
+        '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkEditPanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2B06\uFE0F Update</button>'+
+        '<button type="button" class="tk-act-btn tk-act-red" onclick="tkDeletePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2716 Delete</button></div>';
 
-      // ── Frequently Used Configs ──
-      panelsHtml+='<div id="tk-freq-wr" style="margin-top:8px;">'+
-        '<div onclick="tkToggleFreq()" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 0;font-size:12px;font-weight:600;color:var(--text);user-select:none;">'+
-          '<span id="tk-freq-caret" style="transition:transform 0.2s;font-size:10px;">▼</span>Frequently Used Configs</div>'+
+      // Pill navigation
+      panelsHtml+='<div class="tk-pill-group">'+
+        tkPill('Ticket Types',(pTypes.length?pTypes.length+' type'+(pTypes.length>1?'s':''):'No types yet'),'tkCardClick(\'types\',\''+serverId+'\',\''+selPanel.id+'\')')+
+        tkPill('Custom Questions','Up to 5 per type','tkCardClick(\'forms\',\''+serverId+'\',\''+selPanel.id+'\')')+
+        tkPill('Panel Message','Embed title & description','tkEditMessage(\''+serverId+'\',\'panel\')')+
+        tkPill('Ticket Message','Welcome message for new tickets','tkEditMessage(\''+serverId+'\',\'ticket\')')+
+      '</div>';
+
+      // Frequently Used Configs
+      panelsHtml+='<div id="tk-freq-wr" class="tk-freq-wr">'+
+        '<div class="tk-freq-h" onclick="tkToggleFreq()"><span id="tk-freq-caret" class="tk-freq-caret">\u25BC</span>Frequently Used Configs</div>'+
         '<div id="tk-freq-body" class="tk-freq-grid">'+
           // Left: Support Team Roles + Panel Message
-          '<div><div class="stg" style="margin-bottom:10px;"><label>Support Team Roles <span title="Roles that can view and manage tickets" style="cursor:help;color:var(--text-dim);font-size:11px;">ⓘ</span></label>'+
-            '<select id="tk-freq-roles" multiple style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:70px;" onchange="tkMarkUnsaved()">'+
-            '</select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Hold Ctrl/Cmd to select multiple</div></div>'+
-            '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'panel\')" style="padding:6px 12px;font-size:10px;">💬 Edit Panel Message</button></div>'+
+          '<div><div class="stg" style="margin-bottom:10px;"><label>Support Team Roles <span title="Roles that can view and manage tickets" style="cursor:help;color:var(--text-dim);font-size:11px;">\u24D8</span></label>'+
+            '<div id="tk-freq-roles" class="tk-role-chips"></div><div class="tk-hint">Click roles to toggle them on/off</div></div>'+
+            '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'panel\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDCAC Edit Panel Message</button></div>'+
           // Right: Category + Ticket Message
-          '<div><div class="stg" style="margin-bottom:10px;"><label>Category Created/Opened <span title="Categories where tickets can be created" style="cursor:help;color:var(--text-dim);font-size:11px;">ⓘ</span></label>'+
-            '<select id="tk-freq-cats" style="width:100%;padding:6px 8px;font-size:11px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:36px;" onchange="tkMarkUnsaved()"></select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Category for the first type (per-type settings override)</div></div>'+
-            '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'ticket\')" style="padding:6px 12px;font-size:10px;">💬 Edit Ticket Message</button></div>'+
+          '<div><div class="stg" style="margin-bottom:10px;"><label>Category Created/Opened <span title="Categories where tickets can be created" style="cursor:help;color:var(--text-dim);font-size:11px;">\u24D8</span></label>'+
+            '<select id="tk-freq-cats" class="tk-select" onchange="tkMarkUnsaved()"></select><div class="tk-hint">Category for the first type (per-type settings override)</div></div>'+
+            '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'ticket\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDCAC Edit Ticket Message</button></div>'+
         '</div></div>';
 
       // Populate roles + category pickers after rendering
       var allRoles=[];
       for(var rk in rolesById)allRoles.push(rolesById[rk]);
-      var curRoleIds=[];
-      try{curRoleIds=JSON.parse((selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].support_roles:'[]')||'[]')}catch(e){curRoleIds=[]}
-      var roleOpts='';
+      var curRoleIds=parseTkArray(selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].support_roles:null);
+      var roleChipsHtml='';
       for(var ri=0;ri<allRoles.length;ri++){
         var roleData=allRoles[ri];
-        roleOpts+='<option value="'+roleData.id+'"'+(curRoleIds.indexOf(roleData.id)>-1?' selected':'')+'>'+esc(roleData.name)+'</option>';
+        roleChipsHtml+='<button type="button" class="tk-role-chip'+(curRoleIds.indexOf(roleData.id)>-1?' on':'')+'" data-role-id="'+roleData.id+'" onclick="tkToggleRoleChip(this)">'+esc(roleData.name)+'</button>';
       }
-      var curCatId=selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].category_id||'':' ';
-      var catOpts='';
+      var curCatId=selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].category_id||'':'';
+      // Include an explicit "None" option so the select reflects the type's actual
+      // category — otherwise the browser would default to the first category and
+      // saving quick-config would silently assign it to the type.
+      var catOpts='<option value=""'+(curCatId===''?' selected':'')+'>None</option>';
       (d.channels||[]).forEach(function(c){if(c.type===4)catOpts+='<option value="'+c.id+'"'+(c.id===curCatId?' selected':'')+'>'+esc(c.name)+'</option>'});
       setTimeout(function(){
-        var sel=document.getElementById('tk-freq-roles');if(sel)sel.innerHTML=roleOpts||'<option value="">No roles available</option>';
+        var sel=document.getElementById('tk-freq-roles');if(sel)sel.innerHTML=roleChipsHtml||'<span class="tk-chip-none">No roles available</span>';
         var selC=document.getElementById('tk-freq-cats');if(selC)selC.innerHTML=catOpts||'<option value="">No categories</option>';
       },50);
     }
     panelsHtml+='</div></div>';
 
     // ── Recent Tickets ──
-    var recentHtml='<div class="tw" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Recent Tickets <span style="font-weight:400;color:var(--text-dim);font-size:10px;margin-left:4px;">('+((d.tickets||[]).length)+')</span></div><div style="padding:8px 12px 12px;">';
+    var recentHtml='<div class="tk-glass"><div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Recent Tickets <span class="tk-h-count">'+((d.tickets||[]).length)+'</span></div><div style="padding:8px 12px 12px;">';
     if(d.tickets&&d.tickets.length){
       recentHtml+=d.tickets.slice(0,15).map(function(tk){
         var statusColor=tk.status==='open'?'#3ba55c':(tk.status==='claimed'?'#f59e0b':'#ed4245');
@@ -1058,10 +1067,10 @@ async function loadTickets(){
     recentHtml+='</div></div>';
 
     // ── Build layout ──
-    var grid='<div class="tk-main-grid"><div>'+cfgHtml+'</div><div>'+panelsHtml+'</div></div>';
+    var grid='<div class="tk-main-grid"><div>'+cfgHtml+advHtml+'</div><div>'+panelsHtml+'</div></div>';
     el.innerHTML=grid+'<div style="margin-top:16px;">'+recentHtml+'</div>'+
-      '<!-- Unsaved-changes bar --><div id="tk-unsaved-bar" style="display:none;position:sticky;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 16px;z-index:100;margin-top:16px;align-items:center;justify-content:space-between;">'+
-        '<span style="font-size:12px;color:var(--text-dim);">You have unsaved changes!</span>'+
+      '<!-- Floating unsaved-changes bar --><div id="tk-unsaved-bar" class="tk-unsaved-bar">'+
+        '<span class="tk-unsaved-ic">\u26A0\uFE0F</span><span class="tk-unsaved-tx">You have unsaved changes!</span>'+
         '<div style="display:flex;gap:6px;">'+
           '<button class="btn btn-s" onclick="tkResetChanges()" style="padding:6px 14px;font-size:11px;">Reset</button>'+
           '<button class="btn" onclick="tkSaveChanges()" style="padding:6px 14px;font-size:11px;">Save</button></div></div>';
@@ -1089,7 +1098,7 @@ function editQuestions(serverId,panelId,typeId){
       if(d2.panels[pi].id===panelId){
         for(var ti=0;ti<(d2.panels[pi].types||[]).length;ti++){
           if(d2.panels[pi].types[ti].id===typeId){
-            try{questions=JSON.parse(d2.panels[pi].types[ti].questions||'[]')}catch{}
+            try{questions=parseTkArray(d2.panels[pi].types[ti].questions)}catch{}
             break;
           }
         }
@@ -1281,7 +1290,7 @@ function addTicketType(serverId,panelId){
   // Fetch server data for dropdowns
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var categories=(d2.channels||[]).filter(function(c){return c.type===4}).map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'});
-    var roles=(d2.roles||[]).map(function(r2){return '<option value="'+r2.id+'">'+esc(r2.name)+'</option>'});
+    var roles=(d2.roles||[]);
 
     var overlay=document.createElement('div');
     overlay.className='tk-overlay';
@@ -1294,7 +1303,7 @@ function addTicketType(serverId,panelId){
       '<div class="stg" style="margin-bottom:12px;"><label>Type Name</label><input id="tk-typ-name" placeholder="e.g. General Support, Appeals" style="width:100%;padding:8px 10px;font-size:13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
       '<div class="stg" style="margin-bottom:12px;"><label>Emoji</label><input id="tk-typ-emoji" value="\uD83C\uDFAB" placeholder="e.g. \uD83D\uDCE9 \u26A0\uFE0F \uD83C\uDF89" style="width:100%;padding:8px 10px;font-size:16px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
       (categories.length?'<div class="stg" style="margin-bottom:12px;"><label>Category</label><select id="tk-typ-cat" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"><option value="">None</option>'+categories.join('')+'</select></div>':'')+
-      (roles.length?'<div class="stg" style="margin-bottom:12px;"><label>Support Roles (who can see tickets)</label><select id="tk-typ-roles" multiple style="width:100%;padding:8px 10px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:80px;">'+roles.join('')+'</select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Hold Ctrl/Cmd to select multiple roles</div></div>':'')+
+      (roles.length?'<div class="stg" style="margin-bottom:12px;"><label>Support Roles (who can see tickets)</label>'+tkRoleChipsHtml(roles,[],'tk-typ-roles')+'<div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Click roles to toggle them on/off</div></div>':'')+
       '<div class="stg" style="margin-bottom:12px;"><label>Welcome Message</label><textarea id="tk-typ-welcome" rows="2" placeholder="Thank you for creating a ticket..." style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;resize:vertical;">Thank you for creating a ticket. A staff member will be with you shortly.</textarea></div>'+
       '<div class="stg" style="margin-bottom:16px;"><label>Channel Name Format</label><input id="tk-typ-format" value="ticket-{username}-{number}" placeholder="ticket-{username}-{number}" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Variables: {username}, {number}, {name}</div></div>'+
       '<div style="display:flex;gap:8px;"><button class="tk-modal-close btn btn-s" style="flex:1;padding:10px;font-size:13px;">Cancel</button><button id="tk-typ-save" class="btn" style="flex:2;padding:10px;font-size:13px;">Add Type</button></div></div>';
@@ -1306,8 +1315,7 @@ function addTicketType(serverId,panelId){
       var emoji=document.getElementById('tk-typ-emoji').value.trim()||'\uD83C\uDFAB';
       var catSel=document.getElementById('tk-typ-cat');
       var catId=catSel?catSel.value:null;
-      var roleSel=document.getElementById('tk-typ-roles');
-      var supportRoles=roleSel?Array.from(roleSel.selectedOptions).map(function(o){return o.value}):[];
+      var supportRoles=tkGetSelectedRoles('tk-typ-roles');
       var welcome=document.getElementById('tk-typ-welcome').value.trim();
       var format=document.getElementById('tk-typ-format').value.trim()||'ticket-{username}-{number}';
       var btn=this;btn.disabled=true;btn.textContent='Adding...';
@@ -1333,10 +1341,10 @@ function editTicketTypeSettings(serverId,panelId,typeId){
     }
     if(!currentType){showToast('Type not found',true);return}
     var categories=(d2.channels||[]).filter(function(c){return c.type===4}).map(function(c){return '<option value="'+c.id+'"'+(c.id===currentType.category_id?' selected':'')+'>'+esc(c.name)+'</option>'});
-    // support_roles comes back as a JSON string from the API — parse before membership checks
-    var curRoles=(function(){try{return JSON.parse(currentType.support_roles||'[]')}catch(e){return []}})();
-    var roles=(d2.roles||[]).map(function(r2){return '<option value="'+r2.id+'"'+(curRoles.indexOf(r2.id)>-1?' selected':'')+'>'+esc(r2.name)+'</option>'});
-    var questions=(function(){try{return JSON.parse(currentType.questions||'[]')}catch{return []}})();
+    // support_roles/questions may be double-encoded JSON strings from the API — parse defensively
+    var curRoles=parseTkArray(currentType.support_roles);
+    var roles=(d2.roles||[]);
+    var questions=parseTkArray(currentType.questions);
     
     var overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
@@ -1348,10 +1356,11 @@ function editTicketTypeSettings(serverId,panelId,typeId){
       '<div class="stg" style="margin-bottom:12px;"><label>Type Name</label><input id="tk-typ-name" value="'+esc(currentType.name||'')+'" style="width:100%;padding:8px 10px;font-size:13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
       '<div class="stg" style="margin-bottom:12px;"><label>Emoji</label><input id="tk-typ-emoji" value="'+esc(currentType.emoji||'\uD83C\uDFAB')+'" style="width:100%;padding:8px 10px;font-size:16px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
       (categories.length?'<div class="stg" style="margin-bottom:12px;"><label>Category</label><select id="tk-typ-cat" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"><option value="">None</option>'+categories.join('')+'</select></div>':'')+
-      (roles.length?'<div class="stg" style="margin-bottom:12px;"><label>Support Roles</label><select id="tk-typ-roles" multiple style="width:100%;padding:8px 10px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;min-height:80px;">'+roles.join('')+'</select><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Hold Ctrl/Cmd to select multiple</div></div>':'')+
+      (roles.length?'<div class="stg" style="margin-bottom:12px;"><label>Support Roles</label>'+tkRoleChipsHtml(roles,curRoles,'tk-typ-roles')+'<div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Click roles to toggle them on/off</div></div>':'')+
       '<div class="stg" style="margin-bottom:12px;"><label>Welcome Message</label><textarea id="tk-typ-welcome" rows="2" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;resize:vertical;">'+esc(currentType.welcome_message||'')+'</textarea></div>'+
       '<div class="stg" style="margin-bottom:16px;"><label>Channel Name Format</label><input id="tk-typ-format" value="'+esc(currentType.ticket_name_format||'ticket-{username}-{number}')+'" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Variables: {username}, {number}, {name}</div></div>'+
       '<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn" onclick="editQuestions(\''+serverId+'\',\''+panelId+'\',\''+typeId+'\');tkCloseModal(this)" style="flex:1;padding:8px;font-size:11px;">\uD83D\uDCDD Edit Questions ('+questions.length+')</button></div>'+
+      '<div style="margin-bottom:12px;"><button class="btn btn-s" onclick="deleteTicketType(\''+serverId+'\',\''+panelId+'\',\''+typeId+'\');tkCloseModal(this)" style="width:100%;padding:8px;font-size:11px;color:#ff8a90;background:rgba(237,66,69,0.1);border:1px solid rgba(237,66,69,0.3);">\uD83D\uDDD1\uFE0F Delete Type</button></div>'+
       '<div style="display:flex;gap:8px;"><button class="tk-modal-close btn btn-s" style="flex:1;padding:10px;font-size:13px;">Cancel</button><button id="tk-typ-save" class="btn" style="flex:2;padding:10px;font-size:13px;">Save Settings</button></div></div>';
     document.body.appendChild(overlay);
     overlay.querySelector('.tk-modal-close').onclick=function(){document.body.removeChild(overlay)};
@@ -1361,8 +1370,7 @@ function editTicketTypeSettings(serverId,panelId,typeId){
       var emoji=document.getElementById('tk-typ-emoji').value.trim()||'\uD83C\uDFAB';
       var catSel=document.getElementById('tk-typ-cat');
       var catId=catSel?catSel.value:null;
-      var roleSel=document.getElementById('tk-typ-roles');
-      var supportRoles=roleSel?Array.from(roleSel.selectedOptions).map(function(o){return o.value}):[];
+      var supportRoles=tkGetSelectedRoles('tk-typ-roles');
       var welcome=document.getElementById('tk-typ-welcome').value.trim();
       var format=document.getElementById('tk-typ-format').value.trim()||'ticket-{username}-{number}';
       var btn=this;btn.disabled=true;btn.textContent='Saving...';
@@ -1374,6 +1382,36 @@ function editTicketTypeSettings(serverId,panelId,typeId){
 
 
 function tkCloseModal(btn){var overlay=btn.closest('[style*="fixed"]');if(overlay)document.body.removeChild(overlay)}
+
+// ── Role chip picker (replaces Ctrl+click multi-selects) ──
+function parseTkArray(v){
+  if(Array.isArray(v))return v;
+  if(!v)return[];
+  if(typeof v==='string'){
+    try{var p=JSON.parse(v);if(Array.isArray(p))return p;if(typeof p==='string'){try{var q=JSON.parse(p);return Array.isArray(q)?q:[]}catch{return[]}}return[]}catch{return[]}
+  }
+  return[];
+}
+function tkRoleChipsHtml(roles,selectedIds,containerId){
+  var html='<div id="'+containerId+'" class="tk-role-chips">';
+  if(!roles||!roles.length){html+='<span class="tk-chip-none">No roles available</span>'}
+  else{
+    html+=roles.map(function(r){
+      var on=selectedIds.indexOf(r.id)>-1;
+      return '<button type="button" class="tk-role-chip'+(on?' on':'')+'" data-role-id="'+r.id+'" onclick="tkToggleRoleChip(this)">'+esc(r.name)+'</button>';
+    }).join('');
+  }
+  html+='</div>';
+  return html;
+}
+function tkToggleRoleChip(btn){btn.classList.toggle('on');if(btn.closest('#tk-freq-roles'))tkMarkUnsaved()}
+function tkGetSelectedRoles(containerId){
+  var out=[];
+  var box=document.getElementById(containerId);
+  if(box)box.querySelectorAll('.tk-role-chip.on').forEach(function(c){out.push(c.getAttribute('data-role-id'))});
+  return out;
+}
+function tkPill(title,sub,fn){return '<button type="button" class="tk-pill" onclick="'+fn+'"><span class="tk-pill-t">'+esc(title)+'</span>'+(sub?'<span class="tk-pill-s">'+esc(sub)+'</span>':'')+'<span class="tk-pill-a">\u203A</span></button>'}
 
 // ── New helpers: Rename, Clone, Set Count, Card Click, Freq Config, Unsaved ──
 function tkRenamePanel(serverId,panelId){
@@ -1409,6 +1447,12 @@ function tkDeletePanel(serverId,panelId){
   .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel deleted');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)})
   .catch(function(e){showToast('Failed: '+e.message,true)});
 }
+function deleteTicketType(serverId,panelId,typeId){
+  if(!confirm('Delete this ticket type? This cannot be undone.'))return;
+  fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+typeId,{method:'DELETE'})
+  .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Type deleted');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)})
+  .catch(function(e){showToast('Failed: '+e.message,true)});
+}
 function tkEditPanel(serverId,panelId){
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var panel=null;
@@ -1418,16 +1462,22 @@ function tkEditPanel(serverId,panelId){
   }).catch(function(e){showToast('Failed to load panel data',true)});
 }
 function tkSetCount(serverId,panelId){
-  // Fetch current counter
+  if(!panelId){showToast('Select a panel first',true);return}
+  // Fetch current counters (per-panel + global fallback)
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
-    var curCount=d2.config?d2.config.ticketCount||0:0;
+    var panel=null,panelName='';
+    for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
+    panelName=panel?panel.name||'':'';
+    var curCount=panel&&panel.ticket_counter>0?panel.ticket_counter:0;
+    var globalCount=d2.config?d2.config.ticketCount||0:0;
+    var nextVal=curCount>0?curCount:globalCount+1;
     var overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
     overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
     overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:340px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
       '<h2 style="font-size:16px;font-weight:700;margin:0 0 14px 0;">\uD83D\uDD22 Set Ticket Counter</h2>'+
-      '<div class="stg" style="margin-bottom:16px;"><label>Next ticket number</label><input id="tk-cnt-val" type="number" min="0" value="'+(curCount+1)+'" style="width:100%;padding:8px 10px;font-size:13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
-      '<div style="font-size:10px;color:var(--text-dim);margin-bottom:12px;">Current count: <strong>'+curCount+'</strong>. Set to 0 to auto-increment.</div>'+
+      '<div class="stg" style="margin-bottom:16px;"><label>Next ticket number</label><input id="tk-cnt-val" type="number" min="0" value="'+nextVal+'" style="width:100%;padding:8px 10px;font-size:13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
+      '<div style="font-size:10px;color:var(--text-dim);margin-bottom:12px;">Panel: <strong>'+esc(panelName)+'</strong> \u00B7 Current: <strong>'+curCount+'</strong>. Set to 0 to auto-increment.</div>'+
       '<div style="display:flex;gap:8px;"><button class="btn btn-s" onclick="tkCloseModal(this)" style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-cnt-save" style="flex:1;padding:8px 12px;font-size:12px;">Set</button></div></div>';
     document.body.appendChild(overlay);
     overlay.querySelector('#tk-cnt-save').onclick=function(){
@@ -1479,7 +1529,7 @@ function tkCardClick(cardId,serverId,panelId){
   if(cardId==='transcript'){
     var logCh=document.getElementById('tkLogCh');
     if(logCh){logCh.scrollIntoView({behavior:'smooth',block:'center'});logCh.style.outline='2px solid var(--accent)';logCh.style.outlineOffset='2px';setTimeout(function(){logCh.style.outline=''},2000)}
-    showToast('Set transcript log channel in the Global Config panel above');
+    showToast('Set transcript log channel in General Ticket Options');
     return;
   }
   if(cardId==='claiming'){
@@ -1563,9 +1613,9 @@ function tkResetChanges(){
 }
 function tkSaveChanges(){
   var bar=document.getElementById('tk-unsaved-bar');
-  var roleSel=document.getElementById('tk-freq-roles');
-  var selRoles=[];
-  if(roleSel)selRoles=Array.from(roleSel.selectedOptions).map(function(o){return o.value});
+  var selRoles=tkGetSelectedRoles('tk-freq-roles');
+  var catSel=document.getElementById('tk-freq-cats');
+  var selCat=catSel?catSel.value:null;
   var sel=document.getElementById('tkSelPanel');
   var serverId=document.getElementById('tkSrvSelect')?document.getElementById('tkSrvSelect').value:'';
   var panelId=sel?sel.value:'';
@@ -1578,7 +1628,9 @@ function tkSaveChanges(){
       }
     }
     if(!firstTypeId){showToast('No types to update',true);return}
-    fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+firstTypeId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({support_roles:selRoles})})
+    var payload={support_roles:selRoles};
+    if(selCat!==null&&selCat!==undefined)payload.category_id=selCat||null;
+    fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+firstTypeId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
     .then(function(r2){return r2.json()}).then(function(d3){
       if(d3.success){showToast('Settings saved!');if(bar)bar.style.display='none';loadTickets()}
       else showToast('Save failed: '+(d3.error||'unknown'),true);
@@ -1729,13 +1781,26 @@ async function loadAutomod(){
 }
 
 // ═══ AUTO-MOD HELPERS ═══
-function toggleAMRule(key){
+async function toggleAMRule(key){
   var body=document.getElementById('am-body-'+key);
   var tg=document.querySelector('[data-am-rule="'+key+'"]');
-  if(!tg)return;
+  var sel=document.getElementById('amSrvSelect');
+  if(!tg||!sel)return;
   var now=tg.classList.contains('on');
+  var enabled=!now;
   tg.classList.toggle('on');
-  if(body)body.style.display=now?'none':'block';
+  if(body)body.style.display=enabled?'block':'none';
+  // Persist the new enabled state immediately, so toggling a rule OFF actually saves.
+  // (The Save Rule button lives inside the collapsible body, which is hidden when OFF.)
+  var threshold=parseInt(document.querySelector('.am-threshold[data-rule="'+key+'"]')?.value)||5;
+  var timeWindow=parseInt(document.querySelector('.am-window[data-rule="'+key+'"]')?.value)||10;
+  var action=document.querySelector('.am-action[data-rule="'+key+'"]')?.value||'warn';
+  try{
+    var r=await fetch('/api/server/'+sel.value+'/automod/rules',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ruleType:key,config:{enabled:enabled,threshold:threshold,time_window:timeWindow,action:action,duration:null}})});
+    var d=await r.json();
+    if(d.success){showToast(enabled?'Rule enabled':'Rule disabled')}
+    else{showToast('Failed',true);tg.classList.toggle('on');if(body)body.style.display=now?'block':'none'}
+  }catch{showToast('Failed to save',true);tg.classList.toggle('on');if(body)body.style.display=now?'block':'none'}
 }
 
 async function saveAMRule(key){
