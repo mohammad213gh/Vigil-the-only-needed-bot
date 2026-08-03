@@ -399,6 +399,50 @@ function initSchema() {
         db.exec('ALTER TABLE tickets ADD COLUMN last_activity_at INTEGER');
     } catch {}
 
+    // Add panel_type_id / panel_type_name columns to tickets if not exists.
+    // CREATE TABLE IF NOT EXISTS won't add columns to an existing table, so
+    // existing databases need these explicit migrations or ticket creation
+    // fails with "table tickets has no column named panel_type_id".
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN panel_type_id TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN panel_type_name TEXT');
+    } catch {}
+
+    // Add close/claim columns to tickets if not exists (used by closeTicket,
+    // claimTicket, transferTicket — same old-DB risk as panel_type_id).
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN closed_by_id TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN closed_by_tag TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN closed_at INTEGER');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN closed_reason TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE tickets ADD COLUMN claimer_id TEXT');
+    } catch {}
+
+    // Add display columns to ticket_panels if not exists (used by
+    // updateTicketPanel / createTicketPanelWithTypes).
+    try {
+        db.exec('ALTER TABLE ticket_panels ADD COLUMN panel_message_id TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE ticket_panels ADD COLUMN color TEXT NOT NULL DEFAULT \'#5865F2\'');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE ticket_panels ADD COLUMN image_url TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE ticket_panels ADD COLUMN description TEXT NOT NULL DEFAULT \'Click the button below to create a ticket and a staff member will assist you.\'');
+    } catch {}
+
     // Add inactivity columns to ticket_panel_types if not exists
     try {
         db.exec('ALTER TABLE ticket_panel_types ADD COLUMN inactivity_timeout INTEGER');

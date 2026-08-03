@@ -942,6 +942,10 @@ async function loadTickets(){
   const serverId=sel.value;
   const el=document.getElementById('ticketsContent');
   if(!el)return;
+  // Capture the currently selected panel BEFORE the loading spinner replaces the
+  // DOM — otherwise the re-render wipes #tkSelPanel and the selection is lost,
+  // making it impossible to switch panels.
+  var prevPanelSel=document.getElementById('tkSelPanel') ? document.getElementById('tkSelPanel').value : '';
   if(!serverId){el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:32px;height:32px;"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg><p>Select a server to manage tickets</p><p class="empty-act">Create ticket panels, configure ticket types, and view recent tickets.</p></div>';updateRefreshTimestamp('tickets');return;}
   el.innerHTML='<div class="loading" style="padding:24px;"><div class="spin"></div></div>';
   try{
@@ -967,7 +971,7 @@ async function loadTickets(){
 
     // Selected panel (persisted across reloads via the dropdown)
     var panels=d.panels||[];
-    var tkSelectedPanel=document.getElementById('tkSelPanel') && document.getElementById('tkSelPanel').value;
+    var tkSelectedPanel=prevPanelSel;
     var selPanel=null;
     for(var pi=0;pi<panels.length;pi++){if(panels[pi].id===tkSelectedPanel){selPanel=panels[pi];break}}
     if(!selPanel&&panels.length>0)selPanel=panels[0];
