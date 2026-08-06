@@ -929,6 +929,74 @@ async function loadMod(){
   }
 }
 
+// ═══ MOD: MEMBER PROFILE LOOKUP ═══
+function loadMpServers(){
+  var sel=document.getElementById('mpSrv');if(!sel)return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">Select server…</option>'+allServers.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');
+  if(cur)sel.value=cur;
+}
+async function searchMembers(){
+  var srv=document.getElementById('mpSrv').value;
+  var q=document.getElementById('mpSearch').value.trim();
+  var el=document.getElementById('mpResults');
+  if(!srv||!q){el.innerHTML='<div class="tk-chip-none">Select a server and type a name or user ID.</div>';return}
+  try{
+    var r=await fetch('/api/server/'+srv+'/members/search?q='+encodeURIComponent(q)),d=await r.json();
+    var mems=d.members||[];
+    if(!mems.length){el.innerHTML='<div class="tk-chip-none">No members found.</div>';return}
+    el.innerHTML='<div class="mp-results">'+mems.map(function(m){
+      return '<div class="mp-result" onclick="loadMemberProfile(\''+srv+'\',\''+m.id+'\')"><img class="mp-avatar-s" src="'+esc(m.avatar||'')+'" onerror="this.style.display=\'none\'"><span class="mp-tag-s">'+esc(m.tag)+'</span><span class="mp-sub-s">'+(m.isBot?'BOT':'@'+esc(m.displayName||m.tag.split('#')[0]))+'</span></div>';
+    }).join('')+'</div>';
+  }catch{el.innerHTML='<div class="empty"><p>Search failed.</p></div>'}
+}
+async function loadMemberProfile(srv,userId){
+  var el=document.getElementById('mpProfile');
+  el.style.display='block';
+  el.innerHTML='<div class="empty"><p>Loading profile…</p></div>';
+  try{
+    var r=await fetch('/api/server/'+srv+'/member/'+userId+'/profile'),d=await r.json();
+    if(d.error){el.innerHTML='<div class="empty"><p>'+esc(d.error)+'</p></div>';return}
+    renderMemberProfile(el,d);
+  }catch{el.innerHTML='<div class="empty"><p>Failed to load profile.</p></div>'}
+}
+function mpDate(v){var t=tkTimeAgo(v);return t||(v?esc(String(v)):'—')}
+function renderMemberProfile(el,d){
+  var m=d.member;
+  var header;
+  if(m){
+    var rolesHtml=(m.roles&&m.roles.length)?'<div class="mp-roles">'+m.roles.slice(0,8).map(function(r){return '<span class="mp-role" style="border-color:'+(r.color&&r.color!=='#000000'?r.color:'var(--border)')+';">'+esc(r.name)+'</span>'}).join('')+(m.roles.length>8?'<span class="mp-role">+'+(m.roles.length-8)+'</span>':'')+'</div>':'';
+    header='<div class="mp-head"><img class="mp-avatar" src="'+esc(m.avatar||'')+'" onerror="this.style.display=\'none\'"><div class="mp-head-info"><div class="mp-tag">'+esc(m.tag)+(m.isBot?' <span class="err-badge">BOT</span>':'')+'</div><div class="mp-sub">'+(m.displayName&&m.displayName!==m.tag?'@'+esc(m.displayName)+' · ':'')+'joined '+mpDate(m.joinedAt)+'</div>'+rolesHtml+'</div></div>';
+  }else{
+    header='<div class="mp-head"><div class="mp-head-info"><div class="mp-sub">Member no longer in the server — showing stored data.</div></div></div>';
+  }
+  var w=d.warnings||[],n=d.notes||[],c=d.cases||[],inv=d.invites||{total:0,joiners:[]};
+  var stats='<div class="mp-stats">'+
+    '<div class="mp-stat"><div class="mp-stat-v" style="color:#f1c40f;">'+w.length+'</div><div class="mp-stat-l">Warnings</div></div>'+
+    '<div class="mp-stat"><div class="mp-stat-v" style="color:#5865F2;">'+n.length+'</div><div class="mp-stat-l">Notes</div></div>'+
+    '<div class="mp-stat"><div class="mp-stat-v" style="color:#ed4245;">'+c.length+'</div><div class="mp-stat-l">Cases</div></div>'+
+    '<div class="mp-stat"><div class="mp-stat-v" style="color:#3ba55c;">'+inv.total+'</div><div class="mp-stat-l">Invites</div></div></div>';
+
+  var cs={warn:'#f1c40f',kick:'#e67e22',ban:'#ed4245',timeout:'#9b59b6',unban:'#3ba55c',tempban:'#e74c3c',lock:'#3498db',unlock:'#2ecc71'};
+  var casesHtml=c.length?'<div class="mp-sec"><div class="mp-sec-h">Mod Cases ('+c.length+')</div>'+c.slice(0,15).map(function(x){
+    return '<div class="mp-row"><span class="mp-type" style="color:'+(cs[x.actionType]||'#5865F2')+';">'+esc(x.actionType)+' #'+x.caseNumber+'</span><span class="mp-reason">'+esc(x.reason||'No reason')+'</span><span class="mp-meta">'+(x.active?'<span class="tk-status-pill tk-st-open">Active</span>':'<span class="tk-status-pill tk-st-closed">Closed</span>')+' · by '+(x.moderatorTag?esc(x.moderatorTag):'?')+' · '+mpDate(x.createdAt)+'</span></div>';
+  }).join('')+'</div>':'<div class="mp-sec"><div class="mp-sec-h">Mod Cases</div><div class="tk-chip-none">No cases.</div></div>';
+
+  var warnsHtml=w.length?'<div class="mp-sec"><div class="mp-sec-h">Warnings ('+w.length+')</div>'+w.slice(0,10).map(function(x){
+    return '<div class="mp-row"><span class="mp-type" style="color:#f1c40f;">warning</span><span class="mp-reason">'+esc(x.reason||'No reason')+'</span><span class="mp-meta">by '+(x.moderator?esc(x.moderator):'?')+' · '+mpDate(x.date)+'</span></div>';
+  }).join('')+'</div>':'<div class="mp-sec"><div class="mp-sec-h">Warnings</div><div class="tk-chip-none">No warnings.</div></div>';
+
+  var notesHtml=n.length?'<div class="mp-sec"><div class="mp-sec-h">Staff Notes ('+n.length+')</div>'+n.slice(0,10).map(function(x){
+    return '<div class="mp-row"><span class="mp-type" style="color:#5865F2;">note</span><span class="mp-reason">'+esc(x.note||'')+'</span><span class="mp-meta">by '+(x.authorTag?esc(x.authorTag):'?')+' · '+mpDate(x.createdAt)+'</span></div>';
+  }).join('')+'</div>':'<div class="mp-sec"><div class="mp-sec-h">Staff Notes</div><div class="tk-chip-none">No notes.</div></div>';
+
+  var invHtml='<div class="mp-sec"><div class="mp-sec-h">Invites ('+inv.total+')</div>'+(inv.joiners&&inv.joiners.length?inv.joiners.slice(0,10).map(function(x){
+    return '<div class="mp-row"><span class="mp-type" style="color:#3ba55c;">invite</span><span class="mp-reason">joined '+(x.joiner_id?'<@'+x.joiner_id+'>':'unknown')+'</span><span class="mp-meta">'+mpDate(x.joined_at)+'</span></div>';
+  }).join(''):'<div class="tk-chip-none">No invite records.</div>')+'</div>';
+
+  el.innerHTML='<div class="mp-card">'+header+stats+casesHtml+warnsHtml+notesHtml+invHtml+'</div>';
+}
+
 // ═══ INSIGHTS ═══
 async function loadInsights(){
   const sel=document.getElementById('insSrvSelect');

@@ -14,6 +14,7 @@ const { setLoggerClient, sendLog } = require('./src/logging');
 const { findReactionRole } = require('./src/reactionRoles');
 const { setInviteClient, cacheAllInvites, handleInviteCreate, handleInviteDelete } = require('./src/invites');
 const { setTicketClient, startInactivityCheck, stopInactivityCheck } = require('./src/tickets');
+const { setGiveawayClient, startGiveawayCheck, stopGiveawayCheck } = require('./src/giveaways');
 
 // ─── Command Registry ───
 const { commandRegistry, publicCommands } = require('./src/commands/registry');
@@ -312,6 +313,7 @@ const { closeDb, getDb, backupDatabase } = require('./src/db');
 function shutdown(signal) {
     console.log('\n[Bot] Received ' + signal + '. Shutting down gracefully...');
     stopInactivityCheck();
+    stopGiveawayCheck();
     closeDb();
     client.destroy();
     console.log('[Bot] Goodbye!');
@@ -385,7 +387,9 @@ setErrorListener((entry) => {
 
 client.login(process.env.BOT_TOKEN).then(() => {
     startInactivityCheck(client);
-    console.log('[Bot] Ticket inactivity auto-close check started.');
+    setGiveawayClient(client);
+    startGiveawayCheck();
+    console.log('[Bot] Ticket inactivity + giveaway checks started.');
 }).catch(err => {
     console.error('[Bot] Failed to login:', err.message || err);
     process.exit(1);

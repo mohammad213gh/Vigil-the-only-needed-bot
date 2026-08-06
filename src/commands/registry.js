@@ -14,6 +14,9 @@ const { executeWorldCup, execute8Ball, executeCoinflip, executeDice, executeRPS,
 // ── Reminders ──
 const { executeRemindMe, executeReminders } = require('./reminder');
 
+// ── Giveaways ──
+const { executeGiveaway } = require('./giveaways');
+
 // ── Admin ──
 const { executeRole, executePurge, executeSlowmode, executeNickname, executeSay, executeEmbed, executeDeploy, executeTrack, executePoll, executeAnnounce } = require('./admin');
 
@@ -88,6 +91,9 @@ const commandRegistry = {
     // Reminders (public)
     remindme: executeRemindMe,
     reminders: executeReminders,
+
+    // Giveaways (owner)
+    giveaway: executeGiveaway,
 
     // Admin
     role: executeRole,

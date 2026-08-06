@@ -593,6 +593,30 @@ const commandDefs = [
 
     // ── Reminders (public) ──
     new SlashCommandBuilder()
+        .setName('giveaway')
+        .setDescription('Manage giveaways (owner)')
+        .addSubcommand(sub =>
+            sub.setName('start')
+                .setDescription('Start a giveaway')
+                .addStringOption(opt => opt.setName('prize').setDescription('What is being given away').setRequired(true))
+                .addStringOption(opt => opt.setName('duration').setDescription('How long (e.g. 1h, 30m, 2d, 1h30m)').setRequired(true))
+                .addIntegerOption(opt => opt.setName('winners').setDescription('Number of winners (default 1)').setMinValue(1).setMaxValue(20)))
+        .addSubcommand(sub =>
+            sub.setName('end')
+                .setDescription('End a giveaway early and pick winners')
+                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID (from start or list)').setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('reroll')
+                .setDescription('Pick new winners for an ended giveaway')
+                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID').setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('cancel')
+                .setDescription('Cancel an active giveaway')
+                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID').setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List giveaways in this server')),
+    new SlashCommandBuilder()
         .setName('remindme')
         .setDescription('Set a reminder (you will be DMed when the time is up)')
         .addStringOption(opt =>

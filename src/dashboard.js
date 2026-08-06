@@ -7,6 +7,10 @@ const { getBotConfig, getGuildConfig, updateGuildConfig, getWelcomeConfig, getGo
 const { getDb, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup } = require('./db');
 const { getDataDir } = require('./data');
 const { getGuildStats } = require('./stats');
+const { getWarnings } = require('./warnings');
+const { getNotesForUser } = require('./staffNotes');
+const { getCases } = require('./modCases');
+const { getInviterStats } = require('./invites');
 const { getReactionRoles } = require('./reactionRoles');
 const { getAllPermissions } = require('./permissions');
 const { LOG_CATEGORIES, WS_STATUS } = require('./constants');
@@ -1888,6 +1892,70 @@ function createDashboard() {
         const channelId = (req.body && req.body.channelId || '').trim();
         getDb().prepare('INSERT OR REPLACE INTO bot_config (key, value) VALUES (?, ?)').run('bot_error_alert_channel', channelId);
         res.json({ success: true, channelId });
+    });
+
+    // ── Member Lookup (Moderation section) ──
+    app.get('/api/server/:id/members/search', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const q = (req.query.q || '').trim().toLowerCase();
+        if (!q) return res.json({ members: [] });
+        const members = [];
+        for (const m of guild.members.cache.values()) {
+            const tag = (m.user ? m.user.tag : '').toLowerCase();
+            const name = (m.displayName || '').toLowerCase();
+            if (m.id === q || tag.includes(q) || name.includes(q)) {
+                members.push({
+                    id: m.id,
+                    tag: m.user ? m.user.tag : m.id,
+                    displayName: m.displayName || (m.user ? m.user.username : ''),
+                    avatar: m.user ? m.user.displayAvatarURL({ size: 64 }) : null,
+                    isBot: !!(m.user && m.user.bot),
+                    joinedAt: m.joinedTimestamp || null,
+                });
+                if (members.length >= 8) break;
+            }
+        }
+        res.json({ members });
+    });
+
+    app.get('/api/server/:id/member/:userId/profile', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const userId = req.params.userId;
+            const m = guild.members.cache.get(userId);
+            const member = m ? {
+                id: m.id,
+                tag: m.user ? m.user.tag : m.id,
+                displayName: m.displayName || (m.user ? m.user.username : ''),
+                avatar: m.user ? m.user.displayAvatarURL({ size: 128 }) : null,
+                isBot: !!(m.user && m.user.bot),
+                joinedAt: m.joinedTimestamp || null,
+                roles: m.roles ? m.roles.cache.filter(r => r.id !== guild.id).map(r => ({ id: r.id, name: r.name, color: r.hexColor })).slice(0, 12) : [],
+            } : null;
+            const warnings = getWarnings(guild.id, userId);
+            const notes = getNotesForUser(guild.id, userId).map(n => ({
+                id: n.id,
+                note: n.note,
+                authorTag: n.author_tag,
+                createdAt: n.created_at,
+            }));
+            const cases = getCases(guild.id, userId, 30).map(c => ({
+                caseNumber: c.case_number,
+                actionType: c.action_type,
+                reason: c.reason,
+                moderatorTag: c.moderator_tag,
+                active: !!c.active,
+                createdAt: c.created_at,
+            }));
+            const invites = getInviterStats(guild.id, userId);
+            res.json({ member, warnings, notes, cases, invites });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
     });
 
     // ── Serve Frontend ──

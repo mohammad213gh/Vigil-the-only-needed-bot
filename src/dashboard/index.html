@@ -33,7 +33,7 @@
           <button class="notch-link" data-sec="analytics" onclick="showSec('analytics')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span>Analytics</span></button>
           <button class="notch-link" data-sec="servers" onclick="showSec('servers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><span>Servers</span></button>
           <button class="notch-link" data-sec="auditlog" onclick="showSec('auditlog');loadAudit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Audit</span></button>
-          <button class="notch-link" data-sec="moderation" onclick="showSec('moderation');loadMod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Mod</span></button>
+          <button class="notch-link" data-sec="moderation" onclick="showSec('moderation');loadMod();loadMpServers()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Mod</span></button>
         </nav>
 
         <!-- Center Logo -->
@@ -88,7 +88,7 @@
     <button class="notch-mobile-link" data-sec="analytics" onclick="showSec('analytics');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</button>
     <button class="notch-mobile-link" data-sec="servers" onclick="showSec('servers');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Servers</button>
     <button class="notch-mobile-link" data-sec="auditlog" onclick="showSec('auditlog');toggleMobileMenu();loadAudit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Audit Log</button>
-    <button class="notch-mobile-link" data-sec="moderation" onclick="showSec('moderation');toggleMobileMenu();loadMod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Moderation</button>
+    <button class="notch-mobile-link" data-sec="moderation" onclick="showSec('moderation');toggleMobileMenu();loadMod();loadMpServers()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Moderation</button>
     <button class="notch-mobile-link" data-sec="activity" onclick="showSec('activity');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
     <button class="notch-mobile-link" data-sec="insights" onclick="showSec('insights');toggleMobileMenu();loadInsights()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg>Insights</button>
     <button class="notch-mobile-link" data-sec="invites" onclick="showSec('invites');toggleMobileMenu();loadInvites()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>Invites</button>
@@ -229,6 +229,16 @@
     <div class="section" id="sec-moderation">
       <h1 class="pg-title">Moderation</h1>
       <p class="pg-sub">Recent moderation actions and stats across servers. <span class="rfsh-tm" id="rfsh-moderation"></span></p>
+      <div class="stg" style="margin-bottom:16px;"><label>Member Profile Lookup</label>
+        <div class="stg-inl" style="margin-bottom:8px;">
+          <select id="mpSrv" style="flex:1;"><option value="">Select server…</option></select>
+          <input type="text" id="mpSearch" placeholder="Search by name or user ID..." style="flex:1.5;" onkeydown="if(event.key==='Enter')searchMembers()">
+          <button class="btn btn-s" onclick="searchMembers()" style="padding:9px 14px;font-size:11px;">Search</button>
+        </div>
+        <div id="mpResults"></div>
+        <div id="mpProfile" style="display:none;"></div>
+        <div class="stg-hint">View a member's full moderation history — warnings, staff notes, mod cases, and invites — in one place.</div>
+      </div>
       <div class="grid grid-4" id="modSummary"></div>
       <div class="grid grid-2" style="margin-top:8px;">
         <div class="tw sr"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Recent Cases</div><div id="modRecent" class="mod-list"></div></div>

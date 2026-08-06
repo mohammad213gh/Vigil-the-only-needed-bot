@@ -77,6 +77,24 @@ function initSchema() {
 
         CREATE INDEX IF NOT EXISTS idx_reminders_pending ON reminders(notified, remind_at);
 
+        CREATE TABLE IF NOT EXISTS giveaways (
+            id TEXT PRIMARY KEY,
+            guild_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            message_id TEXT NOT NULL DEFAULT '',
+            prize TEXT NOT NULL,
+            winners INTEGER NOT NULL DEFAULT 1,
+            host_id TEXT NOT NULL,
+            host_tag TEXT,
+            ends_at INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'active',
+            winner_ids TEXT,
+            ended_at INTEGER,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_giveaways_active ON giveaways(status, ends_at);
+
         CREATE TABLE IF NOT EXISTS guild_stats (
             guild_id TEXT PRIMARY KEY,
             total_joins INTEGER NOT NULL DEFAULT 0,

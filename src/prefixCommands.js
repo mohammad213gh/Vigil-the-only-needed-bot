@@ -1394,6 +1394,57 @@ handlers.help = async (message) => {
 
 // ─── Dispatcher ───
 
+// ─── Giveaways (Prefix) ───
+
+handlers.giveaway = async (message) => {
+    if (!checkOwnerOrPerm(message, 'giveaway')) return;
+    const sub = message.args[0];
+    const gw = require('./giveaways');
+
+    if (sub === 'start') {
+        const timeStr = message.args[1];
+        // winners is optional — only consume args[2] as the winner count when numeric,
+        // otherwise it belongs to the prize (e.g. `giveaway start 1h Nitro`).
+        let winners = 1, prizeIdx = 2;
+        const w = parseInt(message.args[2], 10);
+        if (!isNaN(w)) { winners = Math.min(Math.max(w, 1), 20); prizeIdx = 3; }
+        const prize = message.args.slice(prizeIdx).join(' ');
+        if (!timeStr || !prize) return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway start <duration> [winners] <prize>` — e.g. `' + message.prefix + 'giveaway start 1h 1 Nitro`');
+        const ms = parseDuration(timeStr);
+        if (!ms) return message.reply('⚠️ Invalid duration! Use e.g. `1h`, `30m`, `2d`, `1h30m`.');
+        if (ms < 15000) return message.reply('⚠️ Minimum giveaway duration is 15 seconds.');
+        const g = gw.createGiveaway({ guildId: message.guild.id, channelId: message.channel.id, prize, durationMs: ms, winners, hostId: message.author.id, hostTag: message.author.tag });
+        try {
+            await gw.postGiveaway(message.channel, g);
+            return message.reply('✅ Giveaway started! ID: `' + g.id + '` — ends in ' + formatDuration(ms));
+        } catch (err) {
+            gw.cancelGiveaway(g.id);
+            return message.reply('❌ Failed: ' + err.message);
+        }
+    }
+
+    if (sub === 'end' || sub === 'reroll' || sub === 'cancel') {
+        const id = message.args[1];
+        if (!id) return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway ' + sub + ' <id>`');
+        try {
+            const res = sub === 'end' ? await gw.endGiveaway(id) : (sub === 'reroll' ? await gw.rerollGiveaway(id) : gw.cancelGiveaway(id));
+            if (res.error) return message.reply('⚠️ ' + res.error);
+            const done = sub === 'cancel' ? 'cancelled' : (sub === 'reroll' ? 'rerolled' : 'ended');
+            return message.reply('✅ Giveaway ' + done + (res.winners && res.winners.length ? ' — winners: ' + res.winners.map(w => '<@' + w + '>').join(', ') : ''));
+        } catch (err) {
+            return message.reply('❌ Failed: ' + err.message);
+        }
+    }
+
+    if (sub === 'list') {
+        const list = gw.listGiveaways(message.guild.id, 10);
+        if (!list.length) return message.reply('ℹ️ No giveaways in this server.');
+        return message.reply('**🎉 Giveaways**\n' + list.map(g => '`' + g.id + '` — **' + g.prize + '** (' + g.status + (g.ends_at ? ', ends <t:' + Math.floor(g.ends_at / 1000) + ':R>' : '') + ')').join('\n'));
+    }
+
+    return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway start <duration> [winners] <prize>` | `end <id>` | `reroll <id>` | `cancel <id>` | `list`');
+};
+
 async function handlePrefixMessage(message, prefix) {
     const content = message.content;
     if (!content.startsWith(prefix)) return false;
