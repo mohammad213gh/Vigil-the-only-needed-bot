@@ -85,10 +85,21 @@ const allEvents = [
 ];
 
 for (const event of allEvents) {
+    // Wrap every event handler so a rejected promise can never crash the bot.
+    // Each handler is an async fn — without this guard, one throw becomes an
+    // unhandledRejection that takes the whole process down.
+    const rawHandler = event.execute(eventDeps);
+    const safeHandler = async (...args) => {
+        try {
+            await rawHandler(...args);
+        } catch (err) {
+            logError(err, 'event', String(event.name));
+        }
+    };
     if (event.once) {
-        client.once(event.name, event.execute(eventDeps));
+        client.once(event.name, safeHandler);
     } else {
-        client.on(event.name, event.execute(eventDeps));
+        client.on(event.name, safeHandler);
     }
 }
 
@@ -310,6 +321,22 @@ function shutdown(signal) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGQUIT', () => shutdown('SIGQUIT'));
+
+// ──────────────────── Global Crash Safety Nets ────────────────────
+// A single unhandled rejection or uncaught exception must never take the bot
+// down silently. Log full context so failures are visible in the logs.
+process.on('unhandledRejection', (reason) => {
+    // Keep running: most rejections are transient API hiccups / network errors.
+    logError(reason instanceof Error ? reason : new Error(String(reason)), 'unhandledRejection');
+});
+
+process.on('uncaughtException', (err) => {
+    // Unrecoverable — log loudly, then exit so the host restarts us cleanly.
+    logError(err, 'uncaughtException');
+    try { closeDb(); } catch {}
+    try { client.destroy(); } catch {}
+    process.exit(1);
+});
 
 // ──────────────────── Login ────────────────────
 

@@ -4,7 +4,7 @@ const os = require('os');
 const fs = require('fs');
 const { formatUptime, formatNumber } = require('./helpers');
 const { getBotConfig, getGuildConfig, updateGuildConfig, getWelcomeConfig, getGoodbyeConfig, updateWelcomeConfig } = require('./config');
-const { getDb } = require('./db');
+const { getDb, getErrorLogs, getErrorTagCounts, clearErrorLogs } = require('./db');
 const { getGuildStats } = require('./stats');
 const { getReactionRoles } = require('./reactionRoles');
 const { getAllPermissions } = require('./permissions');
@@ -1787,6 +1787,38 @@ function createDashboard() {
         return iconMap[action] || '\uD83D\uDD35';
     }
 
+    // ── Error Log Viewer ──
+    // Bot-wide error feed persisted by logError() into error_logs.
+    app.get('/api/errors', requireAuth, (req, res) => {
+        try {
+            const tag = req.query.tag || null;
+            const limit = Math.min(parseInt(req.query.limit) || 100, 300);
+            const errors = getErrorLogs(limit, tag).map(e => ({
+                id: e.id,
+                tag: e.tag,
+                message: e.message,
+                extra: e.extra,
+                meta: e.meta,
+                stack: e.stack,
+                timestamp: e.timestamp,
+            }));
+            res.json({ errors, tags: getErrorTagCounts(limit) });
+        } catch (err) {
+            logError(err, 'dashboard', 'GET /api/errors');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/errors', requireAuth, (req, res) => {
+        try {
+            clearErrorLogs(req.query.tag || null);
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'DELETE /api/errors');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // ── Serve Frontend ──
     app.get('/', (req, res) => {
         if (!req.authenticated) return res.redirect('/login');
@@ -1797,6 +1829,20 @@ function createDashboard() {
         res.sendFile(path.join(__dirname, 'dashboard', 'login.html'));
     });
     app.use('/static', express.static(path.join(__dirname, 'dashboard')));
+
+    // ── Centralized Error Middleware ──
+    // Catches any error thrown by the routes above so the API always returns a
+    // clean JSON envelope instead of a stack-trace HTML page or a hung request.
+    app.use((err, req, res, next) => {
+        // Malformed JSON body (e.g. truncated fetch) — client error, not a 500.
+        // body-parser sets type='entity.parse.failed' specifically for this case.
+        if (err && err.type === 'entity.parse.failed') {
+            return res.status(400).json({ error: 'Invalid JSON body' });
+        }
+        logError(err, 'dashboard', req.method + ' ' + (req.originalUrl || req.url));
+        const status = (err && (err.statusCode || err.status)) || 500;
+        res.status(status).json({ error: 'Internal server error' });
+    });
 
     return app;
 }

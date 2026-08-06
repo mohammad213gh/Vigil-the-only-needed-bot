@@ -455,6 +455,19 @@ function initSchema() {
     try {
         db.exec('ALTER TABLE ticket_panels ADD COLUMN ticket_counter INTEGER');
     } catch {}
+
+    // Error log for the dashboard Errors section
+    db.exec(`CREATE TABLE IF NOT EXISTS error_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tag TEXT NOT NULL DEFAULT 'general',
+        message TEXT,
+        extra TEXT,
+        meta TEXT,
+        stack TEXT,
+        timestamp INTEGER NOT NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_error_logs_time ON error_logs(timestamp DESC)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_error_logs_tag ON error_logs(tag)');
 }
 
 // ──────────────────── Migration from JSON Files ────────────────────
@@ -710,4 +723,37 @@ function initDb() {
 // Call init on require — synchronously
 initDb();
 
-module.exports = { getDb, initDb, closeDb, migrateFromJson };
+// ──────────────────── Error Log (Dashboard Errors section) ────────────────────
+
+function recordErrorLog({ tag, message, extra, meta, stack, timestamp } = {}) {
+    try {
+        const d = getDb();
+        d.prepare('INSERT INTO error_logs (tag, message, extra, meta, stack, timestamp) VALUES (?, ?, ?, ?, ?, ?)')
+            .run(tag || 'general', String(message || ''), extra ? String(extra) : '', meta ? JSON.stringify(meta) : '', stack ? String(stack) : '', timestamp || Date.now());
+        // Cap the table — keep the most recent 500 entries
+        d.prepare('DELETE FROM error_logs WHERE id NOT IN (SELECT id FROM error_logs ORDER BY timestamp DESC LIMIT 500)').run();
+    } catch (e) {
+        // Never let logging break the app
+    }
+}
+
+function getErrorLogs(limit = 100, tag = null) {
+    const d = getDb();
+    if (tag) {
+        return d.prepare('SELECT * FROM error_logs WHERE tag = ? ORDER BY timestamp DESC LIMIT ?').all(tag, limit);
+    }
+    return d.prepare('SELECT * FROM error_logs ORDER BY timestamp DESC LIMIT ?').all(limit);
+}
+
+function getErrorTagCounts(limit = 500) {
+    const d = getDb();
+    return d.prepare('SELECT tag, COUNT(*) as count FROM (SELECT tag FROM error_logs ORDER BY timestamp DESC LIMIT ?) GROUP BY tag ORDER BY count DESC').all(limit);
+}
+
+function clearErrorLogs(tag = null) {
+    const d = getDb();
+    if (tag) return d.prepare('DELETE FROM error_logs WHERE tag = ?').run(tag);
+    return d.prepare('DELETE FROM error_logs').run();
+}
+
+module.exports = { getDb, initDb, closeDb, migrateFromJson, recordErrorLog, getErrorLogs, getErrorTagCounts, clearErrorLogs };

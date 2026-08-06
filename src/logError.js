@@ -46,6 +46,21 @@ function logError(err, tag = 'general', extra = '', meta = {}) {
             console.error(`${prefix} Stack: ${lines}`);
         }
     }
+
+    // Persist to the error_logs table so the dashboard can surface failures.
+    // Lazy require + try/catch: logging must never throw, and this avoids any
+    // startup-order / circular-dependency issues with the db module.
+    try {
+        const { recordErrorLog } = require('./db');
+        recordErrorLog({
+            tag,
+            message: msg,
+            extra: typeof extra === 'object' ? JSON.stringify(extra) : (extra || null),
+            meta: Object.keys(meta).length ? JSON.stringify(meta) : null,
+            stack: stack ? stack.split('\n').slice(0, 15).join('\n') : null,
+            timestamp,
+        });
+    } catch { /* persistence must never break logging */ }
 }
 
 module.exports = { logError };

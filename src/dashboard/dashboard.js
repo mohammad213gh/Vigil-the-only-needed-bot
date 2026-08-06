@@ -372,7 +372,7 @@ async function updateBotAvatar(){const url=document.getElementById('botAvatarInp
 // ═══ BRANDING ═══
 async function loadBrand(){try{const r=await fetch('/api/status');if(r.ok){const d=await r.json();if(d.brandName)document.getElementById('brandFt').textContent='Powered by '+d.brandName}}catch{}}
 
-function stRf(){if(rTimer)clearInterval(rTimer);rTimer=setInterval(()=>{loadOv();loadAn();loadRm();loadCmdUsage()},rInt*1000)}
+function stRf(){if(rTimer)clearInterval(rTimer);rTimer=setInterval(()=>{loadOv();loadAn();loadRm();loadCmdUsage();var se=document.getElementById('sec-errors');if(se&&se.classList.contains('active'))loadErrors()},rInt*1000)}
 window.addEventListener('resize',()=>{rsBg();startBg(bgStyle)});
 // ═══ GREETINGS (Welcome / Goodbye) ═══
 
@@ -1093,18 +1093,13 @@ async function loadTickets(){
     }
     panelsHtml+='</div></div>';
 
-    // ── Recent Tickets ──
-    var recentHtml='<div class="tk-glass"><div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Recent Tickets <span class="tk-h-count">'+((d.tickets||[]).length)+'</span></div><div style="padding:8px 12px 12px;">';
-    if(d.tickets&&d.tickets.length){
-      recentHtml+=d.tickets.slice(0,15).map(function(tk){
-        var statusColor=tk.status==='open'?'#3ba55c':(tk.status==='claimed'?'#f59e0b':'#ed4245');
-        var panelType=tk.panelTypeName?' <span style="font-size:10px;color:var(--text-dim)">'+esc(tk.panelTypeName)+'</span>':'';
-        return '<div class="mod-item"><div class="mod-body"><div class="mod-top"><span class="mod-type">#'+tk.ticketNumber+' '+esc(tk.creatorTag||'Unknown')+panelType+'</span></div></div><div class="mod-count"><span style="color:'+statusColor+';font-size:10px;">'+tk.status+'</span></div></div>';
-      }).join('');
-    }else{
-      recentHtml+='<div class="empty" style="padding:16px;"><p>No tickets have been created yet.</p></div>';
-    }
-    recentHtml+='</div></div>';
+    // ── Recent Tickets (filter tabs + status pills + relative time) ──
+    tkRecData=d.tickets||[];
+    var recTabs=[['','All'],['open','Open'],['claimed','Claimed'],['closed','Closed']].map(function(f){
+      return '<button class="tk-rec-tab'+(tkRecFilter===f[0]?' on':'')+'" onclick="tkRecFilterSet(\''+f[0]+'\')">'+f[1]+'</button>';
+    }).join('');
+    var recentHtml='<div class="tk-glass"><div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Recent Tickets <span class="tk-h-count">'+tkRecData.length+'</span></div>'+
+      '<div class="tk-rec-tabs">'+recTabs+'</div><div style="padding:8px 12px 12px;" id="tk-rec-body"></div></div>';
 
     // ── Build layout ──
     var grid='<div class="tk-main-grid"><div>'+cfgHtml+advHtml+'</div><div>'+panelsHtml+'</div></div>';
@@ -1114,6 +1109,7 @@ async function loadTickets(){
         '<div style="display:flex;gap:6px;">'+
           '<button class="btn btn-s" onclick="tkResetChanges()" style="padding:6px 14px;font-size:11px;">Reset</button>'+
           '<button class="btn" onclick="tkSaveChanges()" style="padding:6px 14px;font-size:11px;">Save</button></div></div>';
+    tkRecRender();
     updateRefreshTimestamp('tickets');
     setTimeout(function(){document.querySelectorAll('#sec-tickets .sr').forEach(function(el2){srObs.observe(el2)})},50);
   }catch(e){
@@ -1520,6 +1516,29 @@ function editTicketTypeSettings(serverId,panelId,typeId){
 
 function tkCloseModal(btn){var overlay=btn.closest('[style*="fixed"]');if(overlay)document.body.removeChild(overlay)}
 
+// ── Recent Tickets filter (state lives at file scope so tabs survive reloads of the tab) ──
+var tkRecFilter='',tkRecData=[];
+function tkRecStatusLabel(s){return s==='open'?'Open':(s==='claimed'?'Claimed':(s==='closed'?'Closed':String(s||'unknown')))}
+function tkRecRender(){
+  var body=document.getElementById('tk-rec-body');if(!body)return;
+  var list=tkRecData.filter(function(t){return !tkRecFilter||t.status===tkRecFilter});
+  if(!list.length){
+    body.innerHTML='<div class="empty" style="padding:16px;"><p>'+(tkRecData.length?'No '+esc(tkRecFilter||'')+' tickets yet.':'No tickets have been created yet.')+'</p></div>';
+    return;
+  }
+  body.innerHTML=list.slice(0,15).map(function(tk){
+    var panelType=tk.panelTypeName?' <span class="tk-rec-type">'+esc(tk.panelTypeName)+'</span>':'';
+    var sub=[];
+    if(tk.status==='closed'){
+      if(tk.closedAt)sub.push('closed '+tkTimeAgo(tk.closedAt)+(tk.closedByTag?' by '+esc(tk.closedByTag):''));
+      if(tk.closedReason)sub.push(esc(tk.closedReason));
+    }
+    var subHtml=sub.length?'<div class="tk-rec-sub">'+sub.join(' · ')+'</div>':'';
+    return '<div class="mod-item"><div class="mod-body"><div class="mod-top"><span class="mod-type">#'+tk.ticketNumber+' '+esc(tk.creatorTag||'Unknown')+panelType+'</span></div>'+subHtml+'</div><div class="mod-count"><span class="tk-status-pill tk-st-'+tk.status+'">'+tkRecStatusLabel(tk.status)+'</span></div></div>';
+  }).join('');
+}
+function tkRecFilterSet(f){tkRecFilter=f;tkRecRender()}
+
 // ── Role chip picker (replaces Ctrl+click multi-selects) ──
 function parseTkArray(v){
   if(Array.isArray(v))return v;
@@ -1915,6 +1934,64 @@ async function loadAutomod(){
   }catch(e){
     el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>Could not load auto-mod config</p><p class="empty-act">'+e.message+'</p></div>';
   }
+}
+
+// ═══ ERRORS ═══
+var errTagFilter='';
+function tkTimeAgo(ts){
+  if(!ts)return '';
+  var t=new Date(ts).getTime();if(isNaN(t))return '';
+  var s=Math.floor((Date.now()-t)/1000);
+  if(s<45)return 'just now';
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  if(s<2592000)return Math.floor(s/86400)+'d ago';
+  return new Date(ts).toLocaleDateString();
+}
+async function loadErrors(){
+  var el=document.getElementById('errFeed');if(!el)return;
+  try{
+    var qs=errTagFilter?'?tag='+encodeURIComponent(errTagFilter):'';
+    var r=await fetch('/api/errors'+qs),d=await r.json();
+    if(!d||!d.errors){el.innerHTML='<div class="empty"><p>Failed to load errors.</p></div>';return}
+    var tags=d.tags||[];
+    var allCount=tags.reduce(function(a,t){return a+t.count},0);
+    var chips='<div class="err-chips">'+
+      '<button class="err-chip'+(errTagFilter===''?' on':'')+'" data-tag="" onclick="errSetFilter(this.dataset.tag)">All <span class="err-chip-n">'+allCount+'</span></button>'+
+      tags.map(function(t){return '<button class="err-chip'+(errTagFilter===t.tag?' on':'')+'" data-tag="'+esc(t.tag)+'" onclick="errSetFilter(this.dataset.tag)">'+esc(t.tag)+' <span class="err-chip-n">'+t.count+'</span></button>'}).join('')+
+      '<button class="err-chip err-clear" onclick="errClearLog()" style="margin-left:auto;">\uD83D\uDDD1 Clear</button></div>';
+    if(!d.errors.length){
+      el.innerHTML=chips+'<div class="empty"><p>'+(errTagFilter?'No '+esc(errTagFilter)+' errors logged.':'No errors logged yet.')+'</p><p class="empty-act">Errors are captured automatically from every module — a clean feed means a healthy bot.</p></div>';
+    }else{
+      el.innerHTML=chips+'<div class="err-feed">'+d.errors.map(function(e){
+        var stackHtml=e.stack?'<pre class="err-stack">'+esc(e.stack)+'</pre>':'';
+        var metaHtml=e.meta?'<div class="err-meta">'+esc(e.meta)+'</div>':'';
+        var extraHtml=e.extra?'<span class="err-extra">'+esc(e.extra)+'</span>':'';
+        return '<div class="err-item"><div class="err-top"><span class="err-badge err-b-'+esc(e.tag)+'">'+esc(e.tag)+'</span><span class="err-msg">'+esc(e.message)+'</span>'+extraHtml+'</div>'+
+          '<div class="err-sub"><span class="err-time">'+tkTimeAgo(e.timestamp)+'</span>'+
+          (e.stack?'<button class="err-toggle" onclick="errToggleStack(this)">Show stack</button>':'')+
+          '</div>'+metaHtml+stackHtml+'</div>';
+      }).join('')+'</div>';
+    }
+    updateRefreshTimestamp('errors');
+  }catch{
+    el.innerHTML='<div class="empty"><p>Couldn\'t load errors.</p><p class="empty-act">The bot may be reconnecting.</p></div>';
+  }
+}
+function errSetFilter(tag){errTagFilter=tag||'';loadErrors()}
+function errToggleStack(btn){
+  var p=btn.closest('.err-item').querySelector('.err-stack');
+  if(!p)return;
+  var show=p.style.display!=='block';
+  p.style.display=show?'block':'none';
+  btn.textContent=show?'Hide stack':'Show stack';
+}
+function errClearLog(){
+  if(!confirm('Clear all logged errors?'))return;
+  fetch('/api/errors',{method:'DELETE'}).then(function(r){return r.json()}).then(function(d2){
+    if(d2.success){errTagFilter='';loadErrors();showToast('Error log cleared')}
+    else showToast('Failed to clear',true);
+  }).catch(function(){showToast('Failed to clear',true)});
 }
 
 // ═══ AUTO-MOD HELPERS ═══
