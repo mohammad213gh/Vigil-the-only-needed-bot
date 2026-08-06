@@ -1012,6 +1012,7 @@ async function loadTickets(){
     }else{
       // Action row — Clone, Rename, Send, Set Count, Update, Delete
       panelsHtml+='<div class="tk-act-row">'+
+        '<button type="button" class="tk-act-btn tk-act-blue" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDC40 Preview</button>'+
         '<button type="button" class="tk-act-btn tk-act-green" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDCE8 Send</button>'+
         '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkClonePanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD04 Clone</button>'+
         '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkRenamePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u270F\uFE0F Rename</button>'+
@@ -1207,6 +1208,9 @@ list.innerHTML=qHtml;
 }
 
 // ── Panel Preview Modal ──
+// ── Live preview simulation state (declared before first use) ──
+var tkPrevState={types:[],srvName:'',srvIcon:'',color:'#5865F2'};
+
 function previewTicketPanel(serverId,panelId){
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var panel=null;
@@ -1214,41 +1218,72 @@ function previewTicketPanel(serverId,panelId){
     if(!panel){showToast('Panel not found',true);return}
     var types=panel.types||[];
     var channels=(d2.channels||[]).filter(function(c){return c.type===0||c.type===5});
-    
-    // Build preview embed
+    var srvName='',srvIcon='';
+    for(var si=0;si<allServers.length;si++){if(allServers[si].id===serverId){srvName=allServers[si].name||'';srvIcon=allServers[si].icon||'';break}}
     var color=panel.color||'#5865F2';
-    var desc=panel.description||'';
-    var typeList=types.length?(types.map(function(t,i){return (i+1)+'. '+t.emoji+' '+esc(t.name)}).join('\n')):'No types configured yet.';
-    
+    var desc=panel.description||'Click the button below to create a ticket.';
+
+    // Shared state for the live simulation helpers
+    tkPrevState={types:types,srvName:srvName||panel.name||'Support Server',srvIcon:srvIcon,color:color};
+
+    var timeStr='Today at '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+    var avatarHtml=srvIcon?'<img src="'+esc(srvIcon)+'" alt="">':'<span>🎫</span>';
+
+    // ── Discord message frame + faithful embed ──
+    var embedHtml='<div class="tk-prev-embed">'+
+        '<div class="tk-prev-embed-bar" style="background:'+esc(color)+'"></div>'+
+        '<div class="tk-prev-embed-body">'+
+          '<div class="tk-prev-embed-author">'+(srvIcon?'<img src="'+esc(srvIcon)+'" alt="">':'')+'<span>'+esc(srvName||panel.name)+'</span></div>'+
+          '<div class="tk-prev-embed-title">🎫 '+esc(panel.name||'Support Tickets')+'</div>'+
+          (desc?'<div class="tk-prev-embed-desc">'+esc(desc)+'</div>':'')+
+          (panel.image_url?'<img class="tk-prev-embed-img" src="'+esc(panel.image_url)+'" alt="">':'')+
+          '<div class="tk-prev-embed-foot">'+timeStr+'</div>'+
+        '</div></div>';
+
+    // ── Live components: dropdown (multi-type) + Create button ──
+    var compsHtml='';
+    if(types.length>1){
+      compsHtml+='<div class="tk-prev-comp">'+
+        '<div class="tk-prev-select-wrap">'+
+          '<select id="tk-prev-type" class="tk-prev-select" onchange="tkPrevPick(this.value)">'+
+            '<option value="">Choose a ticket type...</option>'+
+            types.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.emoji||'🎫')+' '+esc(t.name)+'</option>'}).join('')+
+          '</select><span class="tk-prev-select-arrow">▾</span>'+
+        '</div></div>';
+    }
+    compsHtml+='<div class="tk-prev-comp"><button type="button" class="tk-prev-btn tk-prev-btn-create" onclick="tkPrevCreate()">🎫 Create Ticket</button></div>';
+
     var overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
     overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)}
-    
-    overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;width:520px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
+
+    overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:20px;width:560px;max-width:94vw;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'+
-        '<h2 style="font-size:16px;font-weight:700;margin:0;">\uD83D\uDC40 Panel Preview: '+esc(panel.name||'Unnamed')+'</h2>'+
-        '<button class="tk-preview-close" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">\u2716</button></div>'+
-      // Preview card mimicking Discord embed
-      '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:0;overflow:hidden;margin-bottom:14px;">'+
-        '<div style="display:flex;">'+
-          '<div style="width:4px;flex-shrink:0;background:'+color+';border-radius:3px 0 0 3px;"></div>'+
-          '<div style="padding:14px 16px;flex:1;">'+
-            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
-              '<span style="font-weight:700;font-size:15px;">\uD83C\uDFAB '+esc(panel.name||'Support Tickets')+'</span></div>'+
-            (desc?'<div style="font-size:12px;color:var(--text-dim);margin-bottom:10px;line-height:1.4;">'+esc(desc)+'</div>':'')+
-            (types.length>0?'<div style="font-size:11px;color:var(--text-dim);border-top:1px solid var(--border);padding-top:10px;"><div style="font-weight:600;margin-bottom:6px;">Ticket Types:</div>'+typeList.replace(/\n/g,'<br>')+'</div>':'')+
-            '<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">'+
-              (types.length>1?'<span style="padding:4px 10px;background:rgba(88,101,242,0.12);color:#5865F2;border-radius:20px;font-size:10px;">\u25BC Type selector</span>':'')+
-              '<span style="padding:4px 10px;background:rgba(59,165,92,0.12);color:#3ba55c;border-radius:20px;font-size:10px;">\uD83C\uDFAB Create Ticket</span></div></div></div></div>'+
+        '<h2 style="font-size:16px;font-weight:700;margin:0;">👁 Live Preview: '+esc(panel.name||'Unnamed')+'</h2>'+
+        '<button class="tk-preview-close" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✖</button></div>'+
+      '<div class="tk-prev-stage">'+
+        '<div class="tk-prev-msg">'+
+          '<div class="tk-prev-avatar-wrap">'+avatarHtml+'</div>'+
+          '<div class="tk-prev-msg-body">'+
+            '<div class="tk-prev-msg-top"><span class="tk-prev-username">Ticket Bot</span><span class="tk-prev-bot">BOT</span><span class="tk-prev-time">'+timeStr+'</span></div>'+
+            embedHtml+
+            '<div class="tk-prev-comps">'+compsHtml+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="tk-prev-sim" id="tk-prev-sim">'+
+          '<div class="tk-prev-sim-hint">🖱 '+(types.length>1?'Pick a type in the dropdown above or click <b>Create Ticket</b> to simulate the Discord flow.':'Click <b>Create Ticket</b> to simulate the Discord flow.')+'</div>'+
+          '<div id="tk-prev-eph"></div><div id="tk-prev-flow"></div>'+
+        '</div>'+
+      '</div>'+
       // Send controls
       '<div style="border-top:1px solid var(--border);padding-top:14px;">'+
         '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">Send to channel:</label>'+
         '<div style="display:flex;gap:8px;">'+
           '<select id="tk-preview-ch" style="flex:1;padding:8px;font-size:11px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;">'+
             '<option value="">Select a channel...</option>'+
-            channels.map(function(ch){return '<option value="'+ch.id+'">#'+ch.name+'</option>'}).join('')+
+            channels.map(function(ch){return '<option value="'+esc(ch.id)+'">#'+esc(ch.name)+'</option>'}).join('')+
           '</select>'+
-          '<button class="btn tk-preview-send-btn" style="padding:8px 16px;font-size:11px;">\uD83D\uDCE4 Send</button></div></div></div>';
+          '<button class="btn tk-preview-send-btn" style="padding:8px 16px;font-size:11px;">📤 Send</button></div></div></div>';
     overlay.querySelector('.tk-preview-close').onclick=function(){document.body.removeChild(overlay)};
     overlay.querySelector('.tk-preview-send-btn').onclick=function(){
       var chId=document.getElementById('tk-preview-ch').value;
@@ -1258,11 +1293,82 @@ function previewTicketPanel(serverId,panelId){
       .then(function(r){return r.json()}).then(function(d3){
         if(d3.success){showToast('Panel sent!');document.body.removeChild(overlay);loadTickets()}
         else showToast('Failed: '+d3.error,true);
-        btn.disabled=false;btn.textContent='Send';
-      }).catch(function(e){showToast('Failed: '+e.message,true);btn.disabled=false;btn.textContent='Send'});
+        btn.disabled=false;btn.textContent='📤 Send';
+      }).catch(function(e){showToast('Failed: '+e.message,true);btn.disabled=false;btn.textContent='📤 Send'});
     };
     document.body.appendChild(overlay);
   }).catch(function(e){showToast('Failed to preview: '+e.message,true)});
+}
+
+// ── Live preview simulation helpers ──
+function tkPrevTimeStr(){return 'Today at '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}
+
+function tkPrevFindType(id){for(var i=0;i<tkPrevState.types.length;i++){if(tkPrevState.types[i].id===id)return tkPrevState.types[i]}return null}
+
+function tkPrevSimCard(innerHtml){
+  return '<div class="tk-prev-msg tk-prev-sim-card">'+
+    '<div class="tk-prev-avatar-wrap">'+(tkPrevState.srvIcon?'<img src="'+esc(tkPrevState.srvIcon)+'" alt="">':'<span>🎫</span>')+'</div>'+
+    '<div class="tk-prev-msg-body">'+
+      '<div class="tk-prev-msg-top"><span class="tk-prev-username">Ticket Bot</span><span class="tk-prev-bot">BOT</span><span class="tk-prev-only-you">ONLY YOU CAN SEE THIS</span><span class="tk-prev-time">'+tkPrevTimeStr()+'</span></div>'+
+      innerHtml+
+    '</div></div>';
+}
+
+function tkPrevEmbedHtml(o){
+  return '<div class="tk-prev-embed"><div class="tk-prev-embed-bar" style="background:'+(o.color||tkPrevState.color)+'"></div><div class="tk-prev-embed-body">'+
+    (o.author?'<div class="tk-prev-embed-author"><span>'+esc(o.author)+'</span></div>':'')+
+    (o.title?'<div class="tk-prev-embed-title">'+esc(o.title)+'</div>':'')+
+    (o.desc?'<div class="tk-prev-embed-desc">'+esc(o.desc)+'</div>':'')+
+    (o.fields||[]).map(function(f){return '<div class="tk-prev-embed-field"><b>'+esc(f.n)+'</b><span>'+esc(f.v)+'</span></div>'}).join('')+
+    '<div class="tk-prev-embed-foot">'+tkPrevTimeStr()+'</div>'+
+  '</div></div>';
+}
+
+function tkPrevPick(typeId){
+  var type=tkPrevFindType(typeId);
+  if(!type)return;
+  var flow=document.getElementById('tk-prev-flow');
+  if(!flow)return;
+  var questions=parseTkArray(type.questions);
+  var html='';
+  // Step 1 — questions modal (if any)
+  if(questions.length){
+    html+=tkPrevSimCard('<div class="tk-prev-modal"><div class="tk-prev-modal-title">'+esc(type.emoji||'🎫')+' '+esc(type.name)+'</div>'+
+      questions.slice(0,5).map(function(q,i){return '<div class="tk-prev-modal-q"><label>'+esc(q.label||q.question||('Question '+(i+1)))+(q.required!==false?' *':'')+'</label><input type="text" placeholder="'+esc(q.placeholder||'')+'" disabled></div>'}).join('')+
+      '<div class="tk-prev-modal-actions"><button type="button" class="tk-prev-btn tk-prev-btn-secondary" disabled>Cancel</button><button type="button" class="tk-prev-btn tk-prev-btn-create" disabled>Submit</button></div></div>');
+    // Pinned answers embed (matches createTicket's answers embed)
+    html+=tkPrevSimCard(tkPrevEmbedHtml({title:'📋 Ticket Form Answers',desc:'Questions and answers submitted when creating this ticket:',fields:questions.slice(0,5).map(function(q){return {n:q.label||q.question||'Question',v:'(your answer)'}})}));
+  }
+  // Step 2 — created confirmation + welcome embed in the ticket channel
+  var chName=(type.ticket_name_format||'ticket-{username}-{number}')
+    .replace('{username}','you').replace('{number}','0001').replace('{name}','you')
+    .replace('{type}','ticket').replace('{category}','ticket').replace(/[^a-z0-9-]/g,'');
+  html+=tkPrevSimCard(
+    '<div class="tk-prev-sim-success">✅ Your <b>'+esc(type.emoji||'🎫')+' '+esc(type.name)+'</b> ticket has been created! <span class="tk-prev-ch">#'+esc(chName)+'</span></div>'+
+    tkPrevEmbedHtml({author:'Ticket #0001',title:'🎫 '+type.name+' Ticket',desc:type.welcome_message||'Thank you for creating a ticket. A staff member will be with you shortly.',fields:[{n:'Created By',v:'@you'},{n:'Type',v:(type.emoji||'🎫')+' '+type.name}]})+
+    '<div class="tk-prev-comps"><div class="tk-prev-comp"><button type="button" class="tk-prev-btn tk-prev-btn-claim" disabled>✋ Claim Ticket</button></div><div class="tk-prev-comp"><button type="button" class="tk-prev-btn tk-prev-btn-close" disabled>🔒 Close Ticket</button></div></div>'
+  );
+  flow.innerHTML=html;
+}
+
+function tkPrevCreate(){
+  var flow=document.getElementById('tk-prev-flow');
+  var eph=document.getElementById('tk-prev-eph');
+  if(!flow)return;
+  var types=tkPrevState.types;
+  if(!types.length){flow.innerHTML=tkPrevSimCard('<div class="tk-prev-sim-error">❌ This panel has no ticket types configured. Please contact the server staff.</div>');return}
+  var sel=document.getElementById('tk-prev-type');
+  var picked=sel?sel.value:'';
+  if(types.length>1&&!picked){
+    // Simulate the ephemeral type-picker the bot sends when the button has no type
+    if(eph)eph.innerHTML=tkPrevSimCard('<div class="tk-prev-sim-title">📋 <b>Please select the type of ticket you want to create:</b></div>'+
+      '<div class="tk-prev-select-wrap"><select id="tk-prev-sim-type" class="tk-prev-select" onchange="tkPrevPick(this.value)"><option value="">Choose a ticket type...</option>'+
+      types.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.emoji||'🎫')+' '+esc(t.name)+'</option>'}).join('')+
+      '</select><span class="tk-prev-select-arrow">▾</span></div>');
+    return;
+  }
+  var type=picked?tkPrevFindType(picked):types[0];
+  if(type)tkPrevPick(type.id);
 }
 
 // ── Ticket Dashboard CRUD Helpers (Modal-based UX) ──
