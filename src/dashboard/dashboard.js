@@ -946,6 +946,7 @@ async function loadTickets(){
   // DOM — otherwise the re-render wipes #tkSelPanel and the selection is lost,
   // making it impossible to switch panels.
   var prevPanelSel=document.getElementById('tkSelPanel') ? document.getElementById('tkSelPanel').value : '';
+  var prevTypeSel=document.getElementById('tkTypeSel') ? document.getElementById('tkTypeSel').value : '';
   if(!serverId){el.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:32px;height:32px;"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg><p>Select a server to manage tickets</p><p class="empty-act">Create ticket panels, configure ticket types, and view recent tickets.</p></div>';updateRefreshTimestamp('tickets');return;}
   el.innerHTML='<div class="loading" style="padding:24px;"><div class="spin"></div></div>';
   try{
@@ -978,6 +979,12 @@ async function loadTickets(){
     var noPanel=!selPanel;
     var panelId=selPanel?selPanel.id:'';
 
+    // Resolve the selected ticket type (persisted across re-renders via the dropdown)
+    var pTypes=selPanel?selPanel.types||[]:[];
+    var selType=null;
+    for(var ti2=0;ti2<pTypes.length;ti2++){if(pTypes[ti2].id===prevTypeSel){selType=pTypes[ti2];break}}
+    if(!selType&&pTypes.length>0)selType=pTypes[0];
+
     // ── Advanced Settings ──
     var advHtml='<div class="tk-glass">'+
       '<div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Advanced Settings</div>'+
@@ -993,7 +1000,6 @@ async function loadTickets(){
 
     // ── Panel Settings ──
     var panelSelOpts=panels.map(function(p,i){return '<option value="'+p.id+'"'+(selPanel&&p.id===selPanel.id?' selected':'')+'>'+(i+1)+' | '+esc(p.name)+'</option>'}).join('');
-    var pTypes=selPanel?selPanel.types||[]:[];
     var panelsHtml='<div class="tk-glass">'+
       '<div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Panel Settings <span class="tk-h-count">'+panels.length+'</span></div>'+
       '<div class="tk-glass-b">'+
@@ -1013,6 +1019,35 @@ async function loadTickets(){
         '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkEditPanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2B06\uFE0F Update</button>'+
         '<button type="button" class="tk-act-btn tk-act-red" onclick="tkDeletePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2716 Delete</button></div>';
 
+      // Ticket Type dropdown — Ticket Tool style: the panel is the "main ticket" and
+      // each type is a sub-ticket (e.g. Support / Application / Reporting). Pick the
+      // type you want to configure from the dropdown below.
+      panelsHtml+='<div class="tk-type-sel-row">'+
+        '<span class="tk-type-sel-label">Ticket Type</span>'+
+        '<select id="tkTypeSel" class="tk-select" onchange="loadTickets()">'+
+          (pTypes.length?pTypes.map(function(t){return '<option value="'+t.id+'"'+(selType&&t.id===selType.id?' selected':'')+'>'+esc(t.emoji||'\uD83C\uDFAB')+' '+esc(t.name)+'</option>'}).join(''):'<option value="">No types yet</option>')+
+        '</select>'+
+        '<button class="btn" onclick="addTicketType(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:9px 12px;font-size:11px;flex-shrink:0;" title="Add a new ticket type">+</button></div>';
+      if(selType){
+        var tQCount=parseTkArray(selType.questions).length;
+        var tRoleCount=parseTkArray(selType.support_roles).length;
+        var tCat='None';
+        if(selType.category_id&&channelsById[selType.category_id])tCat=channelsById[selType.category_id].name;
+        panelsHtml+='<div class="tk-type-sum">'+
+          '<div class="tk-type-sum-head"><span class="tk-type-sum-emoji">'+esc(selType.emoji||'\uD83C\uDFAB')+'</span><span class="tk-type-sum-name">'+esc(selType.name||'Unnamed type')+'</span></div>'+
+          '<div class="tk-type-sum-grid">'+
+            '<div class="tk-type-sum-item"><span>Category</span><b>'+esc(tCat)+'</b></div>'+
+            '<div class="tk-type-sum-item"><span>Questions</span><b>'+tQCount+'</b></div>'+
+            '<div class="tk-type-sum-item"><span>Support roles</span><b>'+(tRoleCount?tRoleCount:'None')+'</b></div>'+
+            '<div class="tk-type-sum-item"><span>Name format</span><b>'+esc(selType.ticket_name_format||'ticket-{username}-{number}')+'</b></div>'+
+          '</div>'+
+          '<div class="tk-type-sum-actions">'+
+            '<button type="button" class="tk-act-btn tk-act-blue" onclick="editTicketTypeSettings(\''+serverId+'\',\''+selPanel.id+'\',\''+selType.id+'\')">\u2699\uFE0F Edit</button>'+
+            '<button type="button" class="tk-act-btn tk-act-blue" onclick="editQuestions(\''+serverId+'\',\''+selPanel.id+'\',\''+selType.id+'\')">\uD83D\uDCDD Questions</button>'+
+            '<button type="button" class="tk-act-btn tk-act-red" onclick="deleteTicketType(\''+serverId+'\',\''+selPanel.id+'\',\''+selType.id+'\')">\uD83D\uDDD1\uFE0F Delete</button>'+
+          '</div></div>';
+      }
+
       // Pill navigation
       panelsHtml+='<div class="tk-pill-group">'+
         tkPill('Ticket Types',(pTypes.length?pTypes.length+' type'+(pTypes.length>1?'s':''):'No types yet'),'tkCardClick(\'types\',\''+serverId+'\',\''+selPanel.id+'\')')+
@@ -1031,20 +1066,20 @@ async function loadTickets(){
             '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'panel\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDCAC Edit Panel Message</button></div>'+
           // Right: Category + Ticket Message
           '<div><div class="stg" style="margin-bottom:10px;"><label>Category Created/Opened <span title="Categories where tickets can be created" style="cursor:help;color:var(--text-dim);font-size:11px;">\u24D8</span></label>'+
-            '<select id="tk-freq-cats" class="tk-select" onchange="tkMarkUnsaved()"></select><div class="tk-hint">Category for the first type (per-type settings override)</div></div>'+
+            '<select id="tk-freq-cats" class="tk-select" onchange="tkMarkUnsaved()"></select><div class="tk-hint">Category for the selected type (per-type settings override)</div></div>'+
             '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'ticket\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDCAC Edit Ticket Message</button></div>'+
         '</div></div>';
 
       // Populate roles + category pickers after rendering
       var allRoles=[];
       for(var rk in rolesById)allRoles.push(rolesById[rk]);
-      var curRoleIds=parseTkArray(selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].support_roles:null);
+      var curRoleIds=parseTkArray(selType?selType.support_roles:null);
       var roleChipsHtml='';
       for(var ri=0;ri<allRoles.length;ri++){
         var roleData=allRoles[ri];
         roleChipsHtml+='<button type="button" class="tk-role-chip'+(curRoleIds.indexOf(roleData.id)>-1?' on':'')+'" data-role-id="'+roleData.id+'" onclick="tkToggleRoleChip(this)">'+esc(roleData.name)+'</button>';
       }
-      var curCatId=selPanel&&selPanel.types&&selPanel.types[0]?selPanel.types[0].category_id||'':'';
+      var curCatId=selType?selType.category_id||'':'';
       // Include an explicit "None" option so the select reflects the type's actual
       // category — otherwise the browser would default to the first category and
       // saving quick-config would silently assign it to the type.
@@ -1493,12 +1528,6 @@ function tkSetCount(serverId,panelId){
     };
   }).catch(function(e){showToast('Failed to load counter data',true)});
 }
-function tkPickTypeGo(serverId,panelId,cardId,typeId){
-  var ov=document.querySelector('[data-tk-pick]');
-  if(ov)document.body.removeChild(ov);
-  if(cardId==='types')editTicketTypeSettings(serverId,panelId,typeId);
-  else if(cardId==='forms')editQuestions(serverId,panelId,typeId);
-}
 function tkCardClick(cardId,serverId,panelId){
   if(cardId==='types'||cardId==='forms'){
     fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
@@ -1514,19 +1543,15 @@ function tkCardClick(cardId,serverId,panelId){
         else editQuestions(serverId,panelId,panel.types[0].id);
         return;
       }
-      // Multiple types — show a type picker first
-      var overlay=document.createElement('div');
-      overlay.setAttribute('data-tk-pick','1');
-      overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
-      overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
-      overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:380px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
-        '<h2 style="font-size:16px;font-weight:700;margin:0 0 12px 0;">'+(cardId==='types'?'\u2699\uFE0F Choose Type':'\uD83D\uDCDD Choose Type')+'</h2>'+
-        '<div style="display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;">'+
-        panel.types.map(function(t){return '<button class="btn btn-s" onclick="tkPickTypeGo(\''+serverId+'\',\''+panelId+'\',\''+cardId+'\',\''+t.id+'\')" style="padding:9px 12px;font-size:12px;text-align:left;">'+esc(t.emoji)+' '+esc(t.name)+'</button>';}).join('')+
-        '</div>'+
-        (cardId==='types'?'<button class="btn" onclick="addTicketType(\''+serverId+'\',\''+panelId+'\');tkCloseModal(this)" style="width:100%;margin-top:12px;padding:9px 12px;font-size:12px;">➕ Add New Type</button>':'')+
-        '</div></div>';
-      document.body.appendChild(overlay);
+      // Multiple types — point the user at the Ticket Type dropdown (Ticket Tool style)
+      var dd=document.getElementById('tkTypeSel');
+      if(dd){
+        dd.scrollIntoView({behavior:'smooth',block:'center'});
+        dd.style.outline='2px solid var(--accent)';dd.style.outlineOffset='2px';
+        setTimeout(function(){dd.style.outline='';dd.style.outlineOffset=''},2000);
+      }
+      showToast(cardId==='types'?'Pick a ticket type from the dropdown above':'Pick a type first, then edit its questions');
+      return;
     }).catch(function(){showToast('Failed to load',true)});
     return;
   }
@@ -1575,8 +1600,14 @@ function tkEditMessage(serverId,type){
       curMsg=panel.description||'';
     }else{
       if(!panel.types||!panel.types.length){showToast('No ticket types on this panel',true);return}
-      targetTypeId=panel.types[0].id;
-      curMsg=panel.types[0].welcome_message||'';
+      // Respect the type selected in the dropdown (fall back to the first type)
+      var typeSel=document.getElementById('tkTypeSel');
+      var picked=typeSel?typeSel.value:'';
+      var target=null;
+      for(var ti3=0;ti3<panel.types.length;ti3++){if(panel.types[ti3].id===picked){target=panel.types[ti3];break}}
+      if(!target)target=panel.types[0];
+      targetTypeId=target.id;
+      curMsg=target.welcome_message||'';
     }
     var overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
@@ -1626,8 +1657,12 @@ function tkSaveChanges(){
   if(!serverId||!panelId){showToast('No panel selected',true);return}
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var firstTypeId=null;
+    var typeSel=document.getElementById('tkTypeSel');
+    var pickedTypeId=typeSel?typeSel.value:'';
     for(var pi=0;pi<(d2.panels||[]).length;pi++){
       if(d2.panels[pi].id===panelId&&d2.panels[pi].types&&d2.panels[pi].types.length){
+        // Prefer the type currently selected in the dropdown; fall back to the first type
+        if(pickedTypeId&&d2.panels[pi].types.some(function(t){return t.id===pickedTypeId})){firstTypeId=pickedTypeId;break}
         firstTypeId=d2.panels[pi].types[0].id;break;
       }
     }
