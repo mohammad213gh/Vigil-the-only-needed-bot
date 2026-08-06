@@ -756,4 +756,57 @@ function clearErrorLogs(tag = null) {
     return d.prepare('DELETE FROM error_logs').run();
 }
 
-module.exports = { getDb, initDb, closeDb, migrateFromJson, recordErrorLog, getErrorLogs, getErrorTagCounts, clearErrorLogs };
+// ──────────────────── Database Backups ────────────────────
+// Copies bot.db into <DATA_DIR>/backups/ and keeps the newest MAX_BACKUPS.
+// better-sqlite3 is fully synchronous and single-process here, so copying the
+// file between operations yields a consistent snapshot.
+const BACKUP_DIR = path.join(getDataDir(), 'backups');
+const MAX_BACKUPS = 7;
+const BACKUP_NAME_RE = /^bot-\d{14}\.db$/;
+
+function listBackups() {
+    try {
+        if (!fs.existsSync(BACKUP_DIR)) return [];
+        return fs.readdirSync(BACKUP_DIR)
+            .filter(n => BACKUP_NAME_RE.test(n))
+            .map(n => {
+                const st = fs.statSync(path.join(BACKUP_DIR, n));
+                return { name: n, size: st.size, createdAt: st.mtimeMs };
+            })
+            .sort((a, b) => b.createdAt - a.createdAt);
+    } catch {
+        return [];
+    }
+}
+
+function backupDatabase() {
+    if (!fs.existsSync(DB_PATH)) return null;
+    try {
+        if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+        // Flush any WAL frames so the copied file is self-contained.
+        try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch {}
+        const name = 'bot-' + new Date().toISOString().replace(/[-:TZ]/g, '').replace(/\.\d{3}/, '') + '.db';
+        const dest = path.join(BACKUP_DIR, name);
+        fs.copyFileSync(DB_PATH, dest);
+        // Prune old backups, keep the newest MAX_BACKUPS.
+        for (const old of listBackups().slice(MAX_BACKUPS)) {
+            try { fs.unlinkSync(path.join(BACKUP_DIR, old.name)); } catch {}
+        }
+        return { name, size: fs.statSync(dest).size, createdAt: Date.now() };
+    } catch (err) {
+        console.error('[DB] Backup failed:', err.message);
+        return null;
+    }
+}
+
+function deleteBackup(name) {
+    if (typeof name !== 'string' || !BACKUP_NAME_RE.test(name)) return false;
+    try {
+        fs.unlinkSync(path.join(BACKUP_DIR, name));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+module.exports = { getDb, initDb, closeDb, migrateFromJson, recordErrorLog, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup };

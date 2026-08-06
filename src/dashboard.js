@@ -4,7 +4,8 @@ const os = require('os');
 const fs = require('fs');
 const { formatUptime, formatNumber } = require('./helpers');
 const { getBotConfig, getGuildConfig, updateGuildConfig, getWelcomeConfig, getGoodbyeConfig, updateWelcomeConfig } = require('./config');
-const { getDb, getErrorLogs, getErrorTagCounts, clearErrorLogs } = require('./db');
+const { getDb, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup } = require('./db');
+const { getDataDir } = require('./data');
 const { getGuildStats } = require('./stats');
 const { getReactionRoles } = require('./reactionRoles');
 const { getAllPermissions } = require('./permissions');
@@ -1817,6 +1818,76 @@ function createDashboard() {
             logError(err, 'dashboard', 'DELETE /api/errors');
             res.status(500).json({ error: err.message });
         }
+    });
+
+    // ── Health Check (no auth — hosts probe this to restart hung containers) ──
+    app.get('/health', (req, res) => {
+        res.json({
+            status: 'ok',
+            botReady: !!(client && client.isReady && client.isReady()),
+            uptime: Math.round(process.uptime()),
+            db: 'ok',
+            timestamp: Date.now(),
+        });
+    });
+
+    // ── Database Backups (owner-only) ──
+    app.get('/api/backups', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage backups' });
+        res.json({ backups: listBackups() });
+    });
+    app.post('/api/backups', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage backups' });
+        const backup = backupDatabase();
+        if (!backup) return res.status(500).json({ error: 'Backup failed' });
+        res.json({ success: true, backup, backups: listBackups() });
+    });
+    app.get('/api/backups/download/:name', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage backups' });
+        const name = req.params.name;
+        if (!/^bot-\d{14}\.db$/.test(name)) return res.status(400).json({ error: 'Invalid backup name' });
+        const fp = path.join(getDataDir(), 'backups', name);
+        if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Backup not found' });
+        res.download(fp, name);
+    });
+    app.delete('/api/backups/:name', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage backups' });
+        const name = req.params.name;
+        if (!/^bot-\d{14}\.db$/.test(name)) return res.status(400).json({ error: 'Invalid backup name' });
+        res.json({ success: deleteBackup(name), backups: listBackups() });
+    });
+
+    // ── Error Alert Channel (owner-only) ──
+    // Bot-wide setting: where critical errors (uncaughtException etc.) get pinged.
+    app.get('/api/errors/alert', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can configure alerts' });
+        const row = getDb().prepare('SELECT value FROM bot_config WHERE key = ?').get('bot_error_alert_channel');
+        let channelId = (row && row.value) || '';
+        const guilds = client ? Array.from(client.guilds.cache.values()).slice(0, 40).map(g => ({
+            id: g.id,
+            name: g.name,
+            channels: g.channels.cache.filter(c => c.type === 0 || c.type === 5).first(60).map(c => ({ id: c.id, name: c.name })),
+        })).filter(g => g.channels.length) : [];
+        // Make sure the guild owning the saved alert channel is always offered,
+        // even if it falls outside the 40-guild cap above.
+        if (channelId && client && !guilds.some(g => g.channels.some(c => c.id === channelId))) {
+            const saved = client.channels.cache.get(channelId);
+            if (saved && saved.guild) {
+                const gc = {
+                    id: saved.guild.id,
+                    name: saved.guild.name,
+                    channels: saved.guild.channels.cache.filter(c => c.type === 0 || c.type === 5).first(60).map(c => ({ id: c.id, name: c.name })),
+                };
+                if (gc.channels.some(c => c.id === channelId)) guilds.unshift(gc);
+            }
+        }
+        res.json({ channelId, guilds });
+    });
+    app.post('/api/errors/alert', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can configure alerts' });
+        const channelId = (req.body && req.body.channelId || '').trim();
+        getDb().prepare('INSERT OR REPLACE INTO bot_config (key, value) VALUES (?, ?)').run('bot_error_alert_channel', channelId);
+        res.json({ success: true, channelId });
     });
 
     // ── Serve Frontend ──

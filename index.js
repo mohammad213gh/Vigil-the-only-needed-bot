@@ -307,7 +307,7 @@ app.listen(PORT, () => {
 
 // ──────────────────── Graceful Shutdown ────────────────────
 
-const { closeDb } = require('./src/db');
+const { closeDb, getDb, backupDatabase } = require('./src/db');
 
 function shutdown(signal) {
     console.log('\n[Bot] Received ' + signal + '. Shutting down gracefully...');
@@ -336,6 +336,49 @@ process.on('uncaughtException', (err) => {
     try { closeDb(); } catch {}
     try { client.destroy(); } catch {}
     process.exit(1);
+});
+
+// ──────────────────── Scheduled Database Backups ────────────────────
+// Snapshot bot.db shortly after boot, then once per day. The dashboard can
+// also trigger backups manually and download/delete them.
+function runScheduledBackup() {
+    try {
+        const r = backupDatabase();
+        if (r) console.log('[Backup] Created ' + r.name + ' (' + (r.size / 1024).toFixed(1) + ' KB)');
+    } catch (err) {
+        logError(err, 'backup');
+    }
+}
+setTimeout(runScheduledBackup, 10 * 1000);
+setInterval(runScheduledBackup, 24 * 60 * 60 * 1000);
+
+// ──────────────────── Error Alert Notifier ────────────────────
+// If an alert channel is configured from the dashboard, surface critical
+// errors there. Rate-limited to 1 message / 60s to avoid spam storms.
+const { setErrorListener } = require('./src/logError');
+let lastErrorAlertAt = 0;
+const CRITICAL_ERROR_TAGS = new Set(['uncaughtException', 'unhandledRejection']);
+setErrorListener((entry) => {
+    try {
+        if (!entry || !CRITICAL_ERROR_TAGS.has(entry.tag)) return;
+        const now = Date.now();
+        if (now - lastErrorAlertAt < 60 * 1000) return;
+        const row = getDb().prepare('SELECT value FROM bot_config WHERE key = ?').get('bot_error_alert_channel');
+        if (!row || !row.value) return;
+        const channel = client.channels.cache.get(row.value);
+        if (!channel || !channel.isTextBased || !channel.isTextBased()) return;
+        lastErrorAlertAt = now;
+        channel.send({
+            embeds: [{
+                color: 0xED4245,
+                author: { name: '⚠️ Critical Bot Error' },
+                title: entry.tag,
+                description: '```\n' + String(entry.message || 'Unknown error').slice(0, 1500) + '\n```',
+                fields: entry.stack ? [{ name: 'Stack (first lines)', value: '```\n' + String(entry.stack).slice(0, 900) + '\n```' }] : [],
+                timestamp: entry.timestamp || new Date().toISOString(),
+            }],
+        }).catch(() => {});
+    } catch { /* alerting must never crash the bot */ }
 });
 
 // ──────────────────── Login ────────────────────

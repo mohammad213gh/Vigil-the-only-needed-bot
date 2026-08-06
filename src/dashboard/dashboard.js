@@ -355,6 +355,119 @@ function esc(s){if(s==null&&s!==0)return'';return String(s).replace(/&/g,'&amp;'
 function renderCommands(data){const el=document.getElementById('cmdList');const totals=data.reduce((a,c)=>a+c.commands.length,0);console.log('[Commands] loaded',data.length,'categories,',totals,'commands');el.innerHTML='<div style="margin-bottom:14px;font-size:11px;color:var(--text-dim);">'+totals+' commands across '+data.length+' categories</div>'+data.map(cat=>'<div class="cmd-cat" onclick="this.classList.toggle(\'collapsed\')"><div class="cmd-cat-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 9 12 15 18 9"/></svg><span>'+esc(cat.category)+'</span><span class="cmd-count">'+cat.commands.length+'</span><span class="cmd-bdg '+(cat.owner?'owner':'public')+'">'+(cat.owner?'Owner Only':'Public')+'</span></div><div class="cmd-items">'+cat.commands.map(cmd=>'<div class="cmd-item"><code class="cmd-name">/'+esc(cmd.name)+'</code><div class="cmd-desc">'+esc(cmd.description)+'</div><div class="cmd-usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>'+esc(cmd.usage)+'</div></div>').join('')+'</div></div>').join('')}
 function filterCommands(){const q=document.getElementById('cmdSearch').value.toLowerCase();const cat=document.getElementById('cmdCatFilter').value;if(!q&&cat==='all')return renderCommands(allCommands);const filtered=allCommands.map(c=>{if(cat!=='all'&&c.category!==cat)return null;const cmds=q?c.commands.filter(cmd=>cmd.name.includes(q)||cmd.description.toLowerCase().includes(q)):c.commands;if(!cmds||!cmds.length)return null;return{...c,commands:cmds};}).filter(Boolean);if(!filtered.length)return document.getElementById('cmdList').innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No commands match "'+q+'"</p><p class="empty-act">Try a different search term or category.</p></div>';renderCommands(filtered)}
 
+// ═══ SYSTEM: BACKUPS ═══
+async function loadBackups(){
+  var el=document.getElementById('backupList');if(!el)return;
+  try{
+    var r=await fetch('/api/backups'),d=await r.json();
+    if(!d||!d.backups){el.innerHTML='<div class="empty"><p>Failed to load backups.</p></div>';return}
+    if(!d.backups.length){el.innerHTML='<div class="tk-chip-none">No backups yet — click \u201CBackup Now\u201D or wait for the automatic daily backup.</div>';return}
+    el.innerHTML=d.backups.map(function(b){
+      var size=b.size>1048576?(b.size/1048576).toFixed(2)+' MB':(b.size/1024).toFixed(1)+' KB';
+      return '<div class="bk-row"><span class="bk-name">'+esc(b.name)+'</span><span class="bk-meta">'+size+' · '+tkTimeAgo(b.createdAt)+'</span>'+
+        '<button class="btn btn-s" onclick="dlBackup(\''+b.name+'\')" style="padding:4px 10px;font-size:10px;">Download</button>'+
+        '<button class="btn btn-s" onclick="delBackup(\''+b.name+'\')" style="padding:4px 10px;font-size:10px;background:rgba(237,66,69,0.15);border-color:rgba(237,66,69,0.4);color:#ff7b81;">Delete</button></div>';
+    }).join('');
+  }catch{el.innerHTML='<div class="empty"><p>Failed to load backups.</p></div>'}
+}
+function backupNow(){
+  fetch('/api/backups',{method:'POST'}).then(function(r){return r.json()}).then(function(d){
+    if(d.success){showToast('Backup created');loadBackups()}
+    else showToast(d.error||'Backup failed',true);
+  }).catch(function(){showToast('Backup failed',true)});
+}
+function dlBackup(name){window.location='/api/backups/download/'+encodeURIComponent(name)}
+function delBackup(name){
+  if(!confirm('Delete backup '+name+'?'))return;
+  fetch('/api/backups/'+encodeURIComponent(name),{method:'DELETE'}).then(function(r){return r.json()}).then(function(d){
+    if(d.success){showToast('Backup deleted');loadBackups()}
+    else showToast('Failed to delete',true);
+  }).catch(function(){showToast('Failed to delete',true)});
+}
+
+// ═══ SYSTEM: ERROR ALERT ═══
+var alertGuilds=[];
+async function loadErrorAlert(){
+  var srvSel=document.getElementById('alertSrvSel'),chSel=document.getElementById('alertChSel');
+  if(!srvSel)return;
+  try{
+    var r=await fetch('/api/errors/alert'),d=await r.json();
+    alertGuilds=d.guilds||[];
+    srvSel.innerHTML='<option value="">Select server…</option>'+alertGuilds.map(function(g){return '<option value="'+g.id+'">'+esc(g.name)+'</option>'}).join('');
+    chSel.innerHTML='<option value="">Select channel…</option>';
+    if(d.channelId){
+      for(var i=0;i<alertGuilds.length;i++){
+        for(var j=0;j<alertGuilds[i].channels.length;j++){
+          if(alertGuilds[i].channels[j].id===d.channelId){
+            srvSel.value=alertGuilds[i].id;
+            alertSrvChanged();
+            chSel.value=d.channelId;
+            i=alertGuilds.length;break;
+          }
+        }
+      }
+    }
+  }catch{}
+}
+function alertSrvChanged(){
+  var srvSel=document.getElementById('alertSrvSel'),chSel=document.getElementById('alertChSel');
+  if(!srvSel||!chSel)return;
+  var g=alertGuilds.find(function(x){return x.id===srvSel.value});
+  chSel.innerHTML='<option value="">'+(g?'Select channel…':'Select server…')+'</option>'+(g?g.channels.map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'}).join(''):'');
+}
+function saveErrorAlert(){
+  var chSel=document.getElementById('alertChSel');
+  var channelId=chSel?chSel.value:'';
+  fetch('/api/errors/alert',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channelId:channelId})}).then(function(r){return r.json()}).then(function(d){
+    if(d.success)showToast(channelId?'Error alerts enabled':'Error alerts disabled');
+    else showToast(d.error||'Failed to save',true);
+  }).catch(function(){showToast('Failed to save',true)});
+}
+
+// ═══ SETTINGS: DASHBOARD ACCESS ═══
+async function loadDashUsers(){
+  var el=document.getElementById('dashUsersList');if(!el)return;
+  try{
+    var r=await fetch('/api/dash/users'),users=await r.json();
+    var ids=Object.keys(users||{});
+    if(!ids.length){el.innerHTML='<div class="tk-chip-none">No dashboard users yet. Add one above — the owner has full access by default.</div>';return}
+    el.innerHTML=ids.map(function(id){
+      var u=users[id];
+      var meta=[];
+      if(u.addedBy)meta.push('by '+esc(u.addedBy));
+      if(u.addedAt)meta.push(tkTimeAgo(u.addedAt));
+      return '<div class="du-row"><span class="du-id">'+esc(id)+'</span><span class="du-meta">'+meta.join(' · ')+'</span>'+
+        '<button class="btn btn-s" data-uid="'+esc(id)+'" onclick="removeDashUserUI(this.dataset.uid)" style="padding:4px 10px;font-size:10px;background:rgba(237,66,69,0.15);border-color:rgba(237,66,69,0.4);color:#ff7b81;">Remove</button></div>';
+    }).join('');
+  }catch{el.innerHTML='<div class="empty"><p>Failed to load users.</p></div>'}
+}
+function addDashUserUI(){
+  var inp=document.getElementById('dashUserIdInput');var id=(inp.value||'').trim();
+  if(!id){showToast('Enter a Discord user ID',true);return}
+  fetch('/api/dash/users/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:id})}).then(function(r){return r.json()}).then(function(d){
+    if(d.accessToken){inp.value='';loadDashUsers();showAccessToken(id,d.accessToken)}
+    else showToast(d.error||'Failed to add user',true);
+  }).catch(function(){showToast('Failed to add user',true)});
+}
+function removeDashUserUI(id){
+  if(!confirm('Revoke dashboard access for '+id+'?'))return;
+  fetch('/api/dash/users/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:id})}).then(function(r){return r.json()}).then(function(d){
+    if(d.success){showToast('Access revoked');loadDashUsers()}
+    else showToast('Failed to remove',true);
+  }).catch(function(){showToast('Failed to remove',true)});
+}
+function showAccessToken(userId,token){
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
+  overlay.innerHTML='<div class="tk-glass" style="max-width:440px;width:calc(100% - 40px);padding:20px;"><div class="tk-glass-h" style="margin:-20px -20px 14px;padding:14px 18px;">Access Token</div>'+
+    '<p style="font-size:12px;color:var(--text-dim);margin:0 0 10px;">User <b style="color:var(--text);">'+esc(userId)+'</b> can now log in with their Discord ID and this token. <b style="color:var(--text);">Shown only once — copy it now.</b></p>'+
+    '<code id="tkTokenSrc" style="display:block;padding:10px;font-size:11px;background:rgba(0,0,0,0.35);border:1px solid var(--border);border-radius:8px;color:#7ee7a8;word-break:break-all;">'+esc(token)+'</code>'+
+    '<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn" style="flex:1;padding:9px;font-size:12px;" onclick="navigator.clipboard.writeText(document.getElementById(\'tkTokenSrc\').textContent).then(function(){showToast(\'Token copied\')})">Copy</button>'+
+    '<button class="btn btn-s" style="flex:1;padding:9px;font-size:12px;" onclick="tkCloseModal(this)">Done</button></div></div>';
+  document.body.appendChild(overlay);
+}
+
 // ═══ SYSTEM ═══
 async function loadSys(){try{const r=await fetch('/api/system'),s=await r.json();document.getElementById('sysHost').innerHTML='<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span style="color:var(--text-dim);">Platform</span><span>'+s.platform+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span style="color:var(--text-dim);">Node</span><span>'+s.nodeVersion+'</span></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span style="color:var(--text-dim);">CPU</span><span>'+s.cpuCores+' cores</span></div><div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;"><span style="color:var(--text-dim);">Uptime</span><span>'+s.uptime+'</span></div>';// Cap RAM display (containers report host memory, use process values)
 let memLabel='System',memUsedDisplay=s.memoryUsed,memTotalDisplay=s.memoryTotal,memUsageDisplay=s.memoryUsage;

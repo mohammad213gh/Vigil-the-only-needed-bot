@@ -698,6 +698,20 @@ body.light-mode .err-item:hover{border-color:rgba(0,0,0,0.14)}
 body.light-mode .err-msg{color:#23253a}
 body.light-mode .err-stack{background:rgba(0,0,0,0.05);border-color:rgba(0,0,0,0.08);color:#4a5268}
 
+/* ── Backup rows ── */
+.bk-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;background:rgba(255,255,255,0.03);transition:border-color .15s}
+.bk-row:hover{border-color:rgba(255,255,255,0.14)}
+.bk-name{font-size:11px;font-family:ui-monospace,Consolas,monospace;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bk-meta{font-size:9.5px;color:var(--text-dim);white-space:nowrap}
+body.light-mode .bk-row{background:rgba(0,0,0,0.02)}
+
+/* ── Dashboard access user rows ── */
+.du-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin-bottom:6px;background:rgba(255,255,255,0.03);transition:border-color .15s}
+.du-row:hover{border-color:rgba(255,255,255,0.14)}
+.du-id{font-size:11px;font-family:ui-monospace,Consolas,monospace;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.du-meta{font-size:9.5px;color:var(--text-dim);white-space:nowrap}
+body.light-mode .du-row{background:rgba(0,0,0,0.02)}
+
 /* empty state on glass */
 .tk-empty{padding:18px 6px;text-align:center;color:#c3c9da;font-size:12px}
 .tk-empty .empty-act{color:#8b93ab;margin-top:6px;font-size:10.5px}

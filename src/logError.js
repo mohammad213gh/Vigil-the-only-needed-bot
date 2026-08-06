@@ -12,6 +12,14 @@
  *   logError(err, 'tag', null, { userId }) // Log error with structured metadata
  */
 
+// Subscribers are notified after an error is persisted (e.g. the Discord
+// alert notifier in index.js). Callbacks must never throw.
+const errorListeners = [];
+
+function setErrorListener(fn) {
+    if (typeof fn === 'function') errorListeners.push(fn);
+}
+
 function logError(err, tag = 'general', extra = '', meta = {}) {
     if (!err) return;
     
@@ -61,6 +69,13 @@ function logError(err, tag = 'general', extra = '', meta = {}) {
             timestamp,
         });
     } catch { /* persistence must never break logging */ }
+
+    // Notify subscribers (e.g. the Discord error-alert notifier).
+    try {
+        for (const fn of errorListeners) {
+            fn({ tag, message: msg, stack: logEntry.stack || null, timestamp });
+        }
+    } catch { /* a bad listener must never break logging */ }
 }
 
-module.exports = { logError };
+module.exports = { logError, setErrorListener };
