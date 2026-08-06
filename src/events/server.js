@@ -77,6 +77,11 @@ module.exports = [
         once: false,
         execute: (deps) => async (channel) => {
             if (!channel.guild) return;
+            // Close any ticket that lived in the deleted channel so it stops
+            // blocking new tickets and showing as open in the dashboard.
+            try {
+                require('../tickets').handleTicketChannelDeleted(channel);
+            } catch (err) { logError(err, 'events/server', 'channelDelete-ticket'); }
             const typeName = CHANNEL_TYPE_NAMES[channel.type] || 'Unknown';
             const executor = await deps.fetchAuditLogExecutor(channel.guild, 12, channel.id).catch(() => null);
             const byUser = executor ? ' by ' + String(executor) : '';

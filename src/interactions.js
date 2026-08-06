@@ -649,10 +649,9 @@ async function handleTicketTypeSelect(interaction, parts) {
         });
     }
 
-    // Check for existing open ticket
+    // Check for existing open ticket (auto-closes stale tickets whose channel was deleted)
     const db = getDb();
-    const existing = db.prepare('SELECT * FROM tickets WHERE guild_id = ? AND creator_id = ? AND status IN (?, ?)')
-        .get(guild.id, interaction.user.id, 'open', 'claimed');
+    const existing = require('./tickets').getBlockingOpenTicket(guild, interaction.user.id);
     if (existing) {
         return interaction.reply({ content: '❌ You already have an open ticket! <#' + existing.channel_id + '>', ephemeral: true });
     }
@@ -930,10 +929,8 @@ async function handleTicketCreate(interaction, parts) {
         });
     }
 
-    // Check for existing open ticket
-    const db = getDb();
-    const existing = db.prepare('SELECT * FROM tickets WHERE guild_id = ? AND creator_id = ? AND status IN (?, ?)')
-        .get(guild.id, interaction.user.id, 'open', 'claimed');
+    // Check for existing open ticket (auto-closes stale tickets whose channel was deleted)
+    const existing = require('./tickets').getBlockingOpenTicket(guild, interaction.user.id);
 
     if (existing) {
         return interaction.reply({ content: '❌ You already have an open ticket! <#' + existing.channel_id + '>', ephemeral: true });

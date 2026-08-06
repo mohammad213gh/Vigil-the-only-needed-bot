@@ -224,17 +224,21 @@ async function sendTicketPanel(panelInput, channel) {
         components.push(new ActionRowBuilder().addComponents(select));
     }
 
-    // Create button that creates a ticket (uses default or first type)
-    const buttonId = types.length === 1 ? 'tk_create_' + panel.id + '_' + types[0].id : 'tk_create_' + panel.id;
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-            .setCustomId(buttonId)
-            .setLabel('Create Ticket')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('🎫')
-    );
-
-    components.push(row);
+    // Create button that creates a ticket (uses default or first type).
+    // When a panel has multiple types the select menu IS the create action —
+    // picking a type from the dropdown creates the ticket directly — so the
+    // button is only shown for single-type (or empty) panels.
+    if (types.length <= 1) {
+        const buttonId = types.length === 1 ? 'tk_create_' + panel.id + '_' + types[0].id : 'tk_create_' + panel.id;
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(buttonId)
+                .setLabel('Create Ticket')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('🎫')
+        );
+        components.push(row);
+    }
 
     const msg = await channel.send({ embeds: [embed], components });
 
@@ -785,6 +789,65 @@ async function handleMemberLeave(member) {
     }
 }
 
+// ──────────────────── Deleted-Channel Cleanup ────────────────────
+// If a ticket channel is deleted manually, the DB row stays 'open' forever —
+// which blocks the user from creating new tickets and shows a phantom open
+// ticket in the dashboard. These helpers close such orphaned rows.
+
+function markTicketChannelDeleted(ticket) {
+    try {
+        const db = getDb();
+        const byId = client && client.user ? client.user.id : null;
+        const byTag = client && client.user ? client.user.tag + ' (Auto)' : 'System (Auto)';
+        db.prepare(`UPDATE tickets SET status = ?, closed_by_id = ?, closed_by_tag = ?, closed_at = ?, closed_reason = ? WHERE id = ?`)
+            .run('closed', byId, byTag, Date.now(), 'Channel deleted', ticket.id);
+        recordTicketMessage(ticket.id, '0', 'System', null, 'Ticket closed — channel was deleted', 1);
+    } catch (err) { logError(err, 'tickets', 'markTicketChannelDeleted'); }
+}
+
+// Close every open/claimed ticket in a guild whose channel no longer exists.
+function closeDeletedChannelTickets(guild) {
+    const db = getDb();
+    const rows = db.prepare("SELECT * FROM tickets WHERE guild_id = ? AND status IN ('open','claimed')").all(guild.id);
+    let closed = 0;
+    for (const t of rows) {
+        if (!guild.channels.cache.get(t.channel_id)) {
+            markTicketChannelDeleted(t);
+            closed++;
+        }
+    }
+    return closed;
+}
+
+// Returns the user's first genuinely-open ticket, auto-closing any stale ones
+// whose channels were deleted. Returns null when the user may create a ticket.
+// Only the user's own rows are scanned here — other users' stale tickets are
+// handled by the channelDelete hook and the periodic sweep.
+function getBlockingOpenTicket(guild, userId) {
+    const db = getDb();
+    const mine = db.prepare('SELECT * FROM tickets WHERE guild_id = ? AND creator_id = ? AND status IN (?, ?)')
+        .all(guild.id, userId, 'open', 'claimed');
+    let firstLive = null;
+    for (const t of mine) {
+        if (!guild.channels.cache.get(t.channel_id)) {
+            markTicketChannelDeleted(t);
+        } else if (!firstLive) {
+            firstLive = t;
+        }
+    }
+    return firstLive;
+}
+
+// channelDelete event hook — close a ticket if its channel was deleted.
+function handleTicketChannelDeleted(channel) {
+    try {
+        const db = getDb();
+        const ticket = db.prepare("SELECT * FROM tickets WHERE channel_id = ? AND status IN ('open','claimed')").get(channel.id);
+        if (!ticket) return;
+        markTicketChannelDeleted(ticket);
+    } catch (err) { logError(err, 'tickets', 'handleTicketChannelDeleted'); }
+}
+
 // ──────────────────── Ticket Transfer (Feature 4) ────────────────────
 
 async function transferTicket(guild, channel, transferer, targetMember) {
@@ -868,6 +931,12 @@ function startInactivityCheck(clientInstance) {
     inactivityInterval = setInterval(async () => {
         try {
             const db = getDb();
+            // Close any open/claimed ticket whose channel no longer exists (e.g.
+            // deleted manually while the bot was offline) so stale rows never
+            // block new tickets or show phantom open tickets.
+            for (const staleGuild of clientInstance.guilds.cache.values()) {
+                closeDeletedChannelTickets(staleGuild);
+            }
             // Get all open/claimed tickets with their panel type info
             const tickets = db.prepare(`
                 SELECT t.*, tp.inactivity_timeout
@@ -990,6 +1059,8 @@ module.exports = {
     saveTranscript, recordTicketMessage,
     // Auto-close
     handleMemberLeave,
+    // Deleted-channel cleanup
+    getBlockingOpenTicket, closeDeletedChannelTickets, handleTicketChannelDeleted,
     // Feature 1: Ratings
     saveRating, getGuildRatings, getAverageRating,
     // Feature 2: Inactivity

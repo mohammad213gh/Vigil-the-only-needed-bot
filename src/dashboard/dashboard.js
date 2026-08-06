@@ -1243,6 +1243,7 @@ function previewTicketPanel(serverId,panelId){
     // ── Live components: dropdown (multi-type) + Create button ──
     var compsHtml='';
     if(types.length>1){
+      // Multiple types — the dropdown is the create action, so no button
       compsHtml+='<div class="tk-prev-comp">'+
         '<div class="tk-prev-select-wrap">'+
           '<select id="tk-prev-type" class="tk-prev-select" onchange="tkPrevPick(this.value)">'+
@@ -1250,8 +1251,10 @@ function previewTicketPanel(serverId,panelId){
             types.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.emoji||'🎫')+' '+esc(t.name)+'</option>'}).join('')+
           '</select><span class="tk-prev-select-arrow">▾</span>'+
         '</div></div>';
+    }else{
+      // Single type (or none) — Create button only
+      compsHtml+='<div class="tk-prev-comp"><button type="button" class="tk-prev-btn tk-prev-btn-create" onclick="tkPrevCreate()">🎫 Create Ticket</button></div>';
     }
-    compsHtml+='<div class="tk-prev-comp"><button type="button" class="tk-prev-btn tk-prev-btn-create" onclick="tkPrevCreate()">🎫 Create Ticket</button></div>';
 
     var overlay=document.createElement('div');
     overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
@@ -1271,8 +1274,8 @@ function previewTicketPanel(serverId,panelId){
           '</div>'+
         '</div>'+
         '<div class="tk-prev-sim" id="tk-prev-sim">'+
-          '<div class="tk-prev-sim-hint">🖱 '+(types.length>1?'Pick a type in the dropdown above or click <b>Create Ticket</b> to simulate the Discord flow.':'Click <b>Create Ticket</b> to simulate the Discord flow.')+'</div>'+
-          '<div id="tk-prev-eph"></div><div id="tk-prev-flow"></div>'+
+          '<div class="tk-prev-sim-hint">🖱 '+(types.length>1?'Pick a type in the dropdown above to simulate the Discord flow.':'Click <b>Create Ticket</b> to simulate the Discord flow.')+'</div>'+
+          '<div id="tk-prev-flow"></div>'+
         '</div>'+
       '</div>'+
       // Send controls
@@ -1353,22 +1356,11 @@ function tkPrevPick(typeId){
 
 function tkPrevCreate(){
   var flow=document.getElementById('tk-prev-flow');
-  var eph=document.getElementById('tk-prev-eph');
   if(!flow)return;
   var types=tkPrevState.types;
   if(!types.length){flow.innerHTML=tkPrevSimCard('<div class="tk-prev-sim-error">❌ This panel has no ticket types configured. Please contact the server staff.</div>');return}
-  var sel=document.getElementById('tk-prev-type');
-  var picked=sel?sel.value:'';
-  if(types.length>1&&!picked){
-    // Simulate the ephemeral type-picker the bot sends when the button has no type
-    if(eph)eph.innerHTML=tkPrevSimCard('<div class="tk-prev-sim-title">📋 <b>Please select the type of ticket you want to create:</b></div>'+
-      '<div class="tk-prev-select-wrap"><select id="tk-prev-sim-type" class="tk-prev-select" onchange="tkPrevPick(this.value)"><option value="">Choose a ticket type...</option>'+
-      types.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.emoji||'🎫')+' '+esc(t.name)+'</option>'}).join('')+
-      '</select><span class="tk-prev-select-arrow">▾</span></div>');
-    return;
-  }
-  var type=picked?tkPrevFindType(picked):types[0];
-  if(type)tkPrevPick(type.id);
+  // Only reachable from the Create button, which renders for single-type panels
+  if(types[0])tkPrevPick(types[0].id);
 }
 
 // ── Ticket Dashboard CRUD Helpers (Modal-based UX) ──
