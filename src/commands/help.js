@@ -46,6 +46,18 @@ const CATEGORIES = [
         ],
     },
     {
+        name: 'Giveaways',
+        emoji: '🎉',
+        public: false,
+        commands: [
+            { name: 'giveaway start', desc: 'Start a giveaway (prize, duration, winners, description, required/banned role, color, image)' },
+            { name: 'giveaway end', desc: 'End a giveaway early and pick winners (ID or message link)' },
+            { name: 'giveaway reroll', desc: 'Pick new winners for an ended giveaway' },
+            { name: 'giveaway cancel', desc: 'Cancel an active giveaway' },
+            { name: 'giveaway list', desc: 'List giveaways in this server' },
+        ],
+    },
+    {
         name: 'Admin',
         emoji: '🛠️',
         public: false,

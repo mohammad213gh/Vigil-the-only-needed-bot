@@ -600,19 +600,24 @@ const commandDefs = [
                 .setDescription('Start a giveaway')
                 .addStringOption(opt => opt.setName('prize').setDescription('What is being given away').setRequired(true))
                 .addStringOption(opt => opt.setName('duration').setDescription('How long (e.g. 1h, 30m, 2d, 1h30m)').setRequired(true))
-                .addIntegerOption(opt => opt.setName('winners').setDescription('Number of winners (default 1)').setMinValue(1).setMaxValue(20)))
+                .addIntegerOption(opt => opt.setName('winners').setDescription('Number of winners (default 1)').setMinValue(1).setMaxValue(20))
+                .addStringOption(opt => opt.setName('description').setDescription('Description shown in the giveaway embed'))
+                .addRoleOption(opt => opt.setName('role').setDescription('Role required to enter'))
+                .addRoleOption(opt => opt.setName('banrole').setDescription('Role that cannot enter'))
+                .addStringOption(opt => opt.setName('color').setDescription('Embed color as hex, e.g. #ff5500'))
+                .addStringOption(opt => opt.setName('image').setDescription('Image / GIF URL shown in the embed')))
         .addSubcommand(sub =>
             sub.setName('end')
-                .setDescription('End a giveaway early and pick winners')
-                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID (from start or list)').setRequired(true)))
+                .setDescription('End a giveaway and pick winners (accepts ID or message link)')
+                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID or message link').setRequired(true)))
         .addSubcommand(sub =>
             sub.setName('reroll')
                 .setDescription('Pick new winners for an ended giveaway')
-                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID').setRequired(true)))
+                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID or message link').setRequired(true)))
         .addSubcommand(sub =>
             sub.setName('cancel')
                 .setDescription('Cancel an active giveaway')
-                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID').setRequired(true)))
+                .addStringOption(opt => opt.setName('id').setDescription('Giveaway ID or message link').setRequired(true)))
         .addSubcommand(sub =>
             sub.setName('list')
                 .setDescription('List giveaways in this server')),

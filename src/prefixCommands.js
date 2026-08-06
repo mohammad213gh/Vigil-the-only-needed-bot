@@ -1382,6 +1382,7 @@ handlers.help = async (message) => {
         { name: '📰 Info', cmds: ['ping', 'status', 'botinfo', 'userinfo [@user]', 'avatar [@user]', 'server', 'growth', 'stats server/growth'] },
         { name: '🎲 Fun', cmds: ['8ball <question>', 'coinflip', 'dice [sides]', 'rps <choice>', 'joke', 'fact', 'advice', 'quote', 'reverse <text>', 'mock <text>', 'random <min> <max>', 'worldcup <t1> <t2>'] },
         { name: '⏰ Utilities', cmds: ['remindme <time> <text>', 'reminders list', 'reminders cancel <id>', 'prefix [newprefix]', 'help'] },
+        { name: '🎉 Giveaways', cmds: ['giveaway start <duration> [winners] <prize> [--desc "..."] [--role @role] [--ban @role] [--color #hex] [--img <url>]', 'giveaway end <id|link>', 'giveaway reroll <id|link>', 'giveaway cancel <id|link>', 'giveaway list'] },
         { name: '⚙️ Bot Config', cmds: ['botname <name>', 'botavatar <url>', 'presence <type> <text>', 'embedconfig footer/color/show', 'dashboard', 'dashaccess add/remove/list', 'shutdown'] },
     ];
     const lines = categories.map(c => '**' + c.name + '**\n' + c.cmds.map(cmd => '`' + prefix + cmd + '`').join(' ')).join('\n\n');
@@ -1396,24 +1397,82 @@ handlers.help = async (message) => {
 
 // ─── Giveaways (Prefix) ───
 
+function parseGwFlags(args, startIdx) {
+    // message.args is whitespace-split, so quoted multi-word flag values arrive as
+    // separate tokens (e.g. --desc "Members only" → '"Members', 'only"'). Re-join
+    // tokens that are inside quotes BEFORE parsing flags, then strip the quotes.
+    const unquote = (s) => (typeof s === 'string' && s.length >= 2 && s.startsWith('"') && s.endsWith('"')) ? s.slice(1, -1) : s;
+    const tokens = [];
+    for (let i = startIdx; i < args.length; i++) {
+        let a = args[i];
+        if (a.startsWith('"') && !a.endsWith('"')) {
+            const parts = [a];
+            while (i + 1 < args.length && !args[i + 1].endsWith('"')) parts.push(args[++i]);
+            if (i + 1 < args.length) parts.push(args[++i]);
+            a = parts.join(' ');
+        }
+        tokens.push(a);
+    }
+    // Flags: --desc "..." --role @role --ban @role --color #hex --img <url>
+    const flags = { desc: null, role: null, ban: null, color: null, img: null };
+    const positional = [];
+    for (let i = 0; i < tokens.length; i++) {
+        const a = tokens[i];
+        if (a === '--desc' || a === '--role' || a === '--ban' || a === '--color' || a === '--img') {
+            const key = a.slice(2);
+            const val = tokens[i + 1];
+            if (val === undefined) { flags.error = 'Missing value for ' + a; return flags; }
+            flags[key] = unquote(val);
+            i++;
+        } else {
+            positional.push(unquote(a));
+        }
+    }
+    flags.positional = positional;
+    return flags;
+}
+
+function parseRoleMentionId(text) {
+    if (!text) return null;
+    const m = String(text).match(/^<@&(\d+)>$/);
+    return m ? m[1] : (/^\d+$/.test(text) ? text : null);
+}
+
 handlers.giveaway = async (message) => {
     if (!checkOwnerOrPerm(message, 'giveaway')) return;
     const sub = message.args[0];
     const gw = require('./giveaways');
+    const gid = message.guild.id;
 
     if (sub === 'start') {
-        const timeStr = message.args[1];
-        // winners is optional — only consume args[2] as the winner count when numeric,
-        // otherwise it belongs to the prize (e.g. `giveaway start 1h Nitro`).
-        let winners = 1, prizeIdx = 2;
-        const w = parseInt(message.args[2], 10);
-        if (!isNaN(w)) { winners = Math.min(Math.max(w, 1), 20); prizeIdx = 3; }
-        const prize = message.args.slice(prizeIdx).join(' ');
-        if (!timeStr || !prize) return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway start <duration> [winners] <prize>` — e.g. `' + message.prefix + 'giveaway start 1h 1 Nitro`');
+        const flags = parseGwFlags(message.args, 1);
+        if (flags.error) return message.reply('⚠️ ' + flags.error);
+        const pos = flags.positional || [];
+        const timeStr = pos[0];
+        // winners is optional — only consume pos[1] as the winner count when numeric.
+        let winners = 1, prizeIdx = 1;
+        const w = parseInt(pos[1], 10);
+        if (!isNaN(w)) { winners = Math.min(Math.max(w, 1), 20); prizeIdx = 2; }
+        const prize = pos.slice(prizeIdx).join(' ');
+        if (!timeStr || !prize) return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway start <duration> [winners] <prize> [--desc "..."] [--role @role] [--ban @role] [--color #ff5500] [--img <url>]` — e.g. `' + message.prefix + 'giveaway start 1h 1 Nitro --desc "Members only" --role @Member --color #ff5500`');
         const ms = parseDuration(timeStr);
         if (!ms) return message.reply('⚠️ Invalid duration! Use e.g. `1h`, `30m`, `2d`, `1h30m`.');
         if (ms < 15000) return message.reply('⚠️ Minimum giveaway duration is 15 seconds.');
-        const g = gw.createGiveaway({ guildId: message.guild.id, channelId: message.channel.id, prize, durationMs: ms, winners, hostId: message.author.id, hostTag: message.author.tag });
+        if (flags.color && !gw.parseHexColor(flags.color)) return message.reply('⚠️ Invalid color! Use a hex like `#ff5500`.');
+        const requiredRoleId = parseRoleMentionId(flags.role);
+        const bannedRoleId = parseRoleMentionId(flags.ban);
+        if (flags.role && !requiredRoleId) return message.reply('⚠️ Could not parse `--role` — use an @mention or a role ID.');
+        if (flags.ban && !bannedRoleId) return message.reply('⚠️ Could not parse `--ban` — use an @mention or a role ID.');
+        if (requiredRoleId && requiredRoleId === bannedRoleId) return message.reply('⚠️ A role cannot be both required and banned.');
+        const g = gw.createGiveaway({
+            guildId: gid, channelId: message.channel.id, prize, durationMs: ms, winners,
+            hostId: message.author.id, hostTag: message.author.tag,
+            description: flags.desc || null,
+            requiredRoleIds: requiredRoleId ? [requiredRoleId] : [],
+            bannedRoleIds: bannedRoleId ? [bannedRoleId] : [],
+            color: flags.color || null,
+            imageUrl: flags.img || null,
+        });
         try {
             await gw.postGiveaway(message.channel, g);
             return message.reply('✅ Giveaway started! ID: `' + g.id + '` — ends in ' + formatDuration(ms));
@@ -1424,10 +1483,12 @@ handlers.giveaway = async (message) => {
     }
 
     if (sub === 'end' || sub === 'reroll' || sub === 'cancel') {
-        const id = message.args[1];
-        if (!id) return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway ' + sub + ' <id>`');
+        const ref = message.args[1];
+        if (!ref) return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway ' + sub + ' <id|message-link>`');
+        const g = gw.getGiveawayByMessageRef(ref);
+        if (!g) return message.reply('⚠️ Giveaway not found. Use the ID from `;giveaway list` or paste the giveaway message link.');
         try {
-            const res = sub === 'end' ? await gw.endGiveaway(id) : (sub === 'reroll' ? await gw.rerollGiveaway(id) : gw.cancelGiveaway(id));
+            const res = sub === 'end' ? await gw.endGiveaway(g.id) : (sub === 'reroll' ? await gw.rerollGiveaway(g.id) : gw.cancelGiveaway(g.id));
             if (res.error) return message.reply('⚠️ ' + res.error);
             const done = sub === 'cancel' ? 'cancelled' : (sub === 'reroll' ? 'rerolled' : 'ended');
             return message.reply('✅ Giveaway ' + done + (res.winners && res.winners.length ? ' — winners: ' + res.winners.map(w => '<@' + w + '>').join(', ') : ''));
@@ -1437,12 +1498,12 @@ handlers.giveaway = async (message) => {
     }
 
     if (sub === 'list') {
-        const list = gw.listGiveaways(message.guild.id, 10);
+        const list = gw.listGiveaways(gid, 10);
         if (!list.length) return message.reply('ℹ️ No giveaways in this server.');
-        return message.reply('**🎉 Giveaways**\n' + list.map(g => '`' + g.id + '` — **' + g.prize + '** (' + g.status + (g.ends_at ? ', ends <t:' + Math.floor(g.ends_at / 1000) + ':R>' : '') + ')').join('\n'));
+        return message.reply('**🎉 Giveaways**\n' + list.map(g => '`' + g.id + '` — **' + g.prize + '** (' + g.status + (g.status === 'active' ? ', ends <t:' + Math.floor(g.ends_at / 1000) + ':R>' : '') + ')').join('\n'));
     }
 
-    return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway start <duration> [winners] <prize>` | `end <id>` | `reroll <id>` | `cancel <id>` | `list`');
+    return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway start <duration> [winners] <prize> [flags]` | `end <id|link>` | `reroll <id|link>` | `cancel <id|link>` | `list`');
 };
 
 async function handlePrefixMessage(message, prefix) {
@@ -1643,4 +1704,4 @@ handlers.goodbye = async (message) => {
     return true;
 }
 
-module.exports = { handlePrefixMessage, prefixHandlers: handlers };
+module.exports = { handlePrefixMessage, prefixHandlers: handlers, parseGwFlags };

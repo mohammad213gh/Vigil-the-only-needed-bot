@@ -90,7 +90,12 @@ function initSchema() {
             status TEXT NOT NULL DEFAULT 'active',
             winner_ids TEXT,
             ended_at INTEGER,
-            created_at INTEGER NOT NULL
+            created_at INTEGER NOT NULL,
+            description TEXT,
+            required_role_ids TEXT,
+            banned_role_ids TEXT,
+            color INTEGER,
+            image_url TEXT
         );
 
         CREATE INDEX IF NOT EXISTS idx_giveaways_active ON giveaways(status, ends_at);
@@ -459,6 +464,23 @@ function initSchema() {
     } catch {}
     try {
         db.exec('ALTER TABLE ticket_panels ADD COLUMN description TEXT NOT NULL DEFAULT \'Click the button below to create a ticket and a staff member will assist you.\'');
+    } catch {}
+
+    // Giveaway v2 columns (description, role requirements, color, image)
+    try {
+        db.exec('ALTER TABLE giveaways ADD COLUMN description TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE giveaways ADD COLUMN required_role_ids TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE giveaways ADD COLUMN banned_role_ids TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE giveaways ADD COLUMN color INTEGER');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE giveaways ADD COLUMN image_url TEXT');
     } catch {}
 
     // Add inactivity columns to ticket_panel_types if not exists
