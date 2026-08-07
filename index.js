@@ -15,6 +15,7 @@ const { findReactionRole } = require('./src/reactionRoles');
 const { setInviteClient, cacheAllInvites, handleInviteCreate, handleInviteDelete } = require('./src/invites');
 const { setTicketClient, startInactivityCheck, stopInactivityCheck } = require('./src/tickets');
 const { setGiveawayClient, startGiveawayCheck, stopGiveawayCheck } = require('./src/giveaways');
+const { startServerStats, stopServerStats, refreshGuildStats } = require('./src/serverStats');
 
 // ─── Command Registry ───
 const { commandRegistry, publicCommands } = require('./src/commands/registry');
@@ -38,6 +39,7 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildPresences,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildVoiceStates,
         GatewayIntentBits.GuildScheduledEvents,
@@ -103,6 +105,17 @@ for (const event of allEvents) {
         client.on(event.name, safeHandler);
     }
 }
+
+// ── Live server-stats refresh (join / leave / boost changes) ──
+// Fires on top of the registered events so stat channels update instantly
+// instead of waiting for the 10-minute sweep.
+client.on(Events.GuildMemberAdd, (member) => { refreshGuildStats(member.guild).catch(() => {}); });
+client.on(Events.GuildMemberRemove, (member) => { refreshGuildStats(member.guild).catch(() => {}); });
+client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
+    if ((oldMember.premiumSince || null) !== (newMember.premiumSince || null)) {
+        refreshGuildStats(newMember.guild).catch(() => {});
+    }
+});
 
 // ──────────────────── Cooldown System ────────────────────
 
@@ -314,6 +327,7 @@ function shutdown(signal) {
     console.log('\n[Bot] Received ' + signal + '. Shutting down gracefully...');
     stopInactivityCheck();
     stopGiveawayCheck();
+    stopServerStats();
     closeDb();
     client.destroy();
     console.log('[Bot] Goodbye!');
@@ -389,7 +403,8 @@ client.login(process.env.BOT_TOKEN).then(() => {
     startInactivityCheck(client);
     setGiveawayClient(client);
     startGiveawayCheck();
-    console.log('[Bot] Ticket inactivity + giveaway checks started.');
+    startServerStats(client);
+    console.log('[Bot] Ticket inactivity, giveaway + server stats checks started.');
 }).catch(err => {
     console.error('[Bot] Failed to login:', err.message || err);
     process.exit(1);

@@ -622,6 +622,31 @@ const commandDefs = [
             sub.setName('list')
                 .setDescription('List giveaways in this server')),
     new SlashCommandBuilder()
+        .setName('serverstats')
+        .setDescription('Manage live server stats channels')
+        .addSubcommand(sub =>
+            sub.setName('add')
+                .setDescription('Add a live counter to a channel name')
+                .addStringOption(opt => opt.setName('type').setDescription('What to count').setRequired(true).addChoices(
+                    { name: 'Members', value: 'members' },
+                    { name: 'Humans', value: 'humans' },
+                    { name: 'Bots', value: 'bots' },
+                    { name: 'Online', value: 'online' },
+                    { name: 'Boosts', value: 'boosting' },
+                    { name: 'Boost Tier', value: 'boost_tier' },
+                    { name: 'Channels', value: 'channels' },
+                    { name: 'Roles', value: 'roles' },
+                    { name: 'Emojis', value: 'emojis' }))
+                .addChannelOption(opt => opt.setName('channel').setDescription('The voice/text channel to rename').setRequired(true))
+                .addStringOption(opt => opt.setName('label').setDescription('Custom label (defaults to the stat name)')))
+        .addSubcommand(sub =>
+            sub.setName('remove')
+                .setDescription('Stop updating a stat channel')
+                .addChannelOption(opt => opt.setName('channel').setDescription('The channel to stop updating').setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List configured stat channels in this server')),
+    new SlashCommandBuilder()
         .setName('remindme')
         .setDescription('Set a reminder (you will be DMed when the time is up)')
         .addStringOption(opt =>

@@ -1506,6 +1506,64 @@ handlers.giveaway = async (message) => {
     return message.reply('⚠️ Usage: `' + message.prefix + 'giveaway start <duration> [winners] <prize> [flags]` | `end <id|link>` | `reroll <id|link>` | `cancel <id|link>` | `list`');
 };
 
+// ─── Server Stats (Prefix) ───
+
+handlers.serverstats = async (message) => {
+    if (!checkOwnerOrPerm(message, 'serverstats')) return;
+    const sub = message.args[0];
+    const ss = require('./serverStats');
+    const gid = message.guild.id;
+
+    const typesList = Object.keys(ss.STAT_TYPES).join(', ');
+
+    if (sub === 'add') {
+        const type = message.args[1];
+        const chanArg = message.args[2];
+        const label = message.args.slice(3).join(' ').trim() || null;
+        if (!type || !chanArg) {
+            return message.reply('⚠️ Usage: `' + message.prefix + 'serverstats add <type> #channel [label]`\nTypes: ' + typesList);
+        }
+        if (!ss.STAT_TYPES[type]) {
+            return message.reply('⚠️ Unknown type `' + type + '`. Valid: ' + typesList);
+        }
+        const m = String(chanArg).match(/^<#(\d+)>$/);
+        const chanId = (m && m[1]) || String(chanArg);
+        const channel = message.guild.channels.cache.get(chanId);
+        if (!channel) return message.reply('⚠️ Channel not found — mention it like `#channel` or paste its ID.');
+        if (channel.type === 4) return message.reply('⚠️ Categories can\'t hold a counter — pick a voice or text channel.');
+        if (channel.isThread && channel.isThread()) return message.reply('⚠️ Threads can\'t hold a counter — pick a voice or text channel.');
+        const res = ss.setServerStat(gid, channel.id, type, label);
+        if (res.error) return message.reply('❌ ' + res.error);
+        try { await ss.refreshGuildStats(message.guild); } catch {}
+        const value = ss.computeStat(message.guild, message.guild.members, type);
+        const note = type === 'online' && value === 0 ? '\nℹ️ The **online** counter needs the **Presence Intent** enabled in the Discord Developer Portal to show live numbers.' : '';
+        return message.reply('✅ Counter set on <#' + channel.id + '> — now named **' + ss.formatStatName(type, value, label) + '**' + note);
+    }
+
+    if (sub === 'remove') {
+        const chanArg = message.args[1];
+        if (!chanArg) return message.reply('⚠️ Usage: `' + message.prefix + 'serverstats remove #channel`');
+        const m = String(chanArg).match(/^<#(\d+)>$/);
+        const chanId = (m && m[1]) || String(chanArg);
+        const channel = message.guild.channels.cache.get(chanId);
+        if (!channel) return message.reply('⚠️ Channel not found.');
+        ss.removeServerStat(gid, channel.id);
+        return message.reply('✅ Stopped updating <#' + channel.id + '>.');
+    }
+
+    if (sub === 'list') {
+        const rows = ss.getServerStats(gid);
+        if (!rows.length) return message.reply('ℹ️ No stat channels configured. Types: ' + typesList);
+        const lines = rows.map(r => {
+            const value = ss.computeStat(message.guild, message.guild.members, r.stat_type);
+            return '• <#' + r.channel_id + '> → **' + ss.formatStatName(r.stat_type, value, r.label) + '**';
+        }).join('\n');
+        return message.reply('**📊 Server Stat Channels**\n' + lines);
+    }
+
+    return message.reply('⚠️ Usage: `' + message.prefix + 'serverstats add <type> #channel [label]` | `remove #channel` | `list`\nTypes: ' + typesList);
+};
+
 async function handlePrefixMessage(message, prefix) {
     const content = message.content;
     if (!content.startsWith(prefix)) return false;

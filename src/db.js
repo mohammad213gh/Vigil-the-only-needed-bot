@@ -100,6 +100,15 @@ function initSchema() {
 
         CREATE INDEX IF NOT EXISTS idx_giveaways_active ON giveaways(status, ends_at);
 
+        CREATE TABLE IF NOT EXISTS server_stats (
+            guild_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            stat_type TEXT NOT NULL,
+            label TEXT,
+            PRIMARY KEY (guild_id, channel_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_server_stats_guild ON server_stats(guild_id);
+
         CREATE TABLE IF NOT EXISTS guild_stats (
             guild_id TEXT PRIMARY KEY,
             total_joins INTEGER NOT NULL DEFAULT 0,

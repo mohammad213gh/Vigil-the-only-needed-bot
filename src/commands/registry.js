@@ -17,6 +17,9 @@ const { executeRemindMe, executeReminders } = require('./reminder');
 // ── Giveaways ──
 const { executeGiveaway } = require('./giveaways');
 
+// ── Server Stats ──
+const { executeServerStats } = require('./serverStats');
+
 // ── Admin ──
 const { executeRole, executePurge, executeSlowmode, executeNickname, executeSay, executeEmbed, executeDeploy, executeTrack, executePoll, executeAnnounce } = require('./admin');
 
@@ -164,6 +167,9 @@ const commandRegistry = {
 
     // Warning Thresholds
     thresholds: executeThresholds,
+
+    // Server Stats
+    serverstats: executeServerStats,
 
     // Tickets
     ticket: executeTicket,
