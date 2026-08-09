@@ -23,6 +23,9 @@ const { executeServerStats } = require('./serverStats');
 // ── Voice Presence ──
 const { executeVoicePresence } = require('./voicePresence');
 
+// ── Temp Voice Channels ──
+const { executeTempVoice } = require('./tempVoice');
+
 // ── Admin ──
 const { executeRole, executePurge, executeSlowmode, executeNickname, executeSay, executeEmbed, executeDeploy, executeTrack, executePoll, executeAnnounce } = require('./admin');
 
@@ -177,6 +180,9 @@ const commandRegistry = {
     // Voice Presence
     vc: executeVoicePresence,
 
+    // Temp Voice Channels
+    tempvc: executeTempVoice,
+
     // Tickets
     ticket: executeTicket,
 };
@@ -186,6 +192,8 @@ const publicCommands = [
     'help', 'ping', 'worldcup', '8ball', 'coinflip', 'dice', 'rps',
     'joke', 'fact', 'advice', 'quote', 'reverse', 'mock', 'random',
     'remindme', 'reminders',
+    // tempvc enforces owner/owner-of-channel permissions inside its handler
+    'tempvc',
 ];
 
 module.exports = { commandRegistry, publicCommands };

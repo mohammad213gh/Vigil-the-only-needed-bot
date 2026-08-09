@@ -150,6 +150,20 @@ test('setStatusText requires the bot to be in a VC', async () => {
     await assert.rejects(vp.setStatusText(makeGuild(), 'x'), (e) => e.code === 'NOT_IN_VC');
 });
 
+// ── @discordjs/voice wiring ──
+test('enableDiscordJsVoice turns on the idle-join implementation', () => {
+    const ok = vp.enableDiscordJsVoice();
+    assert.strictEqual(ok, true, '@discordjs/voice should be installed');
+    vp.resetVoiceImpl(); // don\'t leak the real impl into the other tests
+});
+test('connectVoice falls back to the VoiceState move when no impl is enabled', async () => {
+    vp.resetVoiceImpl();
+    const guild = makeGuild();
+    const vc = makeVoiceChannel('vc9', 'Lounge');
+    await vp.connectVoice(guild, vc);
+    assert.strictEqual(guild.members.me.voice.channelId, 'vc9', 'fallback should move the bot via VoiceState');
+});
+
 // ── leaveChannel ──
 test('leaveChannel clears the presence and disconnects', async () => {
     const guild = makeGuild({ me: makeBotMember({ channelId: 'vc1' }) });

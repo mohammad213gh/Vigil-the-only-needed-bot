@@ -665,6 +665,42 @@ const commandDefs = [
                 .setDescription('Set the "Listening to" status while in VC (leave empty to reset)')
                 .addStringOption(opt => opt.setName('text').setDescription('Status text shown as "Listening to …"').setRequired(false))),
     new SlashCommandBuilder()
+        .setName('tempvc')
+        .setDescription('Temporary voice channels — join a trigger VC to get your own')
+        .addSubcommand(sub =>
+            sub.setName('set')
+                .setDescription('Designate a "join to create" voice channel')
+                .addChannelOption(opt => opt.setName('channel').setDescription('The voice channel to use as the trigger').setRequired(true))
+                .addChannelOption(opt => opt.setName('category').setDescription('Optional category where spawned channels go').setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('unset')
+                .setDescription('Remove a trigger channel (omit the channel to remove all)')
+                .addChannelOption(opt => opt.setName('channel').setDescription('The trigger channel to remove').setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('name')
+                .setDescription('Set the spawned-channel name template ({name}, {number})')
+                .addStringOption(opt => opt.setName('template').setDescription('e.g. "{name}\'s channel" or "{name} • {number}"').setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('list')
+                .setDescription('List trigger channels and live temp channels'))
+        .addSubcommand(sub =>
+            sub.setName('rename')
+                .setDescription('Rename your temp voice channel')
+                .addStringOption(opt => opt.setName('name').setDescription('New channel name').setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('limit')
+                .setDescription('Set the user limit on your temp channel')
+                .addIntegerOption(opt => opt.setName('limit').setDescription('Max users (0 = unlimited)').setRequired(true).setMinValue(0).setMaxValue(99)))
+        .addSubcommand(sub =>
+            sub.setName('lock')
+                .setDescription('Lock your temp channel (only you can join)'))
+        .addSubcommand(sub =>
+            sub.setName('unlock')
+                .setDescription('Unlock your temp channel'))
+        .addSubcommand(sub =>
+            sub.setName('claim')
+                .setDescription('Take ownership of the temp channel you are in')),
+    new SlashCommandBuilder()
         .setName('remindme')
         .setDescription('Set a reminder (you will be DMed when the time is up)')
         .addStringOption(opt =>
@@ -787,6 +823,7 @@ const commandDefs = [
                             { name: 'invites', value: 'invites' },
                             { name: 'note', value: 'note' },
                             { name: 'logs', value: 'logs' },
+                            { name: 'tempvc', value: 'tempvc' },
                         )))
         .addSubcommand(sub =>
             sub.setName('revoke')
@@ -825,6 +862,7 @@ const commandDefs = [
                             { name: 'invites', value: 'invites' },
                             { name: 'note', value: 'note' },
                             { name: 'logs', value: 'logs' },
+                            { name: 'tempvc', value: 'tempvc' },
                         )))
         .addSubcommand(sub =>
             sub.setName('list')

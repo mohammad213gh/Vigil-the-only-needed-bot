@@ -8,12 +8,12 @@
 //   • /vc status <text>    — custom "Listening to" text (the aura)
 //   • /vc leave            — leave and clear the activity
 //
-// Implementation note: discord.js v14.14's voice channel class has no
-// join() method, so we use the bot's own VoiceState instead:
-//   guild.members.me.voice.setChannel(channel)  → join / move
-//   guild.members.me.voice.disconnect()         → leave
-// This needs no extra dependencies (@discordjs/voice) and the
-// GuildVoiceStates intent is already enabled.
+// Implementation note: discord.js v14's REST move endpoint
+// (VoiceState.setChannel) errors with "Target user is not connected to
+// voice" when the bot isn't already in a VC — it can move, but NOT connect
+// from idle. That's why joining uses @discordjs/voice's joinVoiceChannel
+// (enabled via enableDiscordJsVoice() in index.js), which handles both
+// connecting from idle and moving. The GuildVoiceStates intent is enabled.
 
 const { ActivityType } = require('discord.js');
 const { getDb } = require('./db');
@@ -27,6 +27,72 @@ let voiceClient = null;
 
 function setVoiceClient(client) {
     voiceClient = client;
+}
+
+// ──────────────────── Voice connection layer ────────────────────
+
+let connectImpl = null;    // async (guild, channel) => {}
+let disconnectImpl = null; // (guild) => {}
+
+// Use @discordjs/voice for connecting so the bot can join a VC from an idle
+// state (VoiceState.setChannel only moves an already-connected bot). Called
+// once at boot from index.js. Returns true when enabled.
+function enableDiscordJsVoice() {
+    let v = null;
+    try { v = require('@discordjs/voice'); } catch { v = null; }
+    if (!v || typeof v.joinVoiceChannel !== 'function') return false;
+    connectImpl = async (guild, channel) => {
+        const conn = v.joinVoiceChannel({
+            channelId: channel.id,
+            guildId: guild.id,
+            adapterCreator: guild.voiceAdapterCreator,
+            selfDeaf: true,
+            selfMute: true,
+        });
+        // Some failures (channel full, no permission) surface asynchronously
+        // via the connection's error event instead of throwing. Log it AND
+        // clear the saved presence/activity so the DB doesn't claim the bot
+        // is in a VC it never actually joined.
+        if (conn && typeof conn.once === 'function') {
+            conn.once('error', (err) => {
+                logError(err, 'voicePresence', 'connection_' + guild.id);
+                clearPresence(guild.id);
+                clearActivity().catch(() => {});
+            });
+        }
+    };
+    disconnectImpl = (guild) => {
+        if (typeof v.getVoiceConnection !== 'function') return;
+        const conn = v.getVoiceConnection(guild.id);
+        if (conn) { try { conn.destroy(); } catch { /* already gone */ } }
+    };
+    return true;
+}
+
+// Connect or move the bot into `channel`. With @discordjs/voice enabled this
+// works from idle; the VoiceState fallback (moves only) exists for tests and
+// environments without the library.
+async function connectVoice(guild, channel) {
+    if (!guild || !channel) return;
+    if (connectImpl) { await connectImpl(guild, channel); return; }
+    const me = getBotMember(guild);
+    if (me && me.voice) await me.voice.setChannel(channel);
+}
+
+function leaveVoice(guild) {
+    if (!guild) return;
+    if (disconnectImpl) { try { disconnectImpl(guild); } catch { /* ignore */ } }
+    const me = getBotMember(guild);
+    if (me && me.voice && me.voice.channelId) {
+        try { me.voice.disconnect().catch(() => {}); } catch { /* ignore */ }
+    }
+}
+
+// Test-only: drop the @discordjs/voice impl so tests exercise the VoiceState
+// fallback deterministically. No-op in production (never called there).
+function resetVoiceImpl() {
+    connectImpl = null;
+    disconnectImpl = null;
 }
 
 // ──────────────────── Pure helpers ────────────────────
@@ -149,7 +215,7 @@ async function joinChannel(guild, channel, status) {
     const prev = getPresence(guild.id);
     savePresence(guild.id, channel.id, status || null);
     try {
-        await me.voice.setChannel(channel);
+        await connectVoice(guild, channel);
     } catch (err) {
         // Roll back so a failed join doesn't leave a phantom presence.
         if (prev && prev.channel_id) savePresence(guild.id, prev.channel_id, prev.status);
@@ -186,7 +252,7 @@ async function moveChannel(guild, channel) {
 
     savePresence(guild.id, channel.id, prev.status);
     try {
-        await me.voice.setChannel(channel);
+        await connectVoice(guild, channel);
     } catch (err) {
         savePresence(guild.id, prev.channel_id, prev.status);
         throw err;
@@ -196,15 +262,8 @@ async function moveChannel(guild, channel) {
 }
 
 async function leaveChannel(guild) {
-    const me = getBotMember(guild);
+    leaveVoice(guild);
     clearPresence(guild.id);
-    if (me && me.voice && me.voice.channelId) {
-        try {
-            await me.voice.disconnect();
-        } catch (err) {
-            logError(err, 'voicePresence', 'disconnect');
-        }
-    }
     await clearActivity();
 }
 
@@ -245,7 +304,7 @@ async function restoreAllPresences(client) {
         const me = getBotMember(guild);
         if (!me) continue;
         try {
-            await me.voice.setChannel(channel);
+            await connectVoice(guild, channel);
             await updateActivity(guild, channel, saved.status);
         } catch (err) {
             logError(err, 'voicePresence', 'restore_' + guild.id);
@@ -323,7 +382,7 @@ function scheduleRejoin(guild, saved) {
                 rejoinTimers.delete(gid);
                 return;
             }
-            await me.voice.setChannel(channel);
+            await connectVoice(guild, channel);
             await updateActivity(guild, channel, saved.status);
             rejoinTimers.delete(gid);
         } catch (err) {
@@ -345,6 +404,10 @@ function stopVoicePresence() {
 
 module.exports = {
     setVoiceClient,
+    enableDiscordJsVoice,
+    connectVoice,
+    leaveVoice,
+    resetVoiceImpl,
     isVoiceChannel,
     formatStatus,
     getPresence,

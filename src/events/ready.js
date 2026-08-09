@@ -25,5 +25,10 @@ module.exports = {
         const { restoreAllPresences } = require('../voicePresence');
         setTimeout(() => restoreAllPresences(client).catch(() => {}), 3000);
         setTimeout(() => restoreAllPresences(client).catch(() => {}), 30000);
+
+        // Clean up temp voice channels that died while the bot was offline
+        // (delete empty leftovers, drop rows for deleted channels).
+        const { cleanupOrphans } = require('../tempVoice');
+        setTimeout(() => cleanupOrphans(client).catch(() => {}), 5000);
     },
 };

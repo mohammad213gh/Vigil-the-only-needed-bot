@@ -1595,7 +1595,11 @@ handlers.vc = async (message) => {
             await vp.joinChannel(guild, channel, null);
         } catch (err) {
             if (err.code === 'ALREADY_THERE') return message.reply('🎧 I\'m already in **' + channel.name + '**.');
-            return message.reply('❌ Failed to join: ' + (err.message || err));
+            const msg = String(err.message || err);
+            if (msg.includes('Target user is not connected to voice')) {
+                return message.reply('❌ The bot couldn\'t connect — the voice library (@discordjs/voice) isn\'t loaded. Restart the bot after `npm install` to fix this.');
+            }
+            return message.reply('❌ Failed to join: ' + msg);
         }
         return message.reply('🎧 Joined **' + channel.name + '** and I\'m staying. Use `' + message.prefix + 'vc status <text>` to flex a custom "Listening to" line.');
     }
@@ -1630,6 +1634,146 @@ handlers.vc = async (message) => {
         } catch (err) {
             return message.reply('❌ ' + (err.message || err));
         }
+    }
+
+    return message.reply(usage);
+};
+
+// ─── Temp Voice Channels (Prefix) ───
+
+handlers.tempvc = async (message) => {
+    const tv = require('./tempVoice');
+    const guild = message.guild;
+    const sub = (message.args[0] || '').toLowerCase();
+    const adminSubs = ['set', 'unset', 'name', 'list'];
+
+    if (adminSubs.includes(sub) && !checkOwnerOrPerm(message, 'tempvc')) return;
+
+    const usage = '⚠️ Usage: `' + message.prefix + 'tempvc set #channel [category]` | `unset [#channel]` | `name <template>` | `list` | `rename <name>` | `limit <n>` | `lock` | `unlock` | `claim`';
+
+    // Helpers
+    const parseChannel = (arg) => {
+        if (!arg) return null;
+        const m = String(arg).match(/^<#(\d+)>$/);
+        const id = (m && m[1]) || String(arg);
+        const ch = guild.channels.cache.get(id);
+        return ch || null;
+    };
+    const getMemberChannel = () => {
+        const vcId = message.member.voice && message.member.voice.channelId;
+        if (vcId) {
+            const row = tv.getSpawnedChannel(vcId);
+            if (row) {
+                const ch = guild.channels.cache.get(vcId);
+                if (ch) return { row, channel: ch };
+            }
+        }
+        const owned = tv.getSpawnedByOwner(guild.id, message.author.id);
+        if (owned) {
+            const ch = guild.channels.cache.get(owned.channel_id);
+            if (ch) return { row: owned, channel: ch };
+        }
+        return null;
+    };
+
+    if (sub === 'set') {
+        const channel = parseChannel(message.args[1]);
+        const category = parseChannel(message.args[2]);
+        if (!channel) return message.reply('⚠️ Usage: `' + message.prefix + 'tempvc set #channel [category]`');
+        if (!tv.isVoiceChannel(channel)) return message.reply('⚠️ The trigger must be a voice channel.');
+        if (category && category.type !== 4) return message.reply('⚠️ The second arg must be a category.');
+        tv.setTrigger(guild.id, channel.id, category ? category.id : null);
+        return message.reply('✅ <#' + channel.id + '> is now a **join-to-create** trigger' + (category ? ' (spawns in **' + category.name + '**)' : '') + '.');
+    }
+
+    if (sub === 'unset') {
+        const channel = parseChannel(message.args[1]);
+        if (channel) {
+            tv.removeTrigger(guild.id, channel.id);
+            return message.reply('✅ Removed <#' + channel.id + '> as a trigger.');
+        }
+        const triggers = tv.getTriggers(guild.id);
+        for (const t of triggers) tv.removeTrigger(guild.id, t.channel_id);
+        return message.reply(triggers.length ? '✅ Removed all **' + triggers.length + '** triggers.' : 'ℹ️ No triggers configured.');
+    }
+
+    if (sub === 'name') {
+        const template = message.args.slice(1).join(' ').trim();
+        if (!template) return message.reply('⚠️ Usage: `' + message.prefix + 'tempvc name <template>` — placeholders `{name}` and `{number}`.');
+        const res = tv.setConfig(guild.id, template);
+        if (res.error) return message.reply('❌ ' + res.error);
+        return message.reply('✅ Name template set to **' + res.name_template + '**.');
+    }
+
+    if (sub === 'list') {
+        const triggers = tv.getTriggers(guild.id);
+        const spawned = tv.getSpawned(guild.id);
+        const tLines = [];
+        for (const t of triggers) {
+            const ch = guild.channels.cache.get(t.channel_id);
+            if (!ch) { tv.removeTrigger(guild.id, t.channel_id); continue; }
+            tLines.push('• <#' + t.channel_id + '>' + (t.category_id ? ' → <#' + t.category_id + '>' : ''));
+        }
+        const sLines = [];
+        for (const s of spawned) {
+            const ch = guild.channels.cache.get(s.channel_id);
+            if (!ch) { tv.removeSpawned(s.channel_id); continue; }
+            const owner = guild.members.cache.get(s.owner_id);
+            sLines.push('• <#' + s.channel_id + '> → ' + (owner ? String(owner.user) : '`' + s.owner_id + '`') + (ch.members && ch.members.size ? ' (' + ch.members.size + ' in it)' : ' (empty)'));
+        }
+        if (!tLines.length && !sLines.length) return message.reply('ℹ️ No temp voice channels configured. Use `' + message.prefix + 'tempvc set #channel`.');
+        return message.reply('**🎙️ Temp Voice Channels**\n' + (tLines.length ? '**Triggers:**\n' + tLines.join('\n') + '\n' : '') + (sLines.length ? '**Live:**\n' + sLines.join('\n') : ''));
+    }
+
+    if (sub === 'rename' || sub === 'limit' || sub === 'lock' || sub === 'unlock') {
+        const found = getMemberChannel();
+        if (!found) return message.reply('⚠️ You\'re not in a temp voice channel (and don\'t own one).');
+        if (found.row.owner_id !== message.author.id && !isOwner(message.author.id)) {
+            return message.reply('⚠️ Only the channel owner can do that. Owner gone? Use `' + message.prefix + 'tempvc claim`.');
+        }
+        const { channel } = found;
+        if (sub === 'rename') {
+            const name = message.args.slice(1).join(' ').trim().slice(0, tv.MAX_CHANNEL_NAME);
+            if (!name) return message.reply('⚠️ Usage: `' + message.prefix + 'tempvc rename <name>`');
+            try { await channel.setName(name, 'Temp VC renamed'); return message.reply('✅ Renamed to **' + name + '**.'); }
+            catch (err) { return message.reply('❌ Failed to rename: ' + (err.message || err)); }
+        }
+        if (sub === 'limit') {
+            const n = parseInt(message.args[1], 10);
+            if (isNaN(n) || n < 0 || n > 99) return message.reply('⚠️ Usage: `' + message.prefix + 'tempvc limit <0-99>`');
+            try { await channel.setUserLimit(n, 'Temp VC user limit'); return message.reply(n === 0 ? '✅ User limit cleared (unlimited).' : '✅ User limit set to **' + n + '**.', ); }
+            catch (err) { return message.reply('❌ Failed to set limit: ' + (err.message || err)); }
+        }
+        const locked = sub === 'lock';
+        try {
+            const everyone = guild.roles.everyone;
+            if (locked) {
+                await channel.permissionOverwrites.edit(everyone, { Connect: false }, 'Temp VC locked');
+                await channel.permissionOverwrites.edit(message.member, { Connect: true }, 'Temp VC owner');
+                return message.reply('🔒 Channel locked — only you can join now.');
+            }
+            const eow = channel.permissionOverwrites.cache.get(everyone.id);
+            if (eow && eow.deny.has(PermissionFlagsBits.Connect)) await channel.permissionOverwrites.delete(everyone, 'Temp VC unlocked');
+            const mow = channel.permissionOverwrites.cache.get(message.member.id);
+            if (mow && mow.allow.has(PermissionFlagsBits.Connect)) await channel.permissionOverwrites.delete(message.member, 'Temp VC unlocked');
+            return message.reply('🔓 Channel unlocked — everyone can join.');
+        } catch (err) { return message.reply('❌ Failed to ' + sub + ': ' + (err.message || err)); }
+    }
+
+    if (sub === 'claim') {
+        const vcId = message.member.voice && message.member.voice.channelId;
+        if (!vcId) return message.reply('⚠️ You need to be inside a temp voice channel to claim it.');
+        const row = tv.getSpawnedChannel(vcId);
+        if (!row) return message.reply('⚠️ This isn\'t a temp voice channel.');
+        const claimChannel = guild.channels.cache.get(vcId);
+        // channel.members is authoritative for who is in the VC (the members
+        // cache can miss the owner on large servers).
+        if (claimChannel && claimChannel.members && claimChannel.members.has(row.owner_id)) {
+            return message.reply('⚠️ The owner is still here — no need to claim.');
+        }
+        tv.addSpawned(vcId, guild.id, message.author.id, row.trigger_id);
+        tv.cancelDeletion(vcId);
+        return message.reply('👑 You now own this channel.');
     }
 
     return message.reply(usage);

@@ -16,7 +16,8 @@ const { setInviteClient, cacheAllInvites, handleInviteCreate, handleInviteDelete
 const { setTicketClient, startInactivityCheck, stopInactivityCheck } = require('./src/tickets');
 const { setGiveawayClient, startGiveawayCheck, stopGiveawayCheck } = require('./src/giveaways');
 const { startServerStats, stopServerStats, refreshGuildStats } = require('./src/serverStats');
-const { setVoiceClient, handleBotVoiceUpdate, stopVoicePresence } = require('./src/voicePresence');
+const { setVoiceClient, enableDiscordJsVoice, handleBotVoiceUpdate, stopVoicePresence } = require('./src/voicePresence');
+const { handleVoiceStateUpdate: handleTempVoiceUpdate, stopTempVoice } = require('./src/tempVoice');
 
 // ─── Command Registry ───
 const { commandRegistry, publicCommands } = require('./src/commands/registry');
@@ -58,6 +59,11 @@ const client = new Client({
 setLoggerClient(client);
 setInviteClient(client);
 setVoiceClient(client);
+// @discordjs/voice — lets the bot join a VC from an idle state (the REST
+// move endpoint can only move a bot that is already connected).
+if (!enableDiscordJsVoice()) {
+    console.warn('[WARN] @discordjs/voice is not available — /vc join will only work to MOVE the bot between VCs, not connect from idle. Run `npm install`.');
+}
 
 // ──────────────────── Event Dependencies ────────────────────
 
@@ -125,6 +131,13 @@ client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
 // bounded backoff. Never throws.
 client.on(Events.VoiceStateUpdate, (oldState, newState) => {
     try { handleBotVoiceUpdate(oldState, newState); } catch { /* never crash on voice state */ }
+});
+
+// ── Temp voice channels ──
+// Joining a trigger VC spawns a per-user channel; leaving an empty spawned
+// channel schedules its deletion. Never throws.
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+    try { handleTempVoiceUpdate(oldState, newState); } catch { /* never crash on voice state */ }
 });
 
 // ──────────────────── Cooldown System ────────────────────
@@ -339,6 +352,7 @@ function shutdown(signal) {
     stopGiveawayCheck();
     stopServerStats();
     stopVoicePresence();
+    stopTempVoice();
     closeDb();
     client.destroy();
     console.log('[Bot] Goodbye!');

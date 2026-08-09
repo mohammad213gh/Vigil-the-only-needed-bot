@@ -115,6 +115,28 @@ function initSchema() {
             status TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS temp_vc_config (
+            guild_id TEXT PRIMARY KEY,
+            name_template TEXT NOT NULL DEFAULT '{name}''s channel'
+        );
+
+        CREATE TABLE IF NOT EXISTS temp_vc_triggers (
+            guild_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            category_id TEXT,
+            PRIMARY KEY (guild_id, channel_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_temp_vc_triggers_guild ON temp_vc_triggers(guild_id);
+
+        CREATE TABLE IF NOT EXISTS temp_vc_channels (
+            channel_id TEXT PRIMARY KEY,
+            guild_id TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            trigger_id TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_temp_vc_channels_guild ON temp_vc_channels(guild_id);
+
         CREATE TABLE IF NOT EXISTS guild_stats (
             guild_id TEXT PRIMARY KEY,
             total_joins INTEGER NOT NULL DEFAULT 0,

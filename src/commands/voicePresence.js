@@ -107,6 +107,12 @@ function handleJoinError(interaction, err, channel) {
         return interaction.reply({ content: '❌ That\'s not a voice channel.', ephemeral: true });
     }
     const msg = String(err.message || err);
+    if (msg.includes('Target user is not connected to voice')) {
+        return interaction.reply({
+            content: '❌ The bot couldn\'t connect — the voice library (@discordjs/voice) isn\'t loaded. Restart the bot after `npm install` to fix this.',
+            ephemeral: true,
+        });
+    }
     if (msg.includes('Missing Permissions') || msg.includes('Missing Access')) {
         return interaction.reply({
             content: '❌ The bot can\'t join <#' + channel.id + '> — check **View Channel** / **Connect** permissions and that the channel isn\'t full.',
