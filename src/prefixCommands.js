@@ -1736,8 +1736,9 @@ handlers.tempvc = async (message) => {
             channel = ch;
         }
         try {
-            await channel.send(tv.buildPanelMessage(guild));
-            return message.reply('🎙️ Control panel sent to ' + channel + '.');
+            const msg = await channel.send(tv.buildPanelMessage(guild));
+            tv.registerPanel(guild.id, channel.id, msg.id);
+            return message.reply('🎙️ Control panel sent to ' + channel + '. It now updates live as channels are created, locked, or deleted.');
         } catch (err) {
             return message.reply('❌ Failed to send the panel: ' + (err.message || err));
         }
@@ -1768,12 +1769,14 @@ handlers.tempvc = async (message) => {
             if (locked) {
                 await channel.permissionOverwrites.edit(everyone, { Connect: false }, 'Temp VC locked');
                 await channel.permissionOverwrites.edit(message.member, { Connect: true }, 'Temp VC owner');
+                tv.updatePanels(guild).catch(() => {});
                 return message.reply('🔒 Channel locked — only you can join now.');
             }
             const eow = channel.permissionOverwrites.cache.get(everyone.id);
             if (eow && eow.deny.has(PermissionFlagsBits.Connect)) await channel.permissionOverwrites.delete(everyone, 'Temp VC unlocked');
             const mow = channel.permissionOverwrites.cache.get(message.member.id);
             if (mow && mow.allow.has(PermissionFlagsBits.Connect)) await channel.permissionOverwrites.delete(message.member, 'Temp VC unlocked');
+            tv.updatePanels(guild).catch(() => {});
             return message.reply('🔓 Channel unlocked — everyone can join.');
         } catch (err) { return message.reply('❌ Failed to ' + sub + ': ' + (err.message || err)); }
     }
@@ -1791,6 +1794,7 @@ handlers.tempvc = async (message) => {
         }
         tv.addSpawned(vcId, guild.id, message.author.id, row.trigger_id);
         tv.cancelDeletion(vcId);
+        tv.updatePanels(guild).catch(() => {});
         return message.reply('👑 You now own this channel.');
     }
 

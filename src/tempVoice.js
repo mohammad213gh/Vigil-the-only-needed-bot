@@ -190,9 +190,103 @@ function getAllSpawned() {
     }
 }
 
+// ─── Control-panel message tracking (so panels can be edited live) ───
+
+function registerPanel(guildId, channelId, messageId) {
+    if (!guildId || !channelId || !messageId) return;
+    try {
+        getDb().prepare('INSERT OR REPLACE INTO temp_vc_panels (guild_id, channel_id, message_id) VALUES (?, ?, ?)')
+            .run(guildId, channelId, messageId);
+    } catch (err) {
+        logError(err, 'tempvoice', 'registerPanel');
+    }
+}
+
+function getPanels(guildId) {
+    if (!guildId) return [];
+    try {
+        return getDb().prepare('SELECT guild_id, channel_id, message_id FROM temp_vc_panels WHERE guild_id = ?').all(guildId);
+    } catch (err) {
+        logError(err, 'tempvoice', 'getPanels');
+        return [];
+    }
+}
+
+function unregisterPanel(messageId) {
+    if (!messageId) return;
+    try {
+        getDb().prepare('DELETE FROM temp_vc_panels WHERE message_id = ?').run(messageId);
+    } catch (err) {
+        logError(err, 'tempvoice', 'unregisterPanel');
+    }
+}
+
 // ──────────────────── Spawn lifecycle ────────────────────
 
 // Returns the channel on success, null on failure, or the reused channel.
+// Re-render every registered control panel in a guild so the embed always
+// reflects the current live channels (owner + lock status). Stale panel
+// messages (deleted channel/message) are dropped. Never rejects.
+// Concurrent calls for the same guild are coalesced: if a pass is already
+// running, the next call marks a re-run that fires when it finishes, so a
+// burst of voice events only costs one fetch+edit per panel per tick.
+const panelUpdaters = new Map(); // guildId -> { again, promise }
+
+async function renderPanels(guild) {
+    const rows = getPanels(guild.id);
+    if (!rows.length) return;
+    let payload;
+    try {
+        payload = buildPanelMessage(guild);
+    } catch (err) {
+        logError(err, 'tempvoice', 'buildPanelMessage');
+        return;
+    }
+    for (const row of rows) {
+        try {
+            const channel = guild.channels && guild.channels.cache ? guild.channels.cache.get(row.channel_id) : null;
+            if (!channel || !channel.messages) {
+                unregisterPanel(row.message_id);
+                continue;
+            }
+            let msg;
+            try {
+                msg = await channel.messages.fetch(row.message_id);
+            } catch {
+                unregisterPanel(row.message_id); // message deleted
+                continue;
+            }
+            if (!msg || !msg.editable) {
+                unregisterPanel(row.message_id);
+                continue;
+            }
+            await msg.edit(payload);
+        } catch (err) {
+            logError(err, 'tempvoice', 'updatePanel_' + row.channel_id);
+        }
+    }
+}
+
+function updatePanels(guild) {
+    if (!guild || !guild.id) return Promise.resolve();
+    const existing = panelUpdaters.get(guild.id);
+    if (existing) {
+        existing.again = true;
+        return existing.promise;
+    }
+    const state = { again: false, promise: null };
+    state.promise = (async () => {
+        do {
+            state.again = false;
+            await renderPanels(guild);
+        } while (state.again);
+    })().finally(() => {
+        if (panelUpdaters.get(guild.id) === state) panelUpdaters.delete(guild.id);
+    });
+    panelUpdaters.set(guild.id, state);
+    return state.promise;
+}
+
 async function spawnChannel(guild, member, trigger) {
     if (!guild || !member || !trigger) return null;
 
@@ -249,8 +343,10 @@ async function spawnChannel(guild, member, trigger) {
         cancelDeletion(channel.id);
         removeSpawned(channel.id);
         channel.delete('Member could not be moved into temp channel').catch(() => {});
+        updatePanels(guild).catch(() => {});
         return null;
     }
+    updatePanels(guild).catch(() => {});
     return channel;
 }
 
@@ -284,6 +380,7 @@ function scheduleDeletionIfEmpty(guild, channelId) {
             if (ch.members && ch.members.size > 0) return; // someone joined again
             await ch.delete('Temp voice channel empty');
             removeSpawned(channelId);
+            updatePanels(guild).catch(() => {});
         } catch (err) {
             logError(err, 'tempvoice', 'delete_' + channelId);
         }
@@ -328,6 +425,7 @@ async function setChannelLocked(channel, guild, member, locked) {
             await channel.permissionOverwrites.delete(member, 'Temp VC unlocked');
         }
     }
+    updatePanels(guild).catch(() => {});
 }
 
 // "Create my VC" (panel button): gives the member their own channel using
@@ -397,6 +495,7 @@ async function deleteOwnedChannel(guild, ownerId) {
             logError(err, 'tempvoice', 'ownerDelete_' + existing.channel_id);
         }
     }
+    updatePanels(guild).catch(() => {});
     return { success: true };
 }
 
@@ -437,17 +536,32 @@ function buildPanelMessage(guild) {
         embed.addFields({ name: '🎟️ Trigger channels', value: triggers.map(t => '<#' + t.channel_id + '>').join(' '), inline: false });
     }
     if (spawned.length) {
-        // Truncate on channel-tag boundaries so a <#id> is never cut in half.
-        const tags = spawned.map(s => '<#' + s.channel_id + '>');
+        // One line per live channel: tag — owner — lock state.
+        const lines = [];
+        const everyoneId = guild.roles && guild.roles.everyone ? guild.roles.everyone.id : null;
+        for (const s of spawned) {
+            const ch = guild.channels && guild.channels.cache ? guild.channels.cache.get(s.channel_id) : null;
+            if (!ch) continue;
+            const owner = guild.members && guild.members.cache ? guild.members.cache.get(s.owner_id) : null;
+            const ownerName = (owner && owner.user && owner.user.username) || ('<@' + s.owner_id + '>');
+            const eow = everyoneId && ch.permissionOverwrites && ch.permissionOverwrites.cache
+                ? ch.permissionOverwrites.cache.get(everyoneId) : null;
+            // Lock state is derived from the cached @everyone overwrite (the
+            // same one setChannelLocked edits). If it isn't cached yet, the
+            // channel shows as Open — acceptable, the next event re-renders.
+            const locked = !!(eow && eow.deny && eow.deny.has(PermissionFlagsBits.Connect));
+            lines.push('• <#' + ch.id + '> — **' + ownerName + '** — ' + (locked ? '🔒 Locked' : '🔓 Open'));
+        }
+        // Truncate on line boundaries so a channel tag is never cut in half.
         let text = '';
         let shown = 0;
-        for (const t of tags) {
-            if ((text ? text + ' ' + t : t).length > 1000) break;
-            text = text ? text + ' ' + t : t;
+        for (const line of lines) {
+            if ((text ? text + '\n' + line : line).length > 1000) break;
+            text = text ? text + '\n' + line : line;
             shown++;
         }
-        if (shown < tags.length) text += ' …+' + (tags.length - shown) + ' more';
-        embed.addFields({ name: '🔊 Live channels (' + spawned.length + ')', value: text || '—', inline: false });
+        if (shown < lines.length) text += '\n…+' + (lines.length - shown) + ' more';
+        embed.addFields({ name: '🔊 Live channels (' + lines.length + ')', value: text || '—', inline: false });
     }
     return { embeds: [embed], components: buildPanelComponents() };
 }
@@ -535,6 +649,10 @@ module.exports = {
     getSpawnedByOwner,
     addSpawned,
     removeSpawned,
+    registerPanel,
+    getPanels,
+    unregisterPanel,
+    updatePanels,
     spawnChannel,
     cancelDeletion,
     scheduleDeletionIfEmpty,

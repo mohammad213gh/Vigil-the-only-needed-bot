@@ -48,12 +48,14 @@ function makeGuild(opts = {}) {
     for (const c of (opts.channels || [])) channels.set(c.id, c);
     return {
         id: opts.id || 'g1',
+        name: opts.name || 'Test Guild',
         channels: {
             cache: channels,
             create: opts.create || (async () => { throw new Error('no create mock'); }),
         },
         members: { cache: new Map() },
         roles: { everyone: { id: 'everyone' } },
+        iconURL: () => undefined,
     };
 }
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); await new Promise(r => setImmediate(r)); };
@@ -316,6 +318,88 @@ test('cleanupOrphans deletes empty spawned channels and drops stale rows', async
     assert.strictEqual(remaining.length, 1);
     assert.strictEqual(remaining[0].channel_id, 'spBusy');
     tv.removeSpawned('spBusy');
+});
+
+// ── Control-panel tracking + live updates ──
+test('registerPanel/getPanels/unregisterPanel roundtrip', () => {
+    tv.registerPanel('g1', 'text1', 'msg1');
+    tv.registerPanel('g1', 'text2', 'msg2');
+    assert.strictEqual(tv.getPanels('g1').length, 2);
+    assert.strictEqual(tv.getPanels('other').length, 0);
+    tv.unregisterPanel('msg1');
+    assert.strictEqual(tv.getPanels('g1').length, 1);
+    assert.strictEqual(tv.getPanels('g1')[0].message_id, 'msg2');
+    tv.unregisterPanel('msg2');
+});
+
+test('buildPanelMessage shows owner + lock status per live channel', () => {
+    const spawned = makeVoiceChannel('sp1', 'Aya\'s channel');
+    const { PermissionFlagsBits } = require('discord.js');
+    // Simulate a locked channel: @everyone overwrite denies Connect.
+    const deny = new Set();
+    deny.add(PermissionFlagsBits.Connect);
+    spawned.permissionOverwrites.cache.set('everyone', { id: 'everyone', deny, allow: new Set() });
+    const guild = makeGuild({ channels: [spawned] });
+    guild.members.cache.set('u1', { id: 'u1', user: { username: 'Aya' } });
+    tv.addSpawned('sp1', 'g1', 'u1', 'trig1');
+
+    const msg = tv.buildPanelMessage(guild);
+    const field = msg.embeds[0].data.fields.find(f => f.name.startsWith('🔊 Live channels'));
+    assert.ok(field, 'live channels field present');
+    assert.ok(field.value.includes('Aya'), 'owner username shown');
+    assert.ok(field.value.includes('🔒'), 'locked state shown');
+    tv.removeSpawned('sp1');
+});
+
+test('buildPanelMessage marks channels open when not locked', () => {
+    const spawned = makeVoiceChannel('sp1', 'Aya\'s channel');
+    const guild = makeGuild({ channels: [spawned] });
+    guild.members.cache.set('u1', { id: 'u1', user: { username: 'Aya' } });
+    tv.addSpawned('sp1', 'g1', 'u1', 'trig1');
+
+    const msg = tv.buildPanelMessage(guild);
+    const field = msg.embeds[0].data.fields.find(f => f.name.startsWith('🔊 Live channels'));
+    assert.ok(field.value.includes('🔓'), 'open state shown when no lock overwrite');
+    tv.removeSpawned('sp1');
+});
+
+test('updatePanels edits every registered panel message with fresh data', async () => {
+    const spawned = makeVoiceChannel('sp1', 'Aya\'s channel');
+    const edits = [];
+    const textChannel = {
+        id: 'text1',
+        messages: {
+            async fetch() {
+                return {
+                    id: 'msg1',
+                    editable: true,
+                    async edit(payload) { edits.push(payload); },
+                };
+            },
+        },
+    };
+    const guild = makeGuild({ channels: [spawned, textChannel] });
+    guild.members.cache.set('u1', { id: 'u1', user: { username: 'Aya' } });
+    tv.addSpawned('sp1', 'g1', 'u1', 'trig1');
+    tv.registerPanel('g1', 'text1', 'msg1');
+
+    await tv.updatePanels(guild);
+    assert.strictEqual(edits.length, 1, 'panel message edited');
+    assert.ok(edits[0].embeds && edits[0].embeds.length === 1, 'embed payload sent');
+    assert.strictEqual(tv.getPanels('g1').length, 1, 'panel row kept after successful edit');
+    tv.removeSpawned('sp1');
+    tv.unregisterPanel('msg1');
+});
+
+test('updatePanels drops rows whose panel message is gone', async () => {
+    const guild = makeGuild();
+    tv.registerPanel('g1', 'textGone', 'msgGone');
+    guild.channels.cache.set('textGone', {
+        id: 'textGone',
+        messages: { async fetch() { throw new Error('unknown message'); } },
+    });
+    await tv.updatePanels(guild);
+    assert.strictEqual(tv.getPanels('g1').length, 0, 'stale panel row removed');
 });
 
 // ── createForMember (panel button) ──

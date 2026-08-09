@@ -28,8 +28,9 @@ async function executeTempVoice(interaction) {
             return interaction.reply({ content: '❌ Pick a text channel to send the panel to.', ephemeral: true });
         }
         try {
-            await channel.send(tv.buildPanelMessage(guild));
-            return interaction.reply({ content: '🎙️ Control panel sent to ' + channel + '.', ephemeral: true });
+            const msg = await channel.send(tv.buildPanelMessage(guild));
+            tv.registerPanel(guild.id, channel.id, msg.id);
+            return interaction.reply({ content: '🎙️ Control panel sent to ' + channel + '. It now updates live as channels are created, locked, or deleted.', ephemeral: true });
         } catch (err) {
             return interaction.reply({ content: '❌ Failed to send the panel: ' + (err.message || err), ephemeral: true });
         }
@@ -166,6 +167,7 @@ async function executeTempVoice(interaction) {
     }
     tv.addSpawned(vcId, guild.id, interaction.user.id, row.trigger_id);
     tv.cancelDeletion(vcId);
+    tv.updatePanels(guild).catch(() => {});
     return interaction.reply({ content: '👑 You now own this channel. You can `/tempvc rename`, `/tempvc limit`, `/tempvc lock` it.', ephemeral: true });
 
 }

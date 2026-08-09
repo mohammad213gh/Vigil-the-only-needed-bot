@@ -1011,6 +1011,10 @@ async function handleTempVcButton(interaction, parts) {
     if (action === 'create') {
         try {
             const res = await tv.createForMember(guild, member);
+            // Fresh spawns are already panel-updated inside spawnChannel;
+            // only the reuse path needs a refresh here (nothing changed
+            // visually, but the call is cheap and idempotent).
+            if (res.reused) tv.updatePanels(guild).catch(() => {});
             return interaction.reply({
                 content: res.reused
                     ? '🎧 Moved you back to <#' + res.channel.id + '>.'
@@ -1091,6 +1095,7 @@ async function handleTempVcButton(interaction, parts) {
         }
         tv.addSpawned(vcId, guild.id, userId, inRow.trigger_id);
         tv.cancelDeletion(vcId);
+        tv.updatePanels(guild).catch(() => {});
         return interaction.reply({ content: '👑 You now own this channel. Use **Rename** / **Lock** / **Delete** to control it.', ephemeral: true });
     }
 
