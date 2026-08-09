@@ -647,6 +647,24 @@ const commandDefs = [
             sub.setName('list')
                 .setDescription('List configured stat channels in this server')),
     new SlashCommandBuilder()
+        .setName('vc')
+        .setDescription('Voice presence — make the bot chill in a voice channel (owner)')
+        .addSubcommand(sub =>
+            sub.setName('join')
+                .setDescription('Join a voice channel and stay there (defaults to your channel)')
+                .addChannelOption(opt => opt.setName('channel').setDescription('The voice channel to join').setRequired(false)))
+        .addSubcommand(sub =>
+            sub.setName('move')
+                .setDescription('Move the bot to another voice channel')
+                .addChannelOption(opt => opt.setName('channel').setDescription('The voice channel to move to').setRequired(true)))
+        .addSubcommand(sub =>
+            sub.setName('leave')
+                .setDescription('Leave the voice channel and stop the VC presence'))
+        .addSubcommand(sub =>
+            sub.setName('status')
+                .setDescription('Set the "Listening to" status while in VC (leave empty to reset)')
+                .addStringOption(opt => opt.setName('text').setDescription('Status text shown as "Listening to …"').setRequired(false))),
+    new SlashCommandBuilder()
         .setName('remindme')
         .setDescription('Set a reminder (you will be DMed when the time is up)')
         .addStringOption(opt =>

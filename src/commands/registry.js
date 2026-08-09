@@ -20,6 +20,9 @@ const { executeGiveaway } = require('./giveaways');
 // ── Server Stats ──
 const { executeServerStats } = require('./serverStats');
 
+// ── Voice Presence ──
+const { executeVoicePresence } = require('./voicePresence');
+
 // ── Admin ──
 const { executeRole, executePurge, executeSlowmode, executeNickname, executeSay, executeEmbed, executeDeploy, executeTrack, executePoll, executeAnnounce } = require('./admin');
 
@@ -170,6 +173,9 @@ const commandRegistry = {
 
     // Server Stats
     serverstats: executeServerStats,
+
+    // Voice Presence
+    vc: executeVoicePresence,
 
     // Tickets
     ticket: executeTicket,

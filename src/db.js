@@ -109,6 +109,12 @@ function initSchema() {
         );
         CREATE INDEX IF NOT EXISTS idx_server_stats_guild ON server_stats(guild_id);
 
+        CREATE TABLE IF NOT EXISTS voice_presence (
+            guild_id TEXT PRIMARY KEY,
+            channel_id TEXT NOT NULL,
+            status TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS guild_stats (
             guild_id TEXT PRIMARY KEY,
             total_joins INTEGER NOT NULL DEFAULT 0,

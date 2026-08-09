@@ -1564,6 +1564,77 @@ handlers.serverstats = async (message) => {
     return message.reply('⚠️ Usage: `' + message.prefix + 'serverstats add <type> #channel [label]` | `remove #channel` | `list`\nTypes: ' + typesList);
 };
 
+// ─── Voice Presence (Prefix) ───
+
+handlers.vc = async (message) => {
+    if (!checkOwnerOrPerm(message, 'vc')) return;
+    const sub = (message.args[0] || '').toLowerCase();
+    const vp = require('./voicePresence');
+    const guild = message.guild;
+
+    const usage = '⚠️ Usage: `' + message.prefix + 'vc join [#channel]` | `move #channel` | `status <text>` | `leave`';
+
+    if (sub === 'join') {
+        let channel = null;
+        const chanArg = message.args[1];
+        if (chanArg) {
+            const m = String(chanArg).match(/^<#(\d+)>$/);
+            const chanId = (m && m[1]) || String(chanArg);
+            channel = guild.channels.cache.get(chanId);
+            if (!channel) return message.reply('⚠️ Channel not found — mention it like `#channel` or paste its ID.');
+        } else {
+            channel = message.member.voice && message.member.voice.channel ? message.member.voice.channel : null;
+            if (!channel) return message.reply('⚠️ You\'re not in a voice channel. Join one first, or pass one: `' + message.prefix + 'vc join #channel`');
+        }
+        if (!vp.isVoiceChannel(channel)) return message.reply('⚠️ That\'s not a voice channel.');
+        const perms = channel.permissionsFor(guild.members.me);
+        if (!perms || !perms.has(PermissionFlagsBits.Connect) || !perms.has(PermissionFlagsBits.ViewChannel)) {
+            return message.reply('⚠️ The bot can\'t join <#' + channel.id + '> — missing **View Channel** or **Connect** permission.');
+        }
+        try {
+            await vp.joinChannel(guild, channel, null);
+        } catch (err) {
+            if (err.code === 'ALREADY_THERE') return message.reply('🎧 I\'m already in **' + channel.name + '**.');
+            return message.reply('❌ Failed to join: ' + (err.message || err));
+        }
+        return message.reply('🎧 Joined **' + channel.name + '** and I\'m staying. Use `' + message.prefix + 'vc status <text>` to flex a custom "Listening to" line.');
+    }
+
+    if (sub === 'move') {
+        const chanArg = message.args[1];
+        if (!chanArg) return message.reply(usage);
+        const m = String(chanArg).match(/^<#(\d+)>$/);
+        const chanId = (m && m[1]) || String(chanArg);
+        const channel = guild.channels.cache.get(chanId);
+        if (!channel) return message.reply('⚠️ Channel not found.');
+        if (!vp.isVoiceChannel(channel)) return message.reply('⚠️ That\'s not a voice channel.');
+        try {
+            await vp.moveChannel(guild, channel);
+        } catch (err) {
+            return message.reply('❌ ' + (err.message || err));
+        }
+        return message.reply('🎧 Moved to **' + channel.name + '**.');
+    }
+
+    if (sub === 'leave') {
+        await vp.leaveChannel(guild);
+        return message.reply('👋 Left the voice channel. The aura has been stored for later.');
+    }
+
+    if (sub === 'status') {
+        const text = message.args.slice(1).join(' ').trim();
+        try {
+            const clean = await vp.setStatusText(guild, text);
+            if (clean === null) return message.reply('🎧 Status reset — back to "Listening to <channel name>".');
+            return message.reply('🎧 Now "Listening to **' + clean + '**".');
+        } catch (err) {
+            return message.reply('❌ ' + (err.message || err));
+        }
+    }
+
+    return message.reply(usage);
+};
+
 async function handlePrefixMessage(message, prefix) {
     const content = message.content;
     if (!content.startsWith(prefix)) return false;
@@ -1747,7 +1818,7 @@ handlers.goodbye = async (message) => {
     }
 };
 
-    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'server_leave', 'shutdown', 'welcome', 'goodbye', 'invites', 'note', 'logs'];
+    const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'server_leave', 'shutdown', 'welcome', 'goodbye', 'invites', 'note', 'logs', 'vc'];
     if (ownerOnlyCmds.includes(cmdName)) {
         if (!checkOwnerOrPerm(message, cmdName)) return true;
     }

@@ -16,6 +16,7 @@ const { setInviteClient, cacheAllInvites, handleInviteCreate, handleInviteDelete
 const { setTicketClient, startInactivityCheck, stopInactivityCheck } = require('./src/tickets');
 const { setGiveawayClient, startGiveawayCheck, stopGiveawayCheck } = require('./src/giveaways');
 const { startServerStats, stopServerStats, refreshGuildStats } = require('./src/serverStats');
+const { setVoiceClient, handleBotVoiceUpdate, stopVoicePresence } = require('./src/voicePresence');
 
 // ─── Command Registry ───
 const { commandRegistry, publicCommands } = require('./src/commands/registry');
@@ -56,6 +57,7 @@ const client = new Client({
 
 setLoggerClient(client);
 setInviteClient(client);
+setVoiceClient(client);
 
 // ──────────────────── Event Dependencies ────────────────────
 
@@ -115,6 +117,14 @@ client.on(Events.GuildMemberUpdate, (oldMember, newMember) => {
     if ((oldMember.premiumSince || null) !== (newMember.premiumSince || null)) {
         refreshGuildStats(newMember.guild).catch(() => {});
     }
+});
+
+// ── Voice presence self-heal ──
+// If the bot is moved manually it follows; if it gets disconnected while a
+// presence is saved (kicked / channel deleted / blip) it rejoins with
+// bounded backoff. Never throws.
+client.on(Events.VoiceStateUpdate, (oldState, newState) => {
+    try { handleBotVoiceUpdate(oldState, newState); } catch { /* never crash on voice state */ }
 });
 
 // ──────────────────── Cooldown System ────────────────────
@@ -328,6 +338,7 @@ function shutdown(signal) {
     stopInactivityCheck();
     stopGiveawayCheck();
     stopServerStats();
+    stopVoicePresence();
     closeDb();
     client.destroy();
     console.log('[Bot] Goodbye!');
