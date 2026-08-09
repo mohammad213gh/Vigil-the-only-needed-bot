@@ -3,7 +3,6 @@
 // a channel named after you; it auto-deletes when empty.
 //   Admin subs (set/unset/list/name)  — bot owner or granted permission
 //   Owner subs (rename/limit/lock/unlock/claim) — the temp channel's owner
-const { PermissionFlagsBits } = require('discord.js');
 const { isOwner } = require('../helpers');
 const { hasPermission } = require('../permissions');
 const tv = require('../tempVoice');
@@ -12,50 +11,27 @@ function canAdmin(interaction) {
     return isOwner(interaction.user.id) || hasPermission(interaction.guild.id, 'tempvc', interaction.user.id);
 }
 
-// The temp channel the user is currently in, falling back to one they own.
-function getMemberChannel(interaction) {
-    const guild = interaction.guild;
-    const vcId = interaction.member.voice && interaction.member.voice.channelId;
-    if (vcId) {
-        const row = tv.getSpawnedChannel(vcId);
-        if (row) {
-            const channel = guild.channels.cache.get(vcId);
-            if (channel) return { row, channel };
-        }
-    }
-    const owned = tv.getSpawnedByOwner(guild.id, interaction.user.id);
-    if (owned) {
-        const channel = guild.channels.cache.get(owned.channel_id);
-        if (channel) return { row: owned, channel };
-    }
-    return null;
-}
-
-async function setLocked(channel, guild, member, locked) {
-    const everyone = guild.roles.everyone;
-    if (locked) {
-        await channel.permissionOverwrites.edit(everyone, { Connect: false }, 'Temp VC locked');
-        await channel.permissionOverwrites.edit(member, { Connect: true }, 'Temp VC owner');
-    } else {
-        const eow = channel.permissionOverwrites.cache.get(everyone.id);
-        if (eow && eow.deny.has(PermissionFlagsBits.Connect)) {
-            await channel.permissionOverwrites.delete(everyone, 'Temp VC unlocked');
-        }
-        const mow = channel.permissionOverwrites.cache.get(member.id);
-        if (mow && mow.allow.has(PermissionFlagsBits.Connect)) {
-            await channel.permissionOverwrites.delete(member, 'Temp VC unlocked');
-        }
-    }
-}
-
 async function executeTempVoice(interaction) {
     const sub = interaction.options.getSubcommand();
     const guild = interaction.guild;
 
     // ── Admin subcommands ──
-    if (sub === 'set' || sub === 'unset' || sub === 'name' || sub === 'list') {
+    if (sub === 'set' || sub === 'unset' || sub === 'name' || sub === 'list' || sub === 'panel') {
         if (!canAdmin(interaction)) {
             return interaction.reply({ content: '❌ You need the **bot owner** or the `tempvc` permission to manage temp voice channels.', ephemeral: true });
+        }
+    }
+
+    if (sub === 'panel') {
+        const channel = interaction.options.getChannel('channel') || interaction.channel;
+        if (!channel || !channel.isTextBased || !channel.isTextBased()) {
+            return interaction.reply({ content: '❌ Pick a text channel to send the panel to.', ephemeral: true });
+        }
+        try {
+            await channel.send(tv.buildPanelMessage(guild));
+            return interaction.reply({ content: '🎙️ Control panel sent to ' + channel + '.', ephemeral: true });
+        } catch (err) {
+            return interaction.reply({ content: '❌ Failed to send the panel: ' + (err.message || err), ephemeral: true });
         }
     }
 
@@ -132,7 +108,7 @@ async function executeTempVoice(interaction) {
 
     // ── Owner subcommands ──
     if (sub === 'rename' || sub === 'limit' || sub === 'lock' || sub === 'unlock') {
-        const found = getMemberChannel(interaction);
+        const found = tv.getMemberChannelFor(guild, interaction.member);
         if (!found) {
             return interaction.reply({ content: '❌ You\'re not in a temp voice channel (and don\'t own one). Join a trigger VC to get your own.', ephemeral: true });
         }
@@ -165,7 +141,7 @@ async function executeTempVoice(interaction) {
         if (sub === 'lock' || sub === 'unlock') {
             const locked = sub === 'lock';
             try {
-                await setLocked(channel, guild, interaction.member, locked);
+                await tv.setChannelLocked(channel, guild, interaction.member, locked);
                 return interaction.reply({ content: locked ? '🔒 Channel locked — only you can join now.' : '🔓 Channel unlocked — everyone can join.', ephemeral: true });
             } catch (err) {
                 return interaction.reply({ content: '❌ Failed to ' + sub + ': ' + (err.message || err), ephemeral: true });

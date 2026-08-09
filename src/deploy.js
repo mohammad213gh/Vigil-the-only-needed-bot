@@ -684,6 +684,10 @@ const commandDefs = [
             sub.setName('list')
                 .setDescription('List trigger channels and live temp channels'))
         .addSubcommand(sub =>
+            sub.setName('panel')
+                .setDescription('Send the button control panel to a channel')
+                .addChannelOption(opt => opt.setName('channel').setDescription('Text channel to send the panel to (defaults to here)').setRequired(false)))
+        .addSubcommand(sub =>
             sub.setName('rename')
                 .setDescription('Rename your temp voice channel')
                 .addStringOption(opt => opt.setName('name').setDescription('New channel name').setRequired(true)))

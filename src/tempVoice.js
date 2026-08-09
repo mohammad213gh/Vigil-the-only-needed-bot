@@ -13,6 +13,7 @@
 // the voice presence module. Spawned channels are tracked in the DB so
 // empty orphans can be cleaned up on restart.
 
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { getDb } = require('./db');
 const { logError } = require('./logError');
 
@@ -38,6 +39,27 @@ function formatTemplate(template, username, number) {
         .replace(/\{name\}/g, (username && typeof username === 'string') ? username : 'member')
         .replace(/\{number\}/g, String(Number(number) || 1))
         .slice(0, MAX_CHANNEL_NAME);
+}
+
+// Append " 2", " 3", … when another voice channel (in the same category, or
+// the guild) already has the base name, so "Aya's channel" stays unique.
+function uniqueChannelName(guild, baseName, categoryId) {
+    const taken = new Set();
+    if (guild && guild.channels && guild.channels.cache) {
+        for (const c of guild.channels.cache.values()) {
+            if (c.type !== 2) continue;
+            if (categoryId && c.parentId !== categoryId) continue;
+            taken.add(c.name);
+        }
+    }
+    if (!taken.has(baseName)) return baseName;
+    let n = 2;
+    while (n < 100) {
+        const candidate = (baseName + ' ' + n).slice(0, MAX_CHANNEL_NAME);
+        if (!taken.has(candidate)) return candidate;
+        n++;
+    }
+    return baseName.slice(0, MAX_CHANNEL_NAME);
 }
 
 // ──────────────────── DB access ────────────────────
@@ -170,37 +192,52 @@ function getAllSpawned() {
 
 // ──────────────────── Spawn lifecycle ────────────────────
 
+// Returns the channel on success, null on failure, or the reused channel.
 async function spawnChannel(guild, member, trigger) {
-    if (!guild || !member || !trigger) return;
+    if (!guild || !member || !trigger) return null;
 
-    // The member already has a live spawned channel → move them back to it
-    // instead of creating a duplicate (e.g. they joined the trigger again).
+    // The member already has a spawned channel:
+    //   • still in use → move them back to it (no duplicate) and keep it alive
+    //   • empty → it's doomed (deletion pending) — DON'T bounce them back into
+    //     it; let it clean up and spawn a fresh one instead.
     const existing = getSpawnedByOwner(guild.id, member.id);
     if (existing) {
         const ch = guild.channels && guild.channels.cache ? guild.channels.cache.get(existing.channel_id) : null;
         if (ch) {
-            cancelDeletion(existing.channel_id);
-            try { await member.voice.setChannel(ch); } catch { /* fine */ }
-            return;
+            if (ch.members && ch.members.size > 0) {
+                cancelDeletion(existing.channel_id);
+                try { await member.voice.setChannel(ch); } catch { /* fine */ }
+                return ch;
+            }
+            scheduleDeletionIfEmpty(guild, existing.channel_id);
         }
-        removeSpawned(existing.channel_id); // stale row — clean it up
+        removeSpawned(existing.channel_id); // stale/doomed row — clean it up
     }
 
     const count = getSpawned(guild.id).length;
-    const name = formatTemplate(getConfig(guild.id).name_template, member.user && member.user.username, count + 1);
+    let name = formatTemplate(getConfig(guild.id).name_template, member.user && member.user.username, count + 1);
     const parent = trigger.category_id && guild.channels && guild.channels.cache ? guild.channels.cache.get(trigger.category_id) : null;
+    name = uniqueChannelName(guild, name, parent ? parent.id : null);
 
     const options = { name, type: 2, reason: 'Temp voice channel for ' + (member.user ? member.user.tag : member.id) };
     if (parent) options.parent = parent.id;
+    // Inherit the trigger's bitrate + user limit so the spawned channel feels
+    // like a real continuation of it (premium bitrate carries over).
+    const triggerChannel = guild.channels && guild.channels.cache ? guild.channels.cache.get(trigger.channel_id) : null;
+    if (triggerChannel) {
+        if (typeof triggerChannel.bitrate === 'number') options.bitrate = triggerChannel.bitrate;
+        if (typeof triggerChannel.userLimit === 'number') options.userLimit = triggerChannel.userLimit;
+    }
+
     let channel;
     try {
         channel = await guild.channels.create(options);
     } catch (err) {
-        // Bot can't create channels (permissions) — keep the member in the
-        // trigger and let them know, so they don't sit there wondering.
+        // Bot can't create channels (permissions) — keep the member where they
+        // are and let them know, so they don't sit there wondering.
         logError(err, 'tempvoice', 'create_' + guild.id);
         if (member.send) member.send('❌ I couldn\'t create a temp voice channel for you — the bot is missing **Manage Channels** permission (or the category is full).').catch(() => {});
-        return;
+        return null;
     }
 
     addSpawned(channel.id, guild.id, member.id, trigger.channel_id);
@@ -212,7 +249,9 @@ async function spawnChannel(guild, member, trigger) {
         cancelDeletion(channel.id);
         removeSpawned(channel.id);
         channel.delete('Member could not be moved into temp channel').catch(() => {});
+        return null;
     }
+    return channel;
 }
 
 function cancelDeletion(channelId) {
@@ -251,6 +290,166 @@ function scheduleDeletionIfEmpty(guild, channelId) {
     }, EMPTY_DELETE_DELAY_MS);
     if (timer.unref) timer.unref();
     deleteTimers.set(channelId, timer);
+}
+
+// ──────────────────── Shared helpers (slash + panel buttons) ────────────────────
+
+// The temp channel the member is currently in, falling back to one they own.
+function getMemberChannelFor(guild, member) {
+    if (!guild || !member) return null;
+    const vcId = member.voice && member.voice.channelId;
+    if (vcId) {
+        const row = getSpawnedChannel(vcId);
+        if (row) {
+            const channel = guild.channels && guild.channels.cache ? guild.channels.cache.get(vcId) : null;
+            if (channel) return { row, channel };
+        }
+    }
+    const owned = getSpawnedByOwner(guild.id, member.id);
+    if (owned) {
+        const channel = guild.channels && guild.channels.cache ? guild.channels.cache.get(owned.channel_id) : null;
+        if (channel) return { row: owned, channel };
+    }
+    return null;
+}
+
+async function setChannelLocked(channel, guild, member, locked) {
+    const everyone = guild.roles.everyone;
+    if (locked) {
+        await channel.permissionOverwrites.edit(everyone, { Connect: false }, 'Temp VC locked');
+        await channel.permissionOverwrites.edit(member, { Connect: true }, 'Temp VC owner');
+    } else {
+        const eow = channel.permissionOverwrites.cache.get(everyone.id);
+        if (eow && eow.deny.has(PermissionFlagsBits.Connect)) {
+            await channel.permissionOverwrites.delete(everyone, 'Temp VC unlocked');
+        }
+        const mow = channel.permissionOverwrites.cache.get(member.id);
+        if (mow && mow.allow.has(PermissionFlagsBits.Connect)) {
+            await channel.permissionOverwrites.delete(member, 'Temp VC unlocked');
+        }
+    }
+}
+
+// "Create my VC" (panel button): gives the member their own channel using
+// the first configured trigger's category/template/bitrate, without them
+// needing to join the trigger channel.
+async function createForMember(guild, member) {
+    if (!guild || !member) {
+        const err = new Error('Guild or member not available');
+        err.code = 'NO_CONTEXT';
+        throw err;
+    }
+    const triggers = getTriggers(guild.id);
+    if (!triggers.length) {
+        const err = new Error('No join-to-create trigger is configured yet — an admin must run `/tempvc set #channel` first');
+        err.code = 'NO_TRIGGER';
+        throw err;
+    }
+    // The bot can only MOVE a member who is already in a voice channel
+    // (VoiceState.setChannel is the REST move endpoint — connecting an idle
+    // user from nothing isn't possible). The trigger flow is safe because the
+    // member is already inside the trigger; the panel button needs this guard.
+    if (!member.voice || !member.voice.channelId) {
+        const err = new Error('Join any voice channel first (or the trigger channel), then press **Create my VC**.');
+        err.code = 'NOT_IN_VC';
+        throw err;
+    }
+    const trigger = triggers[0];
+
+    // Already in/owning a live channel → move them back (the button acts as
+    // a "return to my VC" as well).
+    const existing = getSpawnedByOwner(guild.id, member.id);
+    if (existing) {
+        const ch = guild.channels && guild.channels.cache ? guild.channels.cache.get(existing.channel_id) : null;
+        if (ch && ch.members && ch.members.size > 0) {
+            cancelDeletion(existing.channel_id);
+            try { await member.voice.setChannel(ch); } catch { /* fine */ }
+            return { reused: true, channel: ch };
+        }
+        if (ch) scheduleDeletionIfEmpty(guild, existing.channel_id);
+        removeSpawned(existing.channel_id);
+    }
+
+    const channel = await spawnChannel(guild, member, trigger);
+    if (!channel) {
+        const err = new Error('Couldn\'t create your voice channel — the bot is missing **Manage Channels** permission, or the category is full.');
+        err.code = 'CREATE_FAILED';
+        throw err;
+    }
+    return { created: true, channel };
+}
+
+// Owner closes their own temp channel (panel button).
+async function deleteOwnedChannel(guild, ownerId) {
+    const existing = getSpawnedByOwner(guild.id, ownerId);
+    if (!existing) {
+        const err = new Error('You don\'t have a temp voice channel to delete.');
+        err.code = 'NONE';
+        throw err;
+    }
+    const channel = guild.channels && guild.channels.cache ? guild.channels.cache.get(existing.channel_id) : null;
+    cancelDeletion(existing.channel_id);
+    removeSpawned(existing.channel_id);
+    if (channel) {
+        try {
+            await channel.delete('Temp VC closed by owner');
+        } catch (err) {
+            logError(err, 'tempvoice', 'ownerDelete_' + existing.channel_id);
+        }
+    }
+    return { success: true };
+}
+
+// ──────────────────── Control panel (embed + buttons) ────────────────────
+
+function buildPanelComponents() {
+    const row1 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('tvc_create').setLabel('Create my VC').setStyle(ButtonStyle.Primary).setEmoji('🎧'),
+        new ButtonBuilder().setCustomId('tvc_rename').setLabel('Rename').setStyle(ButtonStyle.Secondary).setEmoji('✏️'),
+        new ButtonBuilder().setCustomId('tvc_limit').setLabel('Limit').setStyle(ButtonStyle.Secondary).setEmoji('👥'),
+        new ButtonBuilder().setCustomId('tvc_lock').setLabel('Lock').setStyle(ButtonStyle.Danger).setEmoji('🔒'),
+        new ButtonBuilder().setCustomId('tvc_unlock').setLabel('Unlock').setStyle(ButtonStyle.Success).setEmoji('🔓'),
+    );
+    const row2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('tvc_claim').setLabel('Claim').setStyle(ButtonStyle.Secondary).setEmoji('👑'),
+        new ButtonBuilder().setCustomId('tvc_delete').setLabel('Delete my VC').setStyle(ButtonStyle.Danger).setEmoji('🗑️'),
+    );
+    return [row1, row2];
+}
+
+function buildPanelMessage(guild) {
+    const triggers = getTriggers(guild.id);
+    const spawned = getSpawned(guild.id);
+    const embed = new EmbedBuilder()
+        .setColor(0x00BFFF)
+        .setAuthor({ name: guild.name, iconURL: guild.iconURL() })
+        .setTitle('🎙️ Temp Voice Control Panel')
+        .setDescription(
+            'Get your own private voice channel and control it right here.\n\n' +
+            '**How it works:** join a trigger channel (or press **Create my VC**) and a channel named after you appears. ' +
+            'It **auto-deletes** once everyone leaves.\n\n' +
+            'You can only control your own channel — locked channels only let the owner in.'
+        )
+        .setFooter({ text: 'Temp Voice Channels' })
+        .setTimestamp();
+
+    if (triggers.length) {
+        embed.addFields({ name: '🎟️ Trigger channels', value: triggers.map(t => '<#' + t.channel_id + '>').join(' '), inline: false });
+    }
+    if (spawned.length) {
+        // Truncate on channel-tag boundaries so a <#id> is never cut in half.
+        const tags = spawned.map(s => '<#' + s.channel_id + '>');
+        let text = '';
+        let shown = 0;
+        for (const t of tags) {
+            if ((text ? text + ' ' + t : t).length > 1000) break;
+            text = text ? text + ' ' + t : t;
+            shown++;
+        }
+        if (shown < tags.length) text += ' …+' + (tags.length - shown) + ' more';
+        embed.addFields({ name: '🔊 Live channels (' + spawned.length + ')', value: text || '—', inline: false });
+    }
+    return { embeds: [embed], components: buildPanelComponents() };
 }
 
 // ──────────────────── voiceStateUpdate entry point ────────────────────
@@ -324,6 +523,7 @@ module.exports = {
     MAX_CHANNEL_NAME,
     isVoiceChannel,
     formatTemplate,
+    uniqueChannelName,
     getConfig,
     setConfig,
     getTriggers,
@@ -338,6 +538,12 @@ module.exports = {
     spawnChannel,
     cancelDeletion,
     scheduleDeletionIfEmpty,
+    getMemberChannelFor,
+    setChannelLocked,
+    createForMember,
+    deleteOwnedChannel,
+    buildPanelMessage,
+    buildPanelComponents,
     handleVoiceStateUpdate,
     cleanupOrphans,
     stopTempVoice,

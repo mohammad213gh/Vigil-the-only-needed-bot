@@ -6,7 +6,7 @@ const { EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowB
 const { addWarning } = require('./warnings');
 const { createCase, closeCase } = require('./modCases');
 const { getDb } = require('./db');
-const { getLeadingOption } = require('./helpers');
+const { getLeadingOption, isOwner } = require('./helpers');
 const { logError } = require('./logError');
 
 // ─── Custom ID Prefixes ───
@@ -92,6 +92,11 @@ async function handleButton(interaction) {
             return handleTicketAddUser(interaction, parts);
         }
         return interaction.reply({ content: '❌ Unknown ticket button.', ephemeral: true });
+    }
+
+    // Temp VC panel buttons — anyone can use their own panel (per-click validation inside)
+    if (prefix === 'tvc') {
+        return handleTempVcButton(interaction, parts);
     }
 
     // All other buttons: only the person who initiated the action can interact
@@ -325,6 +330,9 @@ async function handleModal(interaction) {
 
     if (prefix === 'wr') {
         return handleWarnSubmit(interaction, parts);
+    }
+    if (prefix === 'tvc') {
+        return handleTempVcModal(interaction, parts);
     }
     if (prefix === 'tk') {
         const tkAction = parts[1];
@@ -989,6 +997,161 @@ async function handleTicketClaim(interaction, parts) {
         logError(err, 'interactions', 'ticketClaim');
         await interaction.editReply({ content: '❌ Failed to claim ticket.' });
     }
+}
+
+// ──────────────────── Temp Voice Panel Buttons ────────────────────
+
+async function handleTempVcButton(interaction, parts) {
+    const action = parts[1]; // tvc_{action}
+    const tv = require('./tempVoice');
+    const guild = interaction.guild;
+    const member = interaction.member;
+    const userId = interaction.user.id;
+
+    if (action === 'create') {
+        try {
+            const res = await tv.createForMember(guild, member);
+            return interaction.reply({
+                content: res.reused
+                    ? '🎧 Moved you back to <#' + res.channel.id + '>.'
+                    : '🎧 Created **' + res.channel.name + '** and moved you in!',
+                ephemeral: true,
+            });
+        } catch (err) {
+            return interaction.reply({ content: '❌ ' + (err.message || err), ephemeral: true });
+        }
+    }
+
+    const found = tv.getMemberChannelFor(guild, member);
+    if (!found) {
+        return interaction.reply({ content: '❌ You\'re not in (and don\'t own) a temp voice channel. Press **Create my VC** first.', ephemeral: true });
+    }
+    const { row, channel } = found;
+    const owns = row.owner_id === userId || isOwner(userId);
+
+    if (action === 'lock' || action === 'unlock') {
+        if (!owns) {
+            return interaction.reply({ content: '❌ Only the channel owner can ' + action + ' this channel.', ephemeral: true });
+        }
+        try {
+            await tv.setChannelLocked(channel, guild, member, action === 'lock');
+            return interaction.reply({ content: action === 'lock' ? '🔒 Channel locked — only you can join now.' : '🔓 Channel unlocked — everyone can join.', ephemeral: true });
+        } catch (err) {
+            return interaction.reply({ content: '❌ Failed to ' + action + ': ' + (err.message || err), ephemeral: true });
+        }
+    }
+
+    if (action === 'rename' || action === 'limit') {
+        if (!owns) {
+            return interaction.reply({ content: '❌ Only the channel owner can do that.', ephemeral: true });
+        }
+        if (action === 'rename') {
+            const modal = new ModalBuilder()
+                .setCustomId('tvc_modal_rename')
+                .setTitle('Rename your voice channel');
+            modal.addComponents(new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('tvc_rename_name')
+                    .setLabel('New channel name')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+                    .setMaxLength(100)
+                    .setPlaceholder('e.g. Chill Zone'),
+            ));
+            return interaction.showModal(modal);
+        }
+        const modal = new ModalBuilder()
+            .setCustomId('tvc_modal_limit')
+            .setTitle('Set user limit');
+        modal.addComponents(new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+                .setCustomId('tvc_limit_num')
+                .setLabel('Max users (0 = unlimited, max 99)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(2)
+                .setPlaceholder('0-99'),
+        ));
+        return interaction.showModal(modal);
+    }
+
+    if (action === 'claim') {
+        const vcId = member.voice && member.voice.channelId;
+        const inRow = vcId ? tv.getSpawnedChannel(vcId) : null;
+        if (!inRow) {
+            return interaction.reply({ content: '❌ You need to be inside a temp voice channel to claim it.', ephemeral: true });
+        }
+        const ch = guild.channels.cache.get(vcId);
+        if (!ch) {
+            return interaction.reply({ content: '❌ That channel no longer exists.', ephemeral: true });
+        }
+        // channel.members is authoritative for who is actually in the VC.
+        if (ch.members && ch.members.has(inRow.owner_id)) {
+            return interaction.reply({ content: '❌ The owner is still here — no need to claim.', ephemeral: true });
+        }
+        tv.addSpawned(vcId, guild.id, userId, inRow.trigger_id);
+        tv.cancelDeletion(vcId);
+        return interaction.reply({ content: '👑 You now own this channel. Use **Rename** / **Lock** / **Delete** to control it.', ephemeral: true });
+    }
+
+    if (action === 'delete') {
+        if (!owns) {
+            return interaction.reply({ content: '❌ Only the channel owner can delete it.', ephemeral: true });
+        }
+        try {
+            await tv.deleteOwnedChannel(guild, userId);
+            return interaction.reply({ content: '🗑️ Deleted your temp voice channel.', ephemeral: true });
+        } catch (err) {
+            return interaction.reply({ content: '❌ ' + (err.message || err), ephemeral: true });
+        }
+    }
+
+    return interaction.reply({ content: 'Unknown panel action.', ephemeral: true });
+}
+
+// ──────────────────── Temp Voice Panel Modals ────────────────────
+
+async function handleTempVcModal(interaction, parts) {
+    const action = parts[2]; // tvc_modal_{action}
+    const tv = require('./tempVoice');
+    const guild = interaction.guild;
+    const member = interaction.member;
+    const userId = interaction.user.id;
+
+    const found = tv.getMemberChannelFor(guild, member);
+    if (!found) {
+        return interaction.reply({ content: '❌ You don\'t have a temp voice channel anymore.', ephemeral: true });
+    }
+    const { row, channel } = found;
+    if (row.owner_id !== userId && !isOwner(userId)) {
+        return interaction.reply({ content: '❌ Only the channel owner can do that.', ephemeral: true });
+    }
+
+    if (action === 'rename') {
+        const name = interaction.fields.getTextInputValue('tvc_rename_name').trim().slice(0, tv.MAX_CHANNEL_NAME);
+        if (!name) return interaction.reply({ content: '❌ Name can\'t be empty.', ephemeral: true });
+        try {
+            await channel.setName(name, 'Temp VC renamed');
+            return interaction.reply({ content: '✅ Renamed to **' + name + '**.', ephemeral: true });
+        } catch (err) {
+            return interaction.reply({ content: '❌ Failed to rename: ' + (err.message || err), ephemeral: true });
+        }
+    }
+
+    if (action === 'limit') {
+        const n = parseInt(interaction.fields.getTextInputValue('tvc_limit_num').trim(), 10);
+        if (isNaN(n) || n < 0 || n > 99) {
+            return interaction.reply({ content: '❌ Enter a number between **0 and 99** (0 = unlimited).', ephemeral: true });
+        }
+        try {
+            await channel.setUserLimit(n, 'Temp VC user limit');
+            return interaction.reply({ content: n === 0 ? '✅ User limit cleared (unlimited).' : '✅ User limit set to **' + n + '**.', ephemeral: true });
+        } catch (err) {
+            return interaction.reply({ content: '❌ Failed to set limit: ' + (err.message || err), ephemeral: true });
+        }
+    }
+
+    return interaction.reply({ content: 'Unknown form.', ephemeral: true });
 }
 
 // ──────────────────── Exports ────────────────────

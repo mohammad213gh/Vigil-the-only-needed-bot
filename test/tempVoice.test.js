@@ -123,11 +123,12 @@ test('joining a trigger spawns a channel and moves the member', async () => {
     tv.removeSpawned('sp1');
 });
 
-test('joining a trigger moves an existing owner back instead of duplicating', async () => {
+test('joining a trigger moves the owner back to an in-use channel instead of duplicating', async () => {
     const trigger = makeVoiceChannel('trig1', 'Join to Create');
     const existing = makeVoiceChannel('sp1', 'Aya\'s channel');
     const guild = makeGuild({ channels: [trigger, existing] });
     const member = makeMember('u1', 'Aya', { vcId: 'trig1' });
+    existing.members.set('u1', member); // channel still has people in it
     tv.setTrigger('g1', 'trig1', null);
     tv.addSpawned('sp1', 'g1', 'u1', 'trig1');
 
@@ -137,8 +138,88 @@ test('joining a trigger moves an existing owner back instead of duplicating', as
     );
     await flush();
 
-    assert.deepStrictEqual(member.voice.moves, ['sp1'], 'should be moved to the existing channel');
+    assert.deepStrictEqual(member.voice.moves, ['sp1'], 'should be moved back to the in-use channel');
     assert.strictEqual(tv.getSpawned('g1').length, 1, 'no duplicate spawned');
+    tv.removeSpawned('sp1');
+});
+
+test('an EMPTY existing channel is not reused — a fresh one spawns and the old one gets deleted', async () => {
+    const { mock } = require('node:test');
+    mock.timers.enable({ apis: ['setTimeout'] });
+    try {
+        const trigger = makeVoiceChannel('trig1', 'Join to Create');
+        const existing = makeVoiceChannel('sp1', 'Aya\'s channel'); // empty
+        let created = null;
+        const guild = makeGuild({
+            channels: [trigger, existing],
+            create: async (opts) => { created = makeVoiceChannel('sp2', opts.name); guild.channels.cache.set('sp2', created); return created; },
+        });
+        const member = makeMember('u1', 'Aya', { vcId: 'trig1' });
+        tv.setTrigger('g1', 'trig1', null);
+        tv.addSpawned('sp1', 'g1', 'u1', 'trig1');
+
+        tv.handleVoiceStateUpdate(
+            { guild, member, channelId: null },
+            { guild, member, channelId: 'trig1' },
+        );
+        await flush();
+
+        assert.ok(created, 'a fresh channel should spawn');
+        assert.strictEqual(member.voice.channelId, 'sp2', 'member moved into the fresh channel');
+        assert.strictEqual(tv.getSpawned('g1')[0].channel_id, 'sp2', 'row now points at the fresh channel');
+        // The old empty channel is scheduled for deletion.
+        mock.timers.tick(6000);
+        await flush();
+        assert.strictEqual(existing.deleted, true, 'old empty channel deleted after the grace period');
+        tv.removeSpawned('sp2');
+    } finally {
+        mock.timers.reset();
+        tv.stopTempVoice();
+    }
+});
+
+test('spawned channel names are deduplicated', async () => {
+    const trigger = makeVoiceChannel('trig1', 'Join to Create');
+    const existing = makeVoiceChannel('sp1', 'Aya\'s channel');
+    let created = null;
+    const guild = makeGuild({
+        channels: [trigger, existing],
+        create: async (opts) => { created = makeVoiceChannel('sp2', opts.name); guild.channels.cache.set('sp2', created); return created; },
+    });
+    const member = makeMember('u1', 'Aya', { vcId: 'trig1' });
+    tv.setTrigger('g1', 'trig1', null);
+
+    tv.handleVoiceStateUpdate(
+        { guild, member, channelId: null },
+        { guild, member, channelId: 'trig1' },
+    );
+    await flush();
+
+    assert.strictEqual(created.name, 'Aya\'s channel 2', 'duplicate name should get a number suffix');
+    assert.strictEqual(tv.getSpawned('g1').length, 1);
+    tv.removeSpawned('sp2');
+});
+
+test('spawnChannel inherits the trigger bitrate and user limit', async () => {
+    const trigger = makeVoiceChannel('trig1', 'Join to Create');
+    trigger.bitrate = 384000;
+    trigger.userLimit = 8;
+    let createdOpts = null;
+    const guild = makeGuild({
+        channels: [trigger],
+        create: async (opts) => { createdOpts = opts; const ch = makeVoiceChannel('sp1', opts.name); guild.channels.cache.set('sp1', ch); return ch; },
+    });
+    const member = makeMember('u1', 'Aya', { vcId: 'trig1' });
+    tv.setTrigger('g1', 'trig1', null);
+
+    tv.handleVoiceStateUpdate(
+        { guild, member, channelId: null },
+        { guild, member, channelId: 'trig1' },
+    );
+    await flush();
+
+    assert.strictEqual(createdOpts.bitrate, 384000);
+    assert.strictEqual(createdOpts.userLimit, 8);
     tv.removeSpawned('sp1');
 });
 
@@ -235,6 +316,71 @@ test('cleanupOrphans deletes empty spawned channels and drops stale rows', async
     assert.strictEqual(remaining.length, 1);
     assert.strictEqual(remaining[0].channel_id, 'spBusy');
     tv.removeSpawned('spBusy');
+});
+
+// ── createForMember (panel button) ──
+test('createForMember spawns a channel from the first trigger', async () => {
+    const trigger = makeVoiceChannel('trig1', 'Join to Create');
+    let created = null;
+    const guild = makeGuild({
+        channels: [trigger],
+        create: async (opts) => { created = makeVoiceChannel('sp1', opts.name); guild.channels.cache.set('sp1', created); return created; },
+    });
+    const member = makeMember('u1', 'Aya', { vcId: 'trig1' }); // already in the trigger
+    tv.setTrigger('g1', 'trig1', null);
+
+    const res = await tv.createForMember(guild, member);
+    assert.strictEqual(res.created, true);
+    assert.strictEqual(member.voice.channelId, 'sp1');
+    assert.strictEqual(tv.getSpawned('g1')[0].owner_id, 'u1');
+    tv.removeSpawned('sp1');
+});
+
+test('createForMember errors when no trigger is configured', async () => {
+    const guild = makeGuild({ id: 'gNoTrig' }); // fresh guild with no trigger row
+    const member = makeMember('u1', 'Aya', { vcId: 'trig1' });
+    await assert.rejects(tv.createForMember(guild, member), (e) => e.code === 'NO_TRIGGER');
+});
+
+test('createForMember errors when the member is not in any voice channel', async () => {
+    const trigger = makeVoiceChannel('trig1', 'Join to Create');
+    const guild = makeGuild({ channels: [trigger] });
+    tv.setTrigger('g1', 'trig1', null);
+    // Idle member — the bot can only MOVE connected users into a VC.
+    await assert.rejects(tv.createForMember(guild, makeMember('u1', 'Aya')), (e) => e.code === 'NOT_IN_VC');
+    tv.removeTrigger('g1', 'trig1');
+});
+
+test('createForMember moves the user back to their in-use channel', async () => {
+    const trigger = makeVoiceChannel('trig1', 'Join to Create');
+    const existing = makeVoiceChannel('sp1', 'Aya\'s channel');
+    const guild = makeGuild({ channels: [trigger, existing] });
+    const member = makeMember('u1', 'Aya', { vcId: 'sp1' });
+    existing.members.set('u1', member);
+    tv.setTrigger('g1', 'trig1', null);
+    tv.addSpawned('sp1', 'g1', 'u1', 'trig1');
+
+    const res = await tv.createForMember(guild, member);
+    assert.strictEqual(res.reused, true);
+    assert.strictEqual(res.channel.id, 'sp1');
+    assert.strictEqual(member.voice.channelId, 'sp1');
+    tv.removeSpawned('sp1');
+});
+
+// ── deleteOwnedChannel (panel button) ──
+test('deleteOwnedChannel deletes the owner\'s channel and drops the row', async () => {
+    const spawned = makeVoiceChannel('sp1', 'Aya\'s channel');
+    const guild = makeGuild({ channels: [spawned] });
+    tv.addSpawned('sp1', 'g1', 'u1', 'trig1');
+
+    await tv.deleteOwnedChannel(guild, 'u1');
+    assert.strictEqual(spawned.deleted, true);
+    assert.strictEqual(tv.getSpawned('g1').length, 0);
+});
+
+test('deleteOwnedChannel errors when the user has no channel', async () => {
+    const guild = makeGuild();
+    await assert.rejects(tv.deleteOwnedChannel(guild, 'u9'), (e) => e.code === 'NONE');
 });
 
 test('cleanupOrphans spares channels spawned within the last minute', async () => {

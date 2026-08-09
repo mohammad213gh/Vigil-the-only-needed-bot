@@ -1645,7 +1645,7 @@ handlers.tempvc = async (message) => {
     const tv = require('./tempVoice');
     const guild = message.guild;
     const sub = (message.args[0] || '').toLowerCase();
-    const adminSubs = ['set', 'unset', 'name', 'list'];
+    const adminSubs = ['set', 'unset', 'name', 'list', 'panel'];
 
     if (adminSubs.includes(sub) && !checkOwnerOrPerm(message, 'tempvc')) return;
 
@@ -1723,6 +1723,24 @@ handlers.tempvc = async (message) => {
         }
         if (!tLines.length && !sLines.length) return message.reply('ℹ️ No temp voice channels configured. Use `' + message.prefix + 'tempvc set #channel`.');
         return message.reply('**🎙️ Temp Voice Channels**\n' + (tLines.length ? '**Triggers:**\n' + tLines.join('\n') + '\n' : '') + (sLines.length ? '**Live:**\n' + sLines.join('\n') : ''));
+    }
+
+    if (sub === 'panel') {
+        let channel = message.channel;
+        const chanArg = message.args[1];
+        if (chanArg) {
+            const m = String(chanArg).match(/^<#(\d+)>$/);
+            const chanId = (m && m[1]) || String(chanArg);
+            const ch = guild.channels.cache.get(chanId);
+            if (!ch || !ch.isTextBased || !ch.isTextBased()) return message.reply('⚠️ Pick a text channel to send the panel to.');
+            channel = ch;
+        }
+        try {
+            await channel.send(tv.buildPanelMessage(guild));
+            return message.reply('🎙️ Control panel sent to ' + channel + '.');
+        } catch (err) {
+            return message.reply('❌ Failed to send the panel: ' + (err.message || err));
+        }
     }
 
     if (sub === 'rename' || sub === 'limit' || sub === 'lock' || sub === 'unlock') {
