@@ -533,7 +533,11 @@ function buildPanelMessage(guild) {
         .setTimestamp();
 
     if (triggers.length) {
-        embed.addFields({ name: '🎟️ Trigger channels', value: triggers.map(t => '<#' + t.channel_id + '>').join(' '), inline: false });
+        embed.addFields({
+            name: '🎟️ Trigger channels',
+            value: triggers.map(t => '<#' + t.channel_id + '>' + (t.category_id ? ' → spawns in <#' + t.category_id + '>' : '')).join('\n'),
+            inline: false,
+        });
     }
     if (spawned.length) {
         // One line per live channel: tag — owner — lock state.

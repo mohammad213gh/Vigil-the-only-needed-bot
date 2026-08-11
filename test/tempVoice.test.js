@@ -84,6 +84,7 @@ test('config get/set roundtrip with default', () => {
 test('trigger and spawned channel CRUD', () => {
     tv.setTrigger('g1', 'trig1', 'cat1');
     assert.ok(tv.getTriggerForChannel('g1', 'trig1'));
+    assert.strictEqual(tv.getTriggerForChannel('g1', 'trig1').category_id, 'cat1', 'category persisted on the trigger');
     assert.strictEqual(tv.getTriggers('g1').length, 1);
     tv.removeTrigger('g1', 'trig1');
     assert.strictEqual(tv.getTriggers('g1').length, 0);
@@ -222,6 +223,48 @@ test('spawnChannel inherits the trigger bitrate and user limit', async () => {
 
     assert.strictEqual(createdOpts.bitrate, 384000);
     assert.strictEqual(createdOpts.userLimit, 8);
+    tv.removeSpawned('sp1');
+});
+
+test('spawnChannel creates the channel inside the configured category', async () => {
+    const trigger = makeVoiceChannel('trig1', 'Join to Create');
+    const category = { id: 'cat1', name: 'Temp VCs', type: 4, members: new Map() };
+    let createdOpts = null;
+    const guild = makeGuild({
+        channels: [trigger, category],
+        create: async (opts) => { createdOpts = opts; const ch = makeVoiceChannel('sp1', opts.name); guild.channels.cache.set('sp1', ch); return ch; },
+    });
+    const member = makeMember('u1', 'Aya', { vcId: 'trig1' });
+    tv.setTrigger('g1', 'trig1', 'cat1');
+
+    tv.handleVoiceStateUpdate(
+        { guild, member, channelId: null },
+        { guild, member, channelId: 'trig1' },
+    );
+    await flush();
+
+    assert.strictEqual(createdOpts.parent, 'cat1', 'spawned channel must be placed in the category');
+    assert.strictEqual(tv.getSpawned('g1').length, 1);
+    tv.removeSpawned('sp1');
+});
+
+test('spawnChannel without a category leaves parent unset (creates wherever)', async () => {
+    const trigger = makeVoiceChannel('trig1', 'Join to Create');
+    let createdOpts = null;
+    const guild = makeGuild({
+        channels: [trigger],
+        create: async (opts) => { createdOpts = opts; const ch = makeVoiceChannel('sp1', opts.name); guild.channels.cache.set('sp1', ch); return ch; },
+    });
+    const member = makeMember('u1', 'Aya', { vcId: 'trig1' });
+    tv.setTrigger('g1', 'trig1', null);
+
+    tv.handleVoiceStateUpdate(
+        { guild, member, channelId: null },
+        { guild, member, channelId: 'trig1' },
+    );
+    await flush();
+
+    assert.strictEqual(createdOpts.parent, undefined, 'no parent when no category was chosen');
     tv.removeSpawned('sp1');
 });
 
