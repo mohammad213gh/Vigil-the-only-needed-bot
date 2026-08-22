@@ -119,9 +119,6 @@ handlers.tempban = async (message) => {
             .addFields({ name: 'Duration', value: formatDuration(durationMs), inline: true }, { name: 'Reason', value: reason, inline: true })
             .setFooter({ text: 'Auto-unban at <t:' + Math.floor(unbanAt / 1000) + ':R>' }).setTimestamp();
         message.reply({ embeds: [embed] });
-        setTimeout(async () => {
-            try { await guild.bans.remove(userId, 'Temp ban expired'); } catch {}
-        }, durationMs);
     } catch (err) {
         message.reply('\u26A0\uFE0F Failed: ' + err.message);
     }
@@ -1801,25 +1798,6 @@ handlers.tempvc = async (message) => {
     return message.reply(usage);
 };
 
-async function handlePrefixMessage(message, prefix) {
-    const content = message.content;
-    if (!content.startsWith(prefix)) return false;
-
-    const afterPrefix = content.slice(prefix.length).trim();
-    if (!afterPrefix) return false;
-
-    const parts = afterPrefix.split(/\s+/);
-    const cmdName = parts[0].toLowerCase();
-
-    const handler = handlers[cmdName];
-    if (!handler) return false;
-
-    // Attach parsed data to message for handlers to use
-    message.prefix = prefix;
-    message.args = parts.slice(1);
-    message.restArgs = parts.slice(1);
-
-    // Check permission for owner-only prefix commands
 // ─── Welcome / Goodbye (Prefix) ───
 
 handlers.welcome = async (message) => {
@@ -1983,6 +1961,26 @@ handlers.goodbye = async (message) => {
         message.reply('⚠️ Subcommands: channel, toggle, message, title, description, color, footer, thumbnail, image, test, reset');
     }
 };
+
+async function handlePrefixMessage(message, prefix) {
+    const content = message.content;
+    if (!content.startsWith(prefix)) return false;
+
+    const afterPrefix = content.slice(prefix.length).trim();
+    if (!afterPrefix) return false;
+
+    const parts = afterPrefix.split(/\s+/);
+    const cmdName = parts[0].toLowerCase();
+
+    const handler = handlers[cmdName];
+    if (!handler) return false;
+
+    // Attach parsed data to message for handlers to use
+    message.prefix = prefix;
+    message.args = parts.slice(1);
+    message.restArgs = parts.slice(1);
+
+    // Check permission for owner-only prefix commands
 
     const ownerOnlyCmds = ['kick', 'ban', 'unban', 'timeout', 'untimeout', 'warn', 'warnings', 'clearwarnings', 'lock', 'unlock', 'purge', 'slowmode', 'say', 'role', 'prefix', 'nickname', 'embed', 'announce', 'poll', 'perm', 'track', 'log', 'reactionrole', 'deploy', 'botavatar', 'botname', 'presence', 'embedconfig', 'dashboard', 'dashaccess', 'server_leave', 'shutdown', 'welcome', 'goodbye', 'invites', 'note', 'logs', 'vc'];
     if (ownerOnlyCmds.includes(cmdName)) {

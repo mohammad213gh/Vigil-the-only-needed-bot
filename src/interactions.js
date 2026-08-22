@@ -211,18 +211,6 @@ async function handleConfirmTempBan(interaction, parts) {
             .setFooter({ text: 'Auto-unban at <t:' + Math.floor(unbanAt / 1000) + ':R>' });
 
         await interaction.update({ embeds: [embed], components: [] });
-
-        // Schedule the unban
-        setTimeout(async () => {
-            try {
-                await guild.bans.remove(targetId, 'Temp ban expired (' + durationLabel + ')');
-                const db2 = getDb();
-                db2.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(targetId, guild.id);
-                console.log('[TempBan] Auto-unbanned', targetId, 'in', guild.id);
-            } catch (err) {
-                logError(err, 'interactions', 'autoUnban');
-            }
-        }, durationMs);
     } catch (err) {
         logError(err, 'interactions', 'confirmTempBan');
         await interaction.update({ content: '❌ Failed to temp ban: ' + err.message, components: [], embeds: [] });

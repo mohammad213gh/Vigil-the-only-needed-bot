@@ -18,6 +18,7 @@ const { setGiveawayClient, startGiveawayCheck, stopGiveawayCheck } = require('./
 const { startServerStats, stopServerStats, refreshGuildStats } = require('./src/serverStats');
 const { setVoiceClient, enableDiscordJsVoice, handleBotVoiceUpdate, stopVoicePresence } = require('./src/voicePresence');
 const { handleVoiceStateUpdate: handleTempVoiceUpdate, stopTempVoice } = require('./src/tempVoice');
+const { setTempBanClient, startTempBanSweeper, stopTempBanSweeper } = require('./src/tempBans');
 
 // ─── Command Registry ───
 const { commandRegistry, publicCommands } = require('./src/commands/registry');
@@ -59,6 +60,7 @@ const client = new Client({
 setLoggerClient(client);
 setInviteClient(client);
 setVoiceClient(client);
+setTempBanClient(client);
 // @discordjs/voice — lets the bot join a VC from an idle state (the REST
 // move endpoint can only move a bot that is already connected).
 if (!enableDiscordJsVoice()) {
@@ -287,47 +289,10 @@ function getFriendlyError(err, commandName) {
 
 
 
-// ──────────────────── Start Reminder Checker ────────────────────
+// ──────────────────── Reminder Client (checker starts post-login) ────────────────────
 
-const { setReminderClient, startReminderChecker } = require('./src/reminders');
+const { setReminderClient, startReminderChecker, stopReminderChecker } = require('./src/reminders');
 setReminderClient(client);
-startReminderChecker();
-
-// ──────────────────── Restore Pending Temp Bans ────────────────────
-
-try {
-    const { getDb } = require('./src/db');
-    const db = getDb();
-    const pending = db.prepare('SELECT * FROM temp_bans WHERE unban_at > ?').all(Date.now());
-    for (const tb of pending) {
-        const guild = client.guilds.cache.get(tb.guild_id);
-        if (!guild) continue;
-        const remaining = tb.unban_at - Date.now();
-        if (remaining <= 0) {
-            // Already expired — unban immediately
-            guild.bans.remove(tb.user_id, 'Temp ban expired').catch(() => {});
-            db.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(tb.user_id, tb.guild_id);
-        } else {
-            // Schedule unban
-            setTimeout(async () => {
-                try {
-                    await guild.bans.remove(tb.user_id, 'Temp ban expired');
-                    db.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(tb.user_id, tb.guild_id);
-                    console.log('[TempBan] Auto-unbanned', tb.user_id, 'in', tb.guild_id);
-                } catch (err) {
-                    console.error('[TempBan] Auto-unban failed:', err.message);
-                    // Remove stale entry anyway
-                    db.prepare('DELETE FROM temp_bans WHERE user_id = ? AND guild_id = ?').run(tb.user_id, tb.guild_id);
-                }
-            }, remaining);
-        }
-    }
-    if (pending.length > 0) {
-        console.log('[TempBan] Restored', pending.length, 'pending temp bans');
-    }
-} catch (err) {
-    console.error('[TempBan] Boot-time restore error:', err.message);
-}
 
 // ──────────────────── Start Web Dashboard ────────────────────
 
@@ -353,6 +318,8 @@ function shutdown(signal) {
     stopServerStats();
     stopVoicePresence();
     stopTempVoice();
+    stopTempBanSweeper();
+    stopReminderChecker();
     closeDb();
     client.destroy();
     console.log('[Bot] Goodbye!');
@@ -429,6 +396,8 @@ client.login(process.env.BOT_TOKEN).then(() => {
     setGiveawayClient(client);
     startGiveawayCheck();
     startServerStats(client);
+    startTempBanSweeper();
+    startReminderChecker();
     console.log('[Bot] Ticket inactivity, giveaway + server stats checks started.');
 }).catch(err => {
     console.error('[Bot] Failed to login:', err.message || err);

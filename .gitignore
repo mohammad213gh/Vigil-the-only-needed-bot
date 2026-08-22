@@ -16,6 +16,9 @@ reminders.json
 # ─── Uploads ───
 uploads/
 
+# ─── Runtime data directory (SQLite db, backups live here) ───
+data/
+
 # ─── Dependencies ───
 node_modules/
 

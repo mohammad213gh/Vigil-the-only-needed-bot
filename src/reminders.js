@@ -76,41 +76,36 @@ function startReminderChecker() {
         const now = Date.now();
 
         try {
-            // Find all due reminders
-            const due = db.prepare('SELECT * FROM reminders WHERE notified = 0 AND remind_at <= ?').all(now);
+            // Find all due reminders that still have retry budget left
+            const due = db.prepare('SELECT * FROM reminders WHERE notified = 0 AND remind_at <= ? AND attempts < 3').all(now);
 
             if (due.length === 0) return;
 
             const markNotified = db.prepare('UPDATE reminders SET notified = 1 WHERE id = ?');
+            const bumpAttempts = db.prepare('UPDATE reminders SET attempts = attempts + 1 WHERE id = ?');
 
-            const tx = db.transaction(() => {
-                for (const reminder of due) {
-                    markNotified.run(reminder.id);
-                }
-            });
-            tx();
-
-            // Send DMs outside the transaction (async)
             for (const reminder of due) {
                 try {
                     const user = await client.users.fetch(reminder.user_id).catch(() => null);
-                    if (user) {
-                        const embed = new EmbedBuilder()
-                            .setColor(0x5865F2)
-                            .setTitle('⏰ Reminder')
-                            .setDescription(reminder.text)
-                            .setFooter({ text: 'Set ' + new Date(reminder.created_at).toLocaleString() })
-                            .setTimestamp();
-                        await user.send({ embeds: [embed] });
-                    }
+                    if (!user) throw new Error('User unavailable');
+                    const embed = new EmbedBuilder()
+                        .setColor(0x5865F2)
+                        .setTitle('⏰ Reminder')
+                        .setDescription(reminder.text)
+                        .setFooter({ text: 'Set ' + new Date(reminder.created_at).toLocaleString() })
+                        .setTimestamp();
+                    await user.send({ embeds: [embed] });
+                    markNotified.run(reminder.id);
                 } catch {
-                    /* DMs closed, skip silently */
+                    // Delivery failed (DMs closed, fetch error) — retry next tick,
+                    // up to 3 attempts, then prune below. Never mark before send.
+                    bumpAttempts.run(reminder.id);
                 }
             }
 
-            // Prune notified reminders older than 24 hours
+            // Prune delivered reminders and exhausted ones older than 24 hours
             const oneDayAgo = Date.now() - 86400000;
-            db.prepare('DELETE FROM reminders WHERE notified = 1 AND remind_at < ?').run(oneDayAgo);
+            db.prepare('DELETE FROM reminders WHERE (notified = 1 OR attempts >= 3) AND remind_at < ?').run(oneDayAgo);
 
         } catch (err) {
             logError(err, 'reminders', 'check');

@@ -16,6 +16,7 @@ const { getAllPermissions } = require('./permissions');
 const { LOG_CATEGORIES, WS_STATUS } = require('./constants');
 const { logError } = require('./logError');
 const multer = require('multer');
+const crypto = require('crypto');
 
 // ──── Rate Limiter ────
 const loginAttempts = new Map();
@@ -58,6 +59,27 @@ function setDashboardClient(c, password) {
     dashboardPassword = password;
 }
 
+// Constant-time password check — hashes both sides so length/timing of the
+// raw comparison can't leak information about DASHBOARD_PASSWORD.
+function passwordMatches(candidate) {
+    if (!candidate || !dashboardPassword) return false;
+    const a = crypto.createHash('sha256').update(String(candidate)).digest();
+    const b = crypto.createHash('sha256').update(String(dashboardPassword)).digest();
+    return crypto.timingSafeEqual(a, b);
+}
+
+// Session cookies are HttpOnly (invisible to JS — kills XSS token theft),
+// Secure when served over TLS, Strict SameSite (kills CSRF from other origins).
+function sessionCookieOptions(req) {
+    return {
+        httpOnly: true,
+        secure: req.secure || req.headers['x-forwarded-proto'] === 'https',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: SESSION_TTL_MS,
+    };
+}
+
 // ──── Dashboard Config (SQLite) ────
 const DEFAULT_DASHBOARD_CONFIG = {
     accentColor: '#5865F2',
@@ -79,8 +101,13 @@ const DEFAULT_DASHBOARD_CONFIG = {
     ambientLight: true,
     headerStyle: 'minimal',
     borderRadius: 'rounded',
+    borderStrength: 'normal',
+    themePreset: 'discord',
+    fontFamily: 'inter',
     showDockLabels: true,
     botAvatarUrl: null,
+    logoUrl: null,
+    faviconUrl: null,
 };
 
 function getDashboardConfig() {
@@ -124,10 +151,7 @@ function getDashUsers() {
 }
 
 function generateAccessToken() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let s = '';
-    for (let i = 0; i < 24; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    return 'dash_' + s;
+    return 'dash_' + crypto.randomBytes(24).toString('base64url');
 }
 
 function addDashUser(userId, addedBy) {
@@ -176,10 +200,7 @@ const SESSION_TTL_MS = (parseFloat(process.env.DASHBOARD_SESSION_HOURS) || 24) *
 const SESSION_MAX_MS = Math.max(1, parseFloat(process.env.DASHBOARD_SESSION_MAX_DAYS) || 7) * 24 * 60 * 60 * 1000;
 
 function generateSession() {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    let s = '';
-    for (let i = 0; i < 32; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    return s;
+    return crypto.randomBytes(32).toString('base64url');
 }
 
 // Reap expired sessions every 10 minutes so the Map doesn't grow unbounded.
@@ -216,8 +237,22 @@ const upload = multer({
 
 function createDashboard() {
     const app = express();
+    // Behind Railway/Discloud reverse proxies: makes req.ip and req.secure
+    // reflect the real client (X-Forwarded-For / X-Forwarded-Proto).
+    app.set('trust proxy', 1);
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+    // Defense-in-depth CSP. script-src keeps 'unsafe-inline' because the UI
+    // still uses inline onclick attributes; img-src/connect-src lockdown
+    // blocks most exfiltration channels regardless.
+    app.use((req, res, next) => {
+        res.setHeader(
+            'Content-Security-Policy',
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.discordapp.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'"
+        );
+        next();
+    });
 
     app.use((req, res, next) => {
         const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
@@ -261,10 +296,11 @@ function createDashboard() {
         const { password, discordId, accessToken } = req.body;
         const now = Date.now();
         const expiresAt = now + SESSION_TTL_MS;
-        if (password && password === dashboardPassword) {
+        if (password && passwordMatches(password)) {
             const token = generateSession();
             sessions.set(token, { method: 'password', expiresAt, createdAt: now });
-            return res.json({ success: true, token });
+            res.cookie('session', token, sessionCookieOptions(req));
+            return res.json({ success: true });
         }
         if (discordId && accessToken) {
             // Check if user exists but has no access token (legacy user)
@@ -276,7 +312,8 @@ function createDashboard() {
             if (isDashUser(discordId, accessToken)) {
                 const token = generateSession();
                 sessions.set(token, { method: 'discord', userId: discordId, accessToken, expiresAt, createdAt: now });
-                return res.json({ success: true, token, method: 'discord' });
+                res.cookie('session', token, sessionCookieOptions(req));
+                return res.json({ success: true, method: 'discord' });
             }
         }
         res.status(401).json({ success: false, error: 'Invalid credentials' });
@@ -285,7 +322,19 @@ function createDashboard() {
     app.post('/api/logout', (req, res) => {
         const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
         if (token) sessions.delete(token);
+        res.clearCookie('session', { path: '/' });
         res.json({ success: true });
+    });
+
+    // Public branding — safe subset, no auth needed (login page uses it).
+    app.get('/api/branding', (req, res) => {
+        const c = getDashboardConfig();
+        res.json({
+            title: c.title || 'Bot Dashboard',
+            accentColor: c.accentColor || '#5865F2',
+            logoUrl: c.logoUrl || null,
+            faviconUrl: c.faviconUrl || null,
+        });
     });
 
     function requireAuth(req, res, next) {
@@ -411,6 +460,24 @@ function createDashboard() {
     });
 
     // ── Server Management: Roles ──
+    app.post('/api/server/:id/settings', requireAuth, (req, res) => {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can change server settings' });
+        const guild = client ? client.guilds.cache.get(req.params.id) : null;
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { prefix, embedColor } = req.body || {};
+        if (prefix !== undefined) {
+            const p = String(prefix).trim();
+            if (p && (p.length > 5 || /\s/.test(p))) return res.status(400).json({ error: 'Prefix must be 1-5 characters with no spaces' });
+            updateGuildConfig(guild.id, cfg => { cfg.prefix = p || ';'; return cfg; });
+        }
+        if (embedColor !== undefined) {
+            const c = String(embedColor).trim();
+            if (c && !/^#[0-9a-fA-F]{6}$/.test(c)) return res.status(400).json({ error: 'Embed color must be a hex value like #5865F2' });
+            updateGuildConfig(guild.id, cfg => { cfg.embed_color = c || null; return cfg; });
+        }
+        res.json({ success: true });
+    });
+
     app.get('/api/server/:id/roles', requireAuth, (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
@@ -812,6 +879,94 @@ function createDashboard() {
                 remindAt: r.remindAt, createdAt: r.createdAt, userId: r.userId,
             })));
         } catch { res.json([]); }
+    });
+
+    // ── Giveaways Manager ──
+    app.get('/api/giveaways', requireAuth, (req, res) => {
+        try {
+            const db = getDb();
+            const rows = db.prepare('SELECT * FROM giveaways ORDER BY created_at DESC LIMIT 100').all();
+            res.json(rows.map(g => ({
+                id: g.id,
+                guildId: g.guild_id,
+                guildName: (client && client.guilds.cache.get(g.guild_id)) ? client.guilds.cache.get(g.guild_id).name : g.guild_id,
+                channelId: g.channel_id,
+                prize: g.prize,
+                winners: g.winners,
+                hostTag: g.host_tag || null,
+                endsAt: g.ends_at,
+                status: g.status,
+                winnerIds: g.winner_ids ? JSON.parse(g.winner_ids) : [],
+                endedAt: g.ended_at,
+                createdAt: g.created_at,
+            })));
+        } catch { res.json([]); }
+    });
+
+    app.post('/api/giveaways/create', requireAuth, async (req, res) => {
+        try {
+            if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can create giveaways' });
+            if (!client || !client.user) return res.status(503).json({ error: 'Bot is not online yet' });
+            const { guildId, channelId, prize, durationHours, winners, description } = req.body || {};
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) return res.status(400).json({ error: 'Bot is not in that server' });
+            if (!prize || typeof prize !== 'string' || !prize.trim()) return res.status(400).json({ error: 'Missing prize' });
+            const hours = parseFloat(durationHours);
+            if (!hours || hours <= 0 || hours > 24 * 30) return res.status(400).json({ error: 'Invalid duration in hours' });
+            const winnerCount = Math.min(Math.max(parseInt(winners) || 1, 1), 20);
+            let channel = channelId ? guild.channels.cache.get(channelId) : null;
+            if (!channel || !channel.isTextBased()) {
+                channel = guild.channels.cache.find(c => c.type === 0 && guild.members.me && c.permissionsFor(guild.members.me)?.has('SendMessages')) || null;
+            }
+            if (!channel) return res.status(400).json({ error: 'No text channel the bot can post in' });
+            const gw = require('./giveaways');
+            const g = gw.createGiveaway({
+                guildId: guild.id,
+                channelId: channel.id,
+                prize: prize.trim().slice(0, 200),
+                durationMs: Math.round(hours * 3600000),
+                winners: winnerCount,
+                hostId: 'dashboard',
+                hostTag: 'Dashboard',
+                description: (description || '').toString().trim().slice(0, 500) || undefined,
+            });
+            await gw.postGiveaway(channel, g);
+            res.json({ success: true, id: g.id });
+        } catch (err) {
+            logError(err, 'dashboard', 'giveaway_create');
+            res.status(500).json({ error: err.message || 'Failed to create giveaway' });
+        }
+    });
+
+    app.post('/api/giveaways/end', requireAuth, async (req, res) => {
+        try {
+            if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can end giveaways' });
+            await require('./giveaways').endGiveaway(String(req.body?.id || ''));
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message || 'Failed to end giveaway' });
+        }
+    });
+
+    app.post('/api/giveaways/cancel', requireAuth, (req, res) => {
+        try {
+            if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can cancel giveaways' });
+            const ok = require('./giveaways').cancelGiveaway(String(req.body?.id || ''));
+            if (!ok) return res.status(400).json({ error: 'Giveaway not found or not active' });
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message || 'Failed to cancel giveaway' });
+        }
+    });
+
+    app.post('/api/giveaways/reroll', requireAuth, async (req, res) => {
+        try {
+            if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can reroll giveaways' });
+            const winners = await require('./giveaways').rerollGiveaway(String(req.body?.id || ''));
+            res.json({ success: true, winners: winners || [] });
+        } catch (err) {
+            res.status(500).json({ error: err.message || 'Failed to reroll' });
+        }
     });
 
     // ── Aggregate Stats ──

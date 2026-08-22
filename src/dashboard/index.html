@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
@@ -46,6 +46,7 @@
           <button class="notch-link" data-sec="activity" onclick="showSec('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Activity</span></button>
           <button class="notch-link" data-sec="insights" onclick="showSec('insights');loadInsights()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg><span>Insights</span></button>
           <button class="notch-link" data-sec="invites" onclick="showSec('invites');loadInvites()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg><span>Invites</span></button>
+          <button class="notch-link" data-sec="giveaways" onclick="showSec('giveaways');populateGwServers();loadGiveaways()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M5 12v9h14v-9"/><path d="M12 8c-1.5 0-4-1-4-3s3-2 4 3zM12 8c1.5 0 4-1 4-3s-3-2-4 3z"/></svg><span>Giveaways</span></button>
           <button class="notch-link" data-sec="automod" onclick="showSec('automod');loadAutomod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Auto-Mod</span></button>
           <button class="notch-link" data-sec="tickets" onclick="showSec('tickets');loadTickets()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg><span>Tickets</span></button>
           <button class="notch-link" data-sec="commands" onclick="showSec('commands')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg><span>Commands</span></button>
@@ -92,6 +93,7 @@
     <button class="notch-mobile-link" data-sec="activity" onclick="showSec('activity');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
     <button class="notch-mobile-link" data-sec="insights" onclick="showSec('insights');toggleMobileMenu();loadInsights()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg>Insights</button>
     <button class="notch-mobile-link" data-sec="invites" onclick="showSec('invites');toggleMobileMenu();loadInvites()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>Invites</button>
+    <button class="notch-mobile-link" data-sec="giveaways" onclick="showSec('giveaways');toggleMobileMenu();populateGwServers();loadGiveaways()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M5 12v9h14v-9"/><path d="M12 8c-1.5 0-4-1-4-3s3-2 4 3zM12 8c1.5 0 4-1 4-3s-3-2-4 3z"/></svg>Giveaways</button>
     <button class="notch-mobile-link" data-sec="automod" onclick="showSec('automod');toggleMobileMenu();loadAutomod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Auto-Mod</button>
     <button class="notch-mobile-link" data-sec="tickets" onclick="showSec('tickets');toggleMobileMenu();loadTickets()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg>Tickets</button>
     <button class="notch-mobile-link" data-sec="commands" onclick="showSec('commands');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg>Commands</button>
@@ -269,6 +271,35 @@
       </div>
     </div>
 
+    <!-- ═══ GIVEAWAYS ═══ -->
+    <div class="section" id="sec-giveaways">
+      <h1 class="pg-title">Giveaways</h1>
+      <p class="pg-sub">Create, monitor, and manage giveaways across all servers.</p>
+      <div class="stg" style="margin-bottom:16px;"><label>Create Giveaway</label>
+        <div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">
+          <select id="gwSrv" style="flex:1;min-width:140px;"><option value="">Select server…</option></select>
+          <input type="text" id="gwPrize" placeholder="Prize (e.g. Discord Nitro)" style="flex:1.2;min-width:150px;">
+          <select id="gwDur" style="flex:0 0 120px;">
+            <option value="0.25">15 minutes</option>
+            <option value="1">1 hour</option>
+            <option value="6">6 hours</option>
+            <option value="12">12 hours</option>
+            <option value="24" selected>1 day</option>
+            <option value="48">2 days</option>
+            <option value="72">3 days</option>
+            <option value="168">1 week</option>
+          </select>
+          <input type="number" id="gwWinners" min="1" max="20" value="1" title="Winner count" style="flex:0 0 80px;">
+        </div>
+        <div class="stg-inl">
+          <input type="text" id="gwDesc" placeholder="Description (optional)" style="flex:1;">
+          <button class="btn btn-s" onclick="createGwUI()" style="padding:9px 14px;font-size:11px;">🎁 Start Giveaway</button>
+        </div>
+        <div class="stg-hint">Posts an interactive giveaway embed to the first text channel the bot can send in. Use /giveaway in Discord for role requirements and custom images.</div>
+      </div>
+      <div id="gwList"></div>
+    </div>
+
     <!-- ═══ AUTO-MOD ═══ -->
     <div class="section" id="sec-automod">
       <h1 class="pg-title">Auto-Mod</h1>
@@ -295,12 +326,43 @@
       <p class="pg-sub">Make the dashboard yours.</p>
       <div style="max-width:540px;">
         <div class="stg"><label>Theme Presets</label><div class="thm-grid" id="themeGrid"></div></div>
+        <div class="stg"><label>Color Palette</label><div class="pal-grid" id="paletteGrid"></div><div class="stg-hint">Full interface color schemes (backgrounds, surfaces, borders). Applies to dark mode; light mode keeps its standard surfaces.</div></div>
+        <div class="stg"><label>Interface Font</label>
+          <select id="dashFont" onchange="previewFont(this.value)">
+            <option value="inter">Inter (default)</option>
+            <option value="system">System UI</option>
+            <option value="grotesk">Space Grotesk</option>
+            <option value="rounded">Nunito (Rounded)</option>
+            <option value="mono">JetBrains Mono</option>
+          </select></div>
+        <div class="stg"><label>Corner Radius</label>
+          <select id="dashRadius" onchange="previewRadius(this.value)">
+            <option value="compact">Compact</option>
+            <option value="rounded">Rounded</option>
+            <option value="pill">Pill</option>
+          </select></div>
+        <div class="stg"><label>Border Intensity</label>
+          <select id="dashBorder" onchange="previewBorder(this.value)">
+            <option value="subtle">Subtle</option>
+            <option value="normal">Normal</option>
+            <option value="strong">Strong</option>
+          </select></div>
         <div class="stg"><label>Accent Color</label><div class="stg-inl"><input type="color" id="dashColor" value="#5865F2" oninput="previewColor(this.value)"><span style="font-size:12px;color:var(--text-dim);font-family:monospace;" id="colorVal">#5865F2</span></div></div>
         <div class="stg"><label>Dashboard Title</label><input type="text" id="dashTitle" placeholder="Dashboard" oninput="previewTitle(this.value)"></div>
         
         <div class="stg"><label>Bot Avatar</label>
           <div class="stg-inl" style="margin-bottom:6px;"><input type="url" id="dashAvatarUrl" placeholder="https://cdn.discordapp.com/...avatar.png" style="flex:1;"><button class="btn btn-s" onclick="showToast('Avatar URL saved with settings')" style="padding:9px 14px;font-size:11px;">Set</button></div>
           <div class="stg-hint">Paste a direct image URL for the bot avatar display.</div></div>
+
+        <div class="stg"><label>Navbar Logo</label>
+          <div class="stg-inl" style="margin-bottom:6px;"><input type="url" id="dashLogoUrl" placeholder="https://...png or upload below" style="flex:1;"></div>
+          <div class="stg-inl"><input type="file" id="logoFileInput" accept="image/*" onchange="uploadBrandAsset(this,'logo')" style="flex:1;"><button class="btn btn-s" onclick="clearBrandAsset('logo')" style="padding:9px 14px;font-size:11px;">Clear</button></div>
+          <div class="stg-hint">Shown in the top navigation bar instead of the default icon. Also used on the login page.</div></div>
+
+        <div class="stg"><label>Favicon</label>
+          <div class="stg-inl" style="margin-bottom:6px;"><input type="url" id="dashFaviconUrl" placeholder="https://...png or upload below" style="flex:1;"></div>
+          <div class="stg-inl"><input type="file" id="faviconFileInput" accept="image/*" onchange="uploadBrandAsset(this,'favicon')" style="flex:1;"><button class="btn btn-s" onclick="clearBrandAsset('favicon')" style="padding:9px 14px;font-size:11px;">Clear</button></div>
+          <div class="stg-hint">Browser tab icon for both the dashboard and login page.</div></div>
 
         <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Background Effect</label>
           <div class="bg-style-grid" id="bgStyleGrid"></div></div>

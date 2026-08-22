@@ -457,6 +457,11 @@ function initSchema() {
         db.exec('ALTER TABLE guild_config ADD COLUMN embed_color TEXT');
     } catch {}
 
+    // Add attempts column to reminders if not exists (delivery retry tracking)
+    try {
+        db.exec('ALTER TABLE reminders ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0');
+    } catch {}
+
     // Add transcript column to tickets if not exists
     try {
         db.exec('ALTER TABLE tickets ADD COLUMN transcript TEXT');
