@@ -68,10 +68,14 @@ function getAllPending() {
 
 // ──────────────────── Check Loop ────────────────────
 
+let checkRunning = false;
+
 function startReminderChecker() {
     if (checkInterval) clearInterval(checkInterval);
 
     checkInterval = setInterval(async () => {
+        if (checkRunning) return;
+        checkRunning = true;
         const db = getDb();
         const now = Date.now();
 
@@ -109,6 +113,8 @@ function startReminderChecker() {
 
         } catch (err) {
             logError(err, 'reminders', 'check');
+        } finally {
+            checkRunning = false;
         }
     }, 15000);
 
