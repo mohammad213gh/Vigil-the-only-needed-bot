@@ -5,3 +5,14 @@ config.json
 reminders.json
 uploads/
 *.log
+data/
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+dashUsers.json
+warnings.json
+stats.json
+dashboardConfig.json
+permissions.json
+reactionRoles.json

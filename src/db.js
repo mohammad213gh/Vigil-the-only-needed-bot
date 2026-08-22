@@ -462,6 +462,18 @@ function initSchema() {
         db.exec('ALTER TABLE reminders ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0');
     } catch {}
 
+    // Per-guild access scopes for non-owner dashboard users.
+    // A discord-session user with zero rows here has access to NO servers.
+    try {
+        db.exec(`CREATE TABLE IF NOT EXISTS dash_user_guilds (
+            user_id TEXT NOT NULL,
+            guild_id TEXT NOT NULL,
+            granted_at INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (user_id, guild_id)
+        )`);
+        db.exec('CREATE INDEX IF NOT EXISTS idx_dash_scopes_user ON dash_user_guilds(user_id)');
+    } catch {}
+
     // Add transcript column to tickets if not exists
     try {
         db.exec('ALTER TABLE tickets ADD COLUMN transcript TEXT');

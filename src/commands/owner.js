@@ -74,7 +74,7 @@ async function executeDashAccess(interaction) {
                 '<@' + id + '> \u2014 Added <t:' + Math.floor(u.addedAt / 1000) + ':R> by ' + u.addedBy
             ).join('\n'),
         });
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 }
 

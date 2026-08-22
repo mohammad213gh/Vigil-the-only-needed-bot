@@ -93,7 +93,7 @@ const DEFAULT_DASHBOARD_CONFIG = {
     },
     refreshInterval: 5,
     cardStyle: 'glass',
-    backgroundStyle: 'dots',
+    backgroundStyle: 'none',
     layoutDensity: 'normal',
     animationPreset: 'smooth',
     animationSpeed: 1,
@@ -103,7 +103,7 @@ const DEFAULT_DASHBOARD_CONFIG = {
     borderRadius: 'rounded',
     borderStrength: 'normal',
     themePreset: 'discord',
-    fontFamily: 'inter',
+    fontFamily: 'system',
     showDockLabels: true,
     botAvatarUrl: null,
     logoUrl: null,
@@ -168,6 +168,8 @@ function removeDashUser(userId) {
     const result = db.prepare('DELETE FROM dash_users WHERE user_id = ?').run(userId);
     const removed = result.changes > 0;
     if (!removed) return false;
+    // Drop their guild scopes too
+    db.prepare('DELETE FROM dash_user_guilds WHERE user_id = ?').run(userId);
     // Invalidate all active sessions for this user — clear every session type
     for (const [token, session] of sessions.entries()) {
         if (session.userId === userId) {
@@ -342,6 +344,21 @@ function createDashboard() {
         next();
     }
 
+    // Tenant guard — covers EVERY /api/server/:id/* route in one place so a
+    // new route can never accidentally skip the scope check.
+    app.use((req, res, next) => {
+        const m = req.path.match(/^\/api\/server\/([^/]+)/);
+        if (m && !canAccessGuild(req, m[1])) {
+            return res.status(403).json({ error: 'You do not have access to this server' });
+        }
+        next();
+    });
+
+    function requireOwner(req, res, next) {
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can do that' });
+        next();
+    }
+
     // ── Dashboard Users API ──
     // Managing dashboard users grants access to the bot admin panel, so these
     // routes are owner-only (password session or OWNER_ID). checkOwner is a
@@ -353,7 +370,7 @@ function createDashboard() {
     app.post('/api/dash/users/add', requireAuth, (req, res) => {
         if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage dashboard users' });
         const { userId } = req.body;
-        if (!userId) return res.status(400).json({ error: 'Missing userId' });
+        if (!userId || !/^\d{5,25}$/.test(String(userId))) return res.status(400).json({ error: 'A valid Discord user ID is required' });
         addDashUser(userId, req.discordUserId || 'dashboard');
         res.json({ success: true, users: getDashUsers() });
     });
@@ -364,18 +381,43 @@ function createDashboard() {
         res.json({ success: true, users: getDashUsers() });
     });
 
+    // Guild scope management for a dash user. Owner-only. Empty list = the
+    // user can see no servers.
+    app.get('/api/dash/users/guilds', requireAuth, requireOwner, (req, res) => {
+        const userId = String(req.query.userId || '');
+        if (!/^\d{5,25}$/.test(userId)) return res.status(400).json({ error: 'Invalid userId' });
+        const db = getDb();
+        res.json(db.prepare('SELECT guild_id FROM dash_user_guilds WHERE user_id = ?').all(userId).map(r => r.guild_id));
+    });
+
+    app.post('/api/dash/users/guilds', requireAuth, requireOwner, (req, res) => {
+        const { userId, guildIds } = req.body || {};
+        if (!userId || !/^\d{5,25}$/.test(String(userId))) return res.status(400).json({ error: 'Invalid userId' });
+        if (!Array.isArray(guildIds) || guildIds.some(g => !/^\d{5,25}$/.test(String(g)))) {
+            return res.status(400).json({ error: 'guildIds must be an array of server IDs' });
+        }
+        const db = getDb();
+        const tx = db.transaction(() => {
+            db.prepare('DELETE FROM dash_user_guilds WHERE user_id = ?').run(String(userId));
+            const ins = db.prepare('INSERT OR IGNORE INTO dash_user_guilds (user_id, guild_id, granted_at) VALUES (?, ?, ?)');
+            for (const g of guildIds) ins.run(String(userId), String(g), Date.now());
+        });
+        tx();
+        res.json({ success: true });
+    });
+
     // ── File Upload ──
-    app.post('/api/upload', requireAuth, upload.single('background'), (req, res) => {
+    app.post('/api/upload', requireAuth, requireOwner, upload.single('background'), (req, res) => {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded or invalid type.' });
         res.json({ success: true, url: '/uploads/' + req.file.filename });
     });
     app.use('/uploads', express.static(uploadsDir));
 
     // ── Dashboard Config ──
-    app.get('/api/dash/config', requireAuth, (req, res) => {
+    app.get('/api/dash/config', requireAuth, requireOwner, (req, res) => {
         res.json(getDashboardConfig());
     });
-    app.post('/api/dash/config', requireAuth, (req, res) => {
+    app.post('/api/dash/config', requireAuth, requireOwner, (req, res) => {
         const updated = updateDashboardConfig(req.body);
         res.json({ success: true, config: updated });
     });
@@ -411,7 +453,7 @@ function createDashboard() {
     });
 
     // ── Bot Customization ──
-    app.post('/api/bot/name', requireAuth, (req, res) => {
+    app.post('/api/bot/name', requireAuth, requireOwner, (req, res) => {
         if (!client || !client.user) return res.status(503).json({ error: 'Bot not ready' });
         const { name } = req.body;
         if (!name || name.length > 32) return res.status(400).json({ error: 'Name must be 1-32 characters' });
@@ -420,7 +462,7 @@ function createDashboard() {
             .catch(err => res.status(400).json({ error: err.message }));
     });
 
-    app.post('/api/bot/avatar', requireAuth, (req, res) => {
+    app.post('/api/bot/avatar', requireAuth, requireOwner, (req, res) => {
         if (!client || !client.user) return res.status(503).json({ error: 'Bot not ready' });
         const { url } = req.body;
         if (!url) return res.status(400).json({ error: 'Missing avatar URL' });
@@ -429,7 +471,7 @@ function createDashboard() {
             .catch(err => res.status(400).json({ error: err.message }));
     });
 
-    app.post('/api/bot/presence', requireAuth, (req, res) => {
+    app.post('/api/bot/presence', requireAuth, requireOwner, (req, res) => {
         if (!client || !client.user) return res.status(503).json({ error: 'Bot not ready' });
         const { type, text } = req.body;
         const activityTypes = { playing: 0, watching: 3, listening: 2, competing: 5 };
@@ -456,7 +498,7 @@ function createDashboard() {
             boostCount: g.premiumSubscriptionCount || 0,
             channels: g.channels.cache.size,
         })).sort((a, b) => b.memberCount - a.memberCount);
-        res.json(servers);
+        res.json(filterByScope(req, servers, 'id'));
     });
 
     // ── Server Management: Roles ──
@@ -681,6 +723,34 @@ function createDashboard() {
         return session.userId || process.env.OWNER_ID || 'dashboard';
     }
 
+    // ── Tenant scoping ──
+    // Password sessions and the OWNER_ID discord session see every server.
+    // Any other dash user only sees servers explicitly granted to them in
+    // dash_user_guilds. Fail-closed: unknown sessions are treated as scoped
+    // with zero grants.
+    function getScopedGuildIds(req) {
+        if (checkOwner(req)) return null;
+        const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
+        const session = token ? sessions.get(token) : null;
+        if (!session || session.method !== 'discord' || !session.userId) return new Set();
+        const db = getDb();
+        return new Set(db.prepare('SELECT guild_id FROM dash_user_guilds WHERE user_id = ?')
+            .all(session.userId).map(r => r.guild_id));
+    }
+
+    function canAccessGuild(req, guildId) {
+        if (!guildId) return false;
+        const scoped = getScopedGuildIds(req);
+        if (scoped === null) return true;
+        return scoped.has(String(guildId));
+    }
+
+    function filterByScope(req, rows, key) {
+        const scoped = getScopedGuildIds(req);
+        if (scoped === null) return rows;
+        return rows.filter(r => scoped.has(String(r[key])));
+    }
+
     app.post('/api/server/:id/mod/warn', requireAuth, async (req, res) => {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can perform mod actions' });
@@ -716,7 +786,7 @@ function createDashboard() {
 
             await member.kick('[Dashboard] ' + reason);
             const { createCase } = require('./modCases');
-            createCase(guild.id, userId, process.env.OWNER_ID || 'dashboard', 'Dashboard', 'kick', reason);
+            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'kick', reason);
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -735,7 +805,7 @@ function createDashboard() {
             const deleteSeconds = deleteMessages === '24hours' ? 86400 : (deleteMessages === '6hours' ? 21600 : (deleteMessages === 'hour' ? 3600 : 0));
             await guild.bans.create(userId, { reason: '[Dashboard] ' + reason, deleteMessageSeconds: deleteSeconds });
             const { createCase } = require('./modCases');
-            createCase(guild.id, userId, process.env.OWNER_ID || 'dashboard', 'Dashboard', 'ban', reason);
+            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'ban', reason);
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -765,7 +835,7 @@ function createDashboard() {
 
             await member.timeout(ms, '[Dashboard] ' + reason);
             const { createCase } = require('./modCases');
-            createCase(guild.id, userId, process.env.OWNER_ID || 'dashboard', 'Dashboard', 'timeout', reason);
+            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'timeout', reason);
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -886,7 +956,7 @@ function createDashboard() {
         try {
             const db = getDb();
             const rows = db.prepare('SELECT * FROM giveaways ORDER BY created_at DESC LIMIT 100').all();
-            res.json(rows.map(g => ({
+            res.json(filterByScope(req, rows, 'guild_id').map(g => ({
                 id: g.id,
                 guildId: g.guild_id,
                 guildName: (client && client.guilds.cache.get(g.guild_id)) ? client.guilds.cache.get(g.guild_id).name : g.guild_id,
@@ -1009,7 +1079,7 @@ function createDashboard() {
             const users = db.prepare('SELECT COUNT(DISTINCT user_id) as users FROM command_usage').get();
             // Per-server breakdown for top 5 servers by usage
             const perServer = db.prepare('SELECT guild_id, command, COUNT(*) as count FROM command_usage GROUP BY guild_id, command ORDER BY count DESC LIMIT 30').all();
-            const enriched = perServer.map(r => ({
+            const enriched = filterByScope(req, perServer, 'guild_id').map(r => ({
                 guildName: client.guilds.cache.get(r.guild_id)?.name || r.guild_id,
                 command: r.command, count: r.count,
             }));
@@ -1025,8 +1095,10 @@ function createDashboard() {
     // ── Export Stats ──
     app.get('/api/stats/export', requireAuth, (req, res) => {
         if (!client) return res.json({});
+        const scoped = getScopedGuildIds(req);
         const exportData = {};
         client.guilds.cache.forEach(g => {
+            if (scoped && !scoped.has(String(g.id))) return;
             const s = getGuildStats(g.id);
             exportData[g.id] = {
                 name: g.name, memberCount: g.memberCount,
@@ -1052,7 +1124,7 @@ function createDashboard() {
                 count: s.totalJoins, time: Date.now(),
             });
         });
-        res.json(recent.slice(-30));
+        res.json(filterByScope(req, recent.slice(-30), 'guildId'));
     });
 
     // ── System Info ──
@@ -1178,7 +1250,7 @@ function createDashboard() {
     });
 
     // ── SSE: Real-time events ──
-    const sseClients = new Set();
+    const sseClients = new Map(); // res -> Set of allowed guildIds (null = unrestricted)
     app.get('/api/events', requireAuth, (req, res) => {
         res.writeHead(200, {
             'Content-Type': 'text/event-stream',
@@ -1186,14 +1258,20 @@ function createDashboard() {
             'Connection': 'keep-alive',
         });
         res.write('data: {"type":"connected"}\n\n');
-        sseClients.add(res);
+        sseClients.set(res, getScopedGuildIds(req));
         req.on('close', () => sseClients.delete(res));
     });
 
-    // Helper to broadcast events
+    // Helper to broadcast events. Scoped clients only receive events whose
+    // data.guildId is in their granted set; events without a guildId are
+    // withheld from scoped clients entirely (fail-closed).
     global.broadcastDashboard = function broadcastDashboard(type, data) {
-        const msg = 'data: ' + JSON.stringify({ type: type, data: data, time: Date.now() }) + '\n\n';
-        for (const client of sseClients) {
+        for (const [client, scoped] of sseClients) {
+            if (scoped) {
+                const gid = data && data.guildId !== undefined ? String(data.guildId) : null;
+                if (!gid || !scoped.has(gid)) continue;
+            }
+            const msg = 'data: ' + JSON.stringify({ type: type, data: data, time: Date.now() }) + '\n\n';
             try { client.write(msg); } catch { sseClients.delete(client); }
         }
     };
@@ -1253,6 +1331,7 @@ function createDashboard() {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
+        if (!canAccessGuild(req, req.params.id)) return res.status(403).json({ error: 'You do not have access to this server' });
         const db = getDb();
         // Top users by message count
         const topUsers = db.prepare('SELECT user_id, SUM(message_count) as total FROM activity_counts WHERE guild_id = ? GROUP BY user_id ORDER BY total DESC LIMIT 10').all(guild.id);
@@ -1949,7 +2028,7 @@ function createDashboard() {
 
     // ── Error Log Viewer ──
     // Bot-wide error feed persisted by logError() into error_logs.
-    app.get('/api/errors', requireAuth, (req, res) => {
+    app.get('/api/errors', requireAuth, requireOwner, (req, res) => {
         try {
             const tag = req.query.tag || null;
             const limit = Math.min(parseInt(req.query.limit) || 100, 300);
@@ -1969,7 +2048,7 @@ function createDashboard() {
         }
     });
 
-    app.delete('/api/errors', requireAuth, (req, res) => {
+    app.delete('/api/errors', requireAuth, requireOwner, (req, res) => {
         try {
             clearErrorLogs(req.query.tag || null);
             res.json({ success: true });
@@ -2018,7 +2097,7 @@ function createDashboard() {
 
     // ── Error Alert Channel (owner-only) ──
     // Bot-wide setting: where critical errors (uncaughtException etc.) get pinged.
-    app.get('/api/errors/alert', requireAuth, (req, res) => {
+    app.get('/api/errors/alert', requireAuth, requireOwner, (req, res) => {
         if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can configure alerts' });
         const row = getDb().prepare('SELECT value FROM bot_config WHERE key = ?').get('bot_error_alert_channel');
         let channelId = (row && row.value) || '';
@@ -2042,7 +2121,7 @@ function createDashboard() {
         }
         res.json({ channelId, guilds });
     });
-    app.post('/api/errors/alert', requireAuth, (req, res) => {
+    app.post('/api/errors/alert', requireAuth, requireOwner, (req, res) => {
         if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can configure alerts' });
         const channelId = (req.body && req.body.channelId || '').trim();
         getDb().prepare('INSERT OR REPLACE INTO bot_config (key, value) VALUES (?, ?)').run('bot_error_alert_channel', channelId);

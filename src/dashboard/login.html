@@ -64,7 +64,25 @@ h1{color:#fff;font-size:22px;font-weight:700;text-align:center;letter-spacing:-0
 .err{color:#ed4245;font-size:12px;text-align:center;margin-top:12px;display:none;padding:8px 12px;background:rgba(237,66,69,0.08);border-radius:8px;border:1px solid rgba(237,66,69,0.1)}
 .err.show{display:block}
 .mode-hint{text-align:center;font-size:11px;color:rgba(255,255,255,0.15);margin-bottom:16px;min-height:16px}
-.ft{text-align:center;margin-top:20px;color:rgba(255,255,255,0.06);font-size:11px;letter-spacing:0.5px}
+.ft{text-align:center;margin-top:20px;color:rgba(255,255,255,0.06);font-size:12px;letter-spacing:0.5px}
+
+/* ═══ SEQUOIA LAYER ═══ */
+body{background:#000}
+body.light-mode{background:#f5f5f7}
+.login-card{border-radius:24px!important;background:rgba(18,18,20,0.72)!important;backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);box-shadow:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 0 0 1px rgba(255,255,255,0.03),0 24px 80px rgba(0,0,0,0.6)!important;padding:40px 36px!important}
+.bg-mesh{opacity:.55;filter:saturate(140%)}
+h1{letter-spacing:-0.02em;font-weight:600}
+.tab-row{position:relative;background:rgba(255,255,255,0.06);border-radius:999px;padding:3px}
+.tab-row::before{content:'';position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;background:rgba(255,255,255,0.10);box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);transition:transform .35s cubic-bezier(0.23,1,0.32,1)}
+.tab-row:has(.tab-btn:nth-child(2).active)::before{transform:translateX(100%)}
+.tab-btn{position:relative;z-index:1;border-radius:999px;color:rgba(255,255,255,0.5);transition:color .3s cubic-bezier(0.23,1,0.32,1)}
+.tab-btn.active{background:transparent;color:#fff}
+.inp-grp input{border-radius:14px!important;background:rgba(255,255,255,0.03)!important;box-shadow:inset 0 1px 2px rgba(0,0,0,0.5)}
+.inp-grp input:focus{outline:none;border-color:rgba(10,132,255,.6)!important;box-shadow:inset 0 1px 2px rgba(0,0,0,.5),0 0 0 2px rgba(10,132,255,.6)!important}
+.btn{min-height:44px;border-radius:14px;background:linear-gradient(180deg,#2E9BFF,#0A84FF)!important;border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 8px 24px -6px rgba(10,132,255,.45);transition:all .3s cubic-bezier(.23,1,.32,1)}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:scale(.98)}
+.icon-wrap{width:52px;height:52px;border-radius:16px}
 </style>
 </head>
 <body>

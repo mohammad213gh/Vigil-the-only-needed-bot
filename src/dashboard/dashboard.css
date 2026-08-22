@@ -1,5 +1,5 @@
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--accent:#5865F2;--accent-rgb:88,101,242;--bg:#07070d;--surface:rgba(255,255,255,0.06);--border:rgba(255,255,255,0.14);--border-hover:rgba(255,255,255,0.24);--text:#eef0f7;--text-dim:rgba(255,255,255,0.72);--text-muted:rgba(255,255,255,0.5);--bg-card:#12121c;--radius:14px;--radius-sm:10px;--radius-xs:8px;--sb-track:transparent;--sb-thumb:rgba(255,255,255,0.12);--sb-thumb-hover:rgba(255,255,255,0.2);--anim-speed:1;--anim-preset:smooth;--card-border-width:1px;--notch-h:68px;--font:'Inter',-apple-system,sans-serif}
+:root{--accent:#0A84FF;--accent-rgb:10,132,255;--bg:#000000;--surface:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--border-hover:rgba(255,255,255,0.16);--text:rgba(255,255,255,0.95);--text-dim:rgba(255,255,255,0.60);--text-muted:rgba(255,255,255,0.35);--bg-card:#0d0d0f;--radius:20px;--radius-sm:14px;--radius-xs:12px;--sb-track:transparent;--sb-thumb:rgba(255,255,255,0.14);--sb-thumb-hover:rgba(255,255,255,0.24);--anim-speed:1;--anim-preset:smooth;--card-border-width:1px;--notch-h:60px;--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Segoe UI',Roboto,sans-serif;--ease-apple:cubic-bezier(0.23,1,0.32,1);--hairline:inset 0 1px 0 rgba(255,255,255,0.08),inset 0 0 0 1px rgba(255,255,255,0.03);--shadow-card:0 20px 40px -10px rgba(0,0,0,0.5)}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--sb-thumb)var(--sb-track)}
 body::-webkit-scrollbar{width:5px}
 body::-webkit-scrollbar-track{background:var(--sb-track)}
@@ -831,3 +831,83 @@ body.light-mode.border-strong{--border:rgba(0,0,0,0.18)!important;--border-hover
 .cmd-pal-item svg{width:15px;height:15px;flex-shrink:0;opacity:0.6}
 .cmd-pal-item .hint{margin-left:auto;font-size:9px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-muted)}
 .cmd-pal-item.sel{background:rgba(var(--accent-rgb),0.14);color:var(--text)}
+/* ═══════════════ APPLE SEQUOIA SYSTEM LAYER ═══════════════ */
+body{letter-spacing:-0.01em;background:#000}
+.pg-title{font-size:28px;font-weight:600;letter-spacing:-0.02em;color:var(--text)}
+.pg-sub,.lbl,.sub{color:var(--text-dim);font-weight:400}
+.card .val,.card-stat .v{font-weight:600;letter-spacing:-0.02em;color:var(--text)}
+h1,h2,h3,.tw-h,.stg>label,.tg-lbl{letter-spacing:-0.015em}
+
+/* ── Glass header + pill tabs ── */
+.notch-nav{--notch-h:60px}
+.notch-side,.notch-body,.notch-corner-l,.notch-corner-r{background:rgba(10,10,12,0.72)!important;backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%)}
+.notch-body,.notch-side,.notch-corner-l,.notch-corner-r{border-bottom:1px solid rgba(255,255,255,0.06)}
+.notch-link{border-radius:999px;padding:8px 14px;color:rgba(255,255,255,0.5);transition:all .3s var(--ease-apple)}
+.notch-link:hover{color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.06)}
+.notch-link.active{color:#fff;background:rgba(255,255,255,0.10)}
+.notch-link svg{width:20px;height:20px}
+.notch-action-btn,.notch-mobile-btn{width:36px;height:36px;border-radius:999px;background:transparent;box-shadow:var(--hairline);transition:all .3s var(--ease-apple)}
+.notch-action-btn:hover,.notch-mobile-btn:hover{background:rgba(255,255,255,0.08)}
+
+/* ── Cards & panels: layered translucency, hairline highlight, ambient shadow ── */
+.card,.tw,.srv-card,.card-stat,.act-item,.rmd,.err-item,.du-row{background:rgba(255,255,255,0.03);border:none;border-radius:var(--radius);box-shadow:var(--hairline),var(--shadow-card);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);padding:24px;transition:transform .3s var(--ease-apple),box-shadow .3s var(--ease-apple),background .3s var(--ease-apple)}
+.tw-h{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.05);background:transparent}
+.card:hover,.tw:hover{transform:translateY(-2px);background:rgba(255,255,255,0.05);box-shadow:var(--hairline),0 28px 56px -12px rgba(0,0,0,0.6)}
+.card-solid{background:rgba(255,255,255,0.05)!important}
+.card-border{background:rgba(255,255,255,0.02)!important}
+
+/* ── Controls: recessed wells ── */
+input,select,textarea{background:rgba(255,255,255,0.02)!important;border:1px solid rgba(255,255,255,0.07)!important;border-radius:var(--radius-xs)!important;box-shadow:inset 0 1px 2px rgba(0,0,0,0.5);color:var(--text)!important;transition:border-color .3s var(--ease-apple),box-shadow .3s var(--ease-apple)}
+input::placeholder,textarea::placeholder{color:var(--text-muted)}
+input:focus,select:focus,textarea:focus{outline:none!important;border-color:rgba(10,132,255,0.6)!important;box-shadow:inset 0 1px 2px rgba(0,0,0,0.5),0 0 0 2px rgba(10,132,255,0.6),0 0 0 3px rgba(0,0,0,1)}
+select option{background:#0d0d0f;color:#fff}
+
+/* ── Buttons ── */
+.btn{min-height:44px;border-radius:14px;background:linear-gradient(180deg,#2E9BFF,#0A84FF);border:1px solid rgba(255,255,255,0.12);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25),0 8px 24px -6px rgba(10,132,255,0.45);font-weight:600;letter-spacing:-0.01em;transition:all .3s var(--ease-apple)}
+.btn:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.btn:active{transform:scale(0.98)}
+.btn-s{background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.08);box-shadow:var(--hairline);color:var(--text)}
+.btn-s:hover{background:rgba(255,255,255,0.14)}
+
+/* ── Status pills w/ ambient pulse ── */
+.tag,.bdg,.cmd-bdg{border-radius:999px;font-size:12px;font-weight:600;padding:4px 12px;border:none}
+.tag.green{background:rgba(48,209,88,0.15);color:#30d158;box-shadow:0 0 12px rgba(48,209,88,0.18);animation:pulseGlow 3s ease-in-out infinite}
+.tag.red{background:rgba(255,69,58,0.15);color:#ff453a;box-shadow:0 0 12px rgba(255,69,58,0.15)}
+.tag.yellow{background:rgba(255,159,10,0.15);color:#ff9f0a}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 8px rgba(48,209,88,0.12)}50%{box-shadow:0 0 18px rgba(48,209,88,0.28)}}
+
+/* ── Theme swatches → floating glass chips ── */
+.thm-pick,.pal-pick,.bg-style-opt{width:44px;height:44px;border-radius:50%;border:2px solid transparent;box-shadow:var(--hairline);transition:all .3s var(--ease-apple)}
+.pal-pick{height:52px;width:52px}
+.pal-pick span{opacity:0;padding:0}
+.pal-pick:hover span,.pal-pick.active span{opacity:1}
+.bg-style-opt{border-radius:var(--radius-sm);min-height:52px}
+.thm-pick.active,.pal-pick.active{border-color:#fff;box-shadow:0 0 0 3px rgba(255,255,255,0.15),var(--shadow-card);transform:scale(1.06)}
+
+/* ── Toggles ── */
+.tg{background:rgba(255,255,255,0.12)}
+.tg.on{background:#30d158;box-shadow:0 0 10px rgba(48,209,88,0.35)}
+
+/* ── Focus visibility (HIG keyboard access) ── */
+button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid rgba(10,132,255,0.7);outline-offset:2px;border-radius:10px}
+
+/* ── Scrollbars / toast / misc ── */
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.14);border-radius:99px}
+.toast{background:rgba(28,28,30,0.85);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border-radius:999px;box-shadow:var(--hairline),var(--shadow-card);color:var(--text)}
+.empty p{color:var(--text-dim)}
+code{background:rgba(255,255,255,0.06)}
+
+/* ── Mobile touch targets (HIG 44pt) ── */
+@media(max-width:899px){.notch-action-btn,.notch-mobile-btn{width:44px;height:44px}.notch-link{min-height:44px}}
+
+/* ── Light mode reconciliation ── */
+body.light-mode{--bg:#f5f5f7;--bg-card:#ffffff;--surface:rgba(0,0,0,0.04);--text:rgba(0,0,0,0.92);--text-dim:rgba(0,0,0,0.60);--text-muted:rgba(0,0,0,0.35)}
+body.light-mode body,body.light-mode{background:#f5f5f7}
+body.light-mode .card,body.light-mode .tw{background:rgba(255,255,255,0.65);box-shadow:inset 0 1px 0 rgba(255,255,255,0.6),0 20px 40px -10px rgba(0,0,0,0.12)}
+body.light-mode .notch-side,body.light-mode .notch-body,body.light-mode .notch-corner-l,body.light-mode .notch-corner-r{background:rgba(245,245,247,0.75)!important;border-bottom-color:rgba(0,0,0,0.06)}
+body.light-mode .notch-link.active{background:rgba(0,0,0,0.08);color:#000}
+body.light-mode .btn-s{background:rgba(0,0,0,0.06);color:#000}
+body.light-mode input,body.light-mode select,body.light-mode textarea{background:rgba(255,255,255,0.8)!important;color:#000!important}
+
+/* ── Reduced motion (HIG) ── */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

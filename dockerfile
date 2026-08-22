@@ -7,4 +7,7 @@ RUN npm install --omit=dev
 
 COPY . .
 
+RUN chown -R node:node /app
+USER node
+
 CMD ["npm", "start"]
