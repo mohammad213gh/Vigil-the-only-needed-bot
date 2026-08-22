@@ -184,11 +184,10 @@ function checkCooldown(interaction) {
 
     timestamps.set(userId, now + cooldownTime);
 
-    // Clean up old entries every 5 minutes
-    if (timestamps.size > 100) {
-        const expiry = now - 60000;
+    // Clean up expired entries once the map grows
+    if (timestamps.size > 50) {
         for (const [uid, ts] of timestamps.entries()) {
-            if (ts < expiry) timestamps.delete(uid);
+            if (ts <= now) timestamps.delete(uid);
         }
     }
 

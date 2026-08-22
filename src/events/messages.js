@@ -30,6 +30,21 @@ function logMessageAction(guildId, channelId, messageId, authorId, authorTag, co
     }
 }
 
+// Prefix cache — avoids a config read per message; 30s staleness window
+const prefixCache = new Map();
+function getCachedPrefix(guildId) {
+    const cached = prefixCache.get(guildId);
+    if (cached && Date.now() - cached.ts < 30000) return cached.prefix;
+    let prefix = ';';
+    try {
+        prefix = getGuildConfig(guildId).prefix || ';';
+    } catch (err) {
+        logError(err, 'events', 'messages/prefix');
+    }
+    prefixCache.set(guildId, { prefix, ts: Date.now() });
+    return prefix;
+}
+
 module.exports = [
     {
         name: 'messageCreate',
@@ -44,14 +59,12 @@ module.exports = [
             // Auto-mod check (async, non-blocking — runs in background)
             checkMessage(message, message.guild.id).catch(() => {});
 
-            // Fast-path: check common prefixes first (; / ! .) before hitting DB
+            // Prefix dispatch — cached lookup supports ANY configured prefix
+            // (the old hardcoded ; / ! . gate silently broke custom prefixes)
             const content = message.content;
-            if (!content || (content[0] !== ';' && content[0] !== '/' && content[0] !== '!' && content[0] !== '.')) return;
+            if (!content || content.length < 2) return;
 
-            const guildConfig = getGuildConfig(message.guild.id);
-            const prefix = guildConfig.prefix || ';';
-
-            await handlePrefixMessage(message, prefix);
+            await handlePrefixMessage(message, getCachedPrefix(message.guild.id));
         },
     },
     {

@@ -911,3 +911,6 @@ body.light-mode input,body.light-mode select,body.light-mode textarea{background
 
 /* ── Reduced motion (HIG) ── */
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+/* ═══ LEGIBILITY FLOOR (HIG audit C1) ═══ */
+.cmd-bdg,.du-meta,.err-extra,.a-tm,.rmd-tm{font-size:12px!important}
+.err-sub,.stg-hint,.empty-act,.mp-meta,.cmd-count{font-size:12px!important}
