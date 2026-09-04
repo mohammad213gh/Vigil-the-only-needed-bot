@@ -50,3 +50,6 @@ repo_check/
 
 # ─── Agent Skills ───
 .claude/skills/
+
+# ─── Agent scratch ───
+.utim_tmp/

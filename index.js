@@ -340,7 +340,7 @@ app.listen(PORT, () => {
 
 // ──────────────────── Graceful Shutdown ────────────────────
 
-const { closeDb, getDb, backupDatabase } = require('./src/db');
+const { closeDb, getDb, backupDatabase, startDataRetentionSweeper, stopDataRetentionSweeper } = require('./src/db');
 
 function shutdown(signal) {
     console.log('\n[Bot] Received ' + signal + '. Shutting down gracefully...');
@@ -351,6 +351,7 @@ function shutdown(signal) {
     stopTempVoice();
     stopTempBanSweeper();
     stopReminderChecker();
+    stopDataRetentionSweeper();
     closeDb();
     client.destroy();
     console.log('[Bot] Goodbye!');
@@ -429,6 +430,7 @@ client.login(process.env.BOT_TOKEN).then(() => {
     startServerStats(client);
     startTempBanSweeper();
     startReminderChecker();
+    startDataRetentionSweeper();
     console.log('[Bot] Ticket inactivity, giveaway + server stats checks started.');
 }).catch(err => {
     console.error('[Bot] Failed to login:', err.message || err);

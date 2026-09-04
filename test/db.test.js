@@ -12,7 +12,7 @@ process.env.DATA_DIR = tmp;
 
 const {
     getDb, closeDb, recordErrorLog, getErrorLogs, getErrorTagCounts,
-    clearErrorLogs, backupDatabase, listBackups, deleteBackup,
+    clearErrorLogs, backupDatabase, listBackups, deleteBackup, pruneOldData,
 } = require('../src/db');
 
 after(() => {
@@ -72,4 +72,56 @@ test('backups: only newest 7 are kept', () => {
 test('db is usable after all that', () => {
     const db = getDb();
     assert.ok(db.prepare('SELECT 1 AS ok').get().ok === 1);
+});
+
+test('prune: command_usage older than the window is removed, recent kept', () => {
+    const db = getDb();
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+    db.prepare('INSERT INTO command_usage (guild_id, command, user_id, used_at) VALUES (?, ?, ?, ?)').run('prune-g', 'ping', 'u1', now - 200 * DAY);
+    db.prepare('INSERT INTO command_usage (guild_id, command, user_id, used_at) VALUES (?, ?, ?, ?)').run('prune-g', 'help', 'u1', now - 10 * DAY);
+    const res = pruneOldData(now);
+    const remaining = db.prepare('SELECT command FROM command_usage WHERE guild_id = ?').all('prune-g').map(r => r.command);
+    assert.deepStrictEqual(remaining, ['help']);
+    assert.strictEqual(res.commandUsage, 1);
+    db.prepare('DELETE FROM command_usage WHERE guild_id = ?').run('prune-g');
+});
+
+test('prune: activity_counts inactive rows removed, active + legacy-NULL kept', () => {
+    const db = getDb();
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+    db.prepare('INSERT OR REPLACE INTO activity_counts (guild_id, user_id, channel_id, message_count, last_seen) VALUES (?, ?, ?, ?, ?)').run('prune-g2', 'stale', 'c1', 5, now - 200 * DAY);
+    db.prepare('INSERT OR REPLACE INTO activity_counts (guild_id, user_id, channel_id, message_count, last_seen) VALUES (?, ?, ?, ?, ?)').run('prune-g2', 'active', 'c1', 3, now - 2 * DAY);
+    db.prepare('INSERT OR REPLACE INTO activity_counts (guild_id, user_id, channel_id, message_count) VALUES (?, ?, ?, ?)').run('prune-g2', 'legacy', 'c1', 1);
+    const res = pruneOldData(now);
+    const rows = db.prepare('SELECT user_id FROM activity_counts WHERE guild_id = ?').all('prune-g2').map(r => r.user_id).sort();
+    assert.deepStrictEqual(rows, ['active', 'legacy']);
+    assert.strictEqual(res.activityCounts, 1);
+    db.prepare('DELETE FROM activity_counts WHERE guild_id = ?').run('prune-g2');
+});
+
+test('prune: ticket messages of old closed tickets removed, open/recent kept', () => {
+    const db = getDb();
+    const now = Date.now();
+    const DAY = 24 * 60 * 60 * 1000;
+    const insTicket = db.prepare('INSERT INTO tickets (id, guild_id, ticket_number, channel_id, creator_id, creator_tag, status, created_at, closed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    insTicket.run('t-old', 'prune-g3', 1, 'ch1', 'u1', 'u', 'closed', now - 400 * DAY, now - 400 * DAY);
+    insTicket.run('t-open', 'prune-g3', 2, 'ch2', 'u1', 'u', 'open', now, null);
+    insTicket.run('t-recent-closed', 'prune-g3', 3, 'ch3', 'u1', 'u', 'closed', now - 30 * DAY, now - 30 * DAY);
+    const insMsg = db.prepare('INSERT INTO ticket_messages (ticket_id, author_id, author_tag, content, created_at) VALUES (?, ?, ?, ?, ?)');
+    insMsg.run('t-old', 'u1', 'u', 'ancient', now - 400 * DAY);
+    insMsg.run('t-open', 'u1', 'u', 'still live', now - 1 * DAY);
+    insMsg.run('t-recent-closed', 'u1', 'u', 'freshly closed', now - 30 * DAY);
+    const res = pruneOldData(now);
+    const remaining = db.prepare('SELECT ticket_id, content FROM ticket_messages WHERE ticket_id IN (?, ?, ?)').all('t-old', 't-open', 't-recent-closed').map(r => r.content).sort();
+    assert.deepStrictEqual(remaining, ['freshly closed', 'still live']);
+    assert.strictEqual(res.ticketMessages, 1);
+    db.prepare('DELETE FROM ticket_messages WHERE ticket_id IN (?, ?, ?)').run('t-old', 't-open', 't-recent-closed');
+    db.prepare('DELETE FROM tickets WHERE id IN (?, ?, ?)').run('t-old', 't-open', 't-recent-closed');
+});
+
+test('prune: safe to run on a fresh database (no rows, no error)', () => {
+    const res = pruneOldData();
+    assert.ok(res.commandUsage >= 0 && res.activityCounts >= 0 && res.ticketMessages >= 0);
 });

@@ -608,6 +608,15 @@ function initSchema() {
         db.exec('ALTER TABLE ban_appeals ADD COLUMN review_note TEXT');
     } catch {}
 
+    // Add last_seen column to activity_counts if not exists (used by the
+    // retention sweeper to prune long-inactive user/channel rows). Legacy
+    // rows are backfilled to "now" so they age out on the normal schedule
+    // instead of living forever.
+    try {
+        db.exec('ALTER TABLE activity_counts ADD COLUMN last_seen INTEGER');
+        db.prepare('UPDATE activity_counts SET last_seen = ? WHERE last_seen IS NULL').run(Date.now());
+    } catch {}
+
     // Error log for the dashboard Errors section
     db.exec(`CREATE TABLE IF NOT EXISTS error_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1034,7 +1043,81 @@ async function runBackupVerification() {
     }
 }
 
-module.exports = { getDb, initDb, closeDb, migrateFromJson, recordErrorLog, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup, verifyBackup, scheduleBackupVerification, recordAuditTrail };
+function deleteBackup(name) {
+    if (typeof name !== 'string' || !BACKUP_NAME_RE.test(name)) return false;
+    try {
+        fs.unlinkSync(path.join(BACKUP_DIR, name));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// ──────────────────── Retention Sweeps ────────────────────
+// A handful of tables grow forever if nothing prunes them (message_log,
+// error_logs and bot_activity are already capped at write time). These
+// sweeps keep the database bounded so backups stay small and fast:
+//   - command_usage:      one row per command execution, forever → 180 days
+//   - activity_counts:    one row per (user × channel) pair, churns forever
+//                         → rows inactive 180 days; requires last_seen
+//   - ticket_messages:    every ticket message, forever → messages of tickets
+//                         closed > 365 days (transcripts are snapshotted into
+//                         tickets.transcript at close, so history survives)
+// invite_uses is deliberately NOT pruned — invite stats (counts, top
+// inviters) are computed straight off that table, and growth is ~1 row per
+// join, which is negligible.
+const RETENTION_DAY_MS = 24 * 60 * 60 * 1000;
+const RETENTION = {
+    commandUsageMs: 180 * RETENTION_DAY_MS,
+    activityMs: 180 * RETENTION_DAY_MS,
+    closedTicketMessagesMs: 365 * RETENTION_DAY_MS,
+};
+
+let retentionSweeper = null;
+
+function pruneOldData(nowMs = Date.now()) {
+    const d = getDb();
+    const changes = {};
+    try {
+        const r = d.prepare('DELETE FROM command_usage WHERE used_at < ?').run(nowMs - RETENTION.commandUsageMs);
+        changes.commandUsage = r.changes;
+    } catch (err) {
+        logError(err, 'db', 'prune/command_usage');
+    }
+    try {
+        // Only rows with a known last_seen — legacy NULL rows are kept rather
+        // than risk deleting live activity during an in-place upgrade.
+        const r = d.prepare('DELETE FROM activity_counts WHERE last_seen IS NOT NULL AND last_seen < ?').run(nowMs - RETENTION.activityMs);
+        changes.activityCounts = r.changes;
+    } catch (err) {
+        logError(err, 'db', 'prune/activity_counts');
+    }
+    try {
+        const r = d.prepare(`DELETE FROM ticket_messages WHERE ticket_id IN (
+            SELECT id FROM tickets WHERE status = 'closed' AND closed_at < ?
+        )`).run(nowMs - RETENTION.closedTicketMessagesMs);
+        changes.ticketMessages = r.changes;
+    } catch (err) {
+        logError(err, 'db', 'prune/ticket_messages');
+    }
+    return changes;
+}
+
+function startDataRetentionSweeper() {
+    if (retentionSweeper) return;
+    pruneOldData(); // catch up once on boot, then daily
+    retentionSweeper = setInterval(() => pruneOldData(), RETENTION_DAY_MS);
+    retentionSweeper.unref?.();
+}
+
+function stopDataRetentionSweeper() {
+    if (retentionSweeper) {
+        clearInterval(retentionSweeper);
+        retentionSweeper = null;
+    }
+}
+
+module.exports = { getDb, initDb, closeDb, migrateFromJson, recordErrorLog, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup, verifyBackup, scheduleBackupVerification, recordAuditTrail, pruneOldData, startDataRetentionSweeper, stopDataRetentionSweeper };
 
 function recordAuditTrail({ type, userId, userTag, guildId, action, details }) {
     try {

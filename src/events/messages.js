@@ -10,8 +10,9 @@ const { checkMessage } = require('../automod');
 function trackActivity(guildId, userId, channelId) {
     const db = getDb();
     try {
-        db.prepare('INSERT OR REPLACE INTO activity_counts (guild_id, user_id, channel_id, message_count) VALUES (?, ?, ?, COALESCE((SELECT message_count + 1 FROM activity_counts WHERE guild_id = ? AND user_id = ? AND channel_id = ?), 1))')
-            .run(guildId, userId, channelId, guildId, userId, channelId);
+        db.prepare(`INSERT OR REPLACE INTO activity_counts (guild_id, user_id, channel_id, message_count, last_seen)
+            VALUES (?, ?, ?, COALESCE((SELECT message_count + 1 FROM activity_counts WHERE guild_id = ? AND user_id = ? AND channel_id = ?), 1), ?)`)
+            .run(guildId, userId, channelId, guildId, userId, channelId, Date.now());
     } catch (err) {
         logError(err, 'events', 'messages/trackActivity');
     }
