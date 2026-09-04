@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node index.js",
     "test": "node --test \"test/*.test.js\"",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "seal:dashboard": "node scripts/split-dashboard.mjs seal"
   },
   "dependencies": {
     "@discordjs/voice": "^0.19.2",
@@ -22,7 +23,9 @@
     "better-sqlite3@12.11.1": true
   },
   "devDependencies": {
+    "acorn": "^8.18.0",
     "eslint": "^10.10.0",
-    "globals": "^17.12.0"
+    "globals": "^17.12.0",
+    "jsdom": "^30.0.1"
   }
 }

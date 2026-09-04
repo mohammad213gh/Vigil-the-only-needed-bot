@@ -11,7 +11,7 @@ const path = require('path');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'automod-test-'));
 process.env.DATA_DIR = tmp;
 
-const { getDb, closeDb } = require('../src/db');
+const { closeDb } = require('../src/db');
 const am = require('../src/automod');
 
 after(() => {

@@ -35,10 +35,11 @@ export default [
         },
     },
     // The dashboard frontend runs in the browser and deliberately calls
-    // functions defined by other inline <script> blocks, so undefined-name
-    // checks don't apply there. Everything else still lints.
+    // functions defined by other parts of the same bundle (concatenated at
+    // serve time), so undefined-name and unused-name checks don't apply
+    // there. Everything else still lints.
     {
-        files: ['src/dashboard/dashboard.js'],
+        files: ['src/dashboard/parts/**/*.js'],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType: 'commonjs',
@@ -48,6 +49,9 @@ export default [
             'no-undef': 'off',
             'no-unused-vars': 'off',
             'no-redeclare': 'off', // legacy for-loop `var` reuse is pervasive here
+            'no-unreachable': 'off', // legacy single-file dead code still applies
+            'no-constant-condition': 'off',
+            'no-empty': 'off',
         },
     },
 ];
