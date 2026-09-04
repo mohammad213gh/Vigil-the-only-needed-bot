@@ -1,5 +1,6 @@
+import { allServers, curSrv, esc, showToast, srObs, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ AUTO-MOD ═══
-async function loadAutomod(){
+export async function loadAutomod(){
   const sel=document.getElementById('amSrvSelect');
   if(!sel)return;
   // Populate server select if empty
@@ -140,70 +141,8 @@ async function loadAutomod(){
   }
 }
 
-// ═══ ERRORS ═══
-var errTagFilter='';
-function tkTimeAgo(ts){
-  if(!ts)return '';
-  var t=new Date(ts).getTime();if(isNaN(t))return '';
-  var s=Math.floor((Date.now()-t)/1000);
-  if(s<45)return 'just now';
-  if(s<3600)return Math.floor(s/60)+'m ago';
-  if(s<86400)return Math.floor(s/3600)+'h ago';
-  if(s<2592000)return Math.floor(s/86400)+'d ago';
-  return new Date(ts).toLocaleDateString();
-}
-async function loadErrors(){
-  var el=document.getElementById('errFeed');if(!el)return;
-  try{
-    var qs=errTagFilter?'?tag='+encodeURIComponent(errTagFilter):'';
-    var r=await fetch('/api/errors'+qs),d=await r.json();
-    if(!d||!d.errors){el.innerHTML='<div class="empty"><p>Failed to load errors.</p></div>';return}
-    var tags=d.tags||[];
-    var allCount=tags.reduce(function(a,t){return a+t.count},0);
-    var chips='<div class="err-chips">'+
-      '<button class="err-chip'+(errTagFilter===''?' on':'')+'" data-tag="" onclick="errSetFilter(this.dataset.tag)">All <span class="err-chip-n">'+allCount+'</span></button>'+
-      tags.map(function(t){return '<button class="err-chip'+(errTagFilter===t.tag?' on':'')+'" data-tag="'+esc(t.tag)+'" onclick="errSetFilter(this.dataset.tag)">'+esc(t.tag)+' <span class="err-chip-n">'+t.count+'</span></button>'}).join('')+
-      '<button class="err-chip err-clear" onclick="errClearLog()" style="margin-left:auto;">\uD83D\uDDD1 Clear</button></div>';
-    if(!d.errors.length){
-      el.innerHTML=chips+'<div class="empty"><p>'+(errTagFilter?'No '+esc(errTagFilter)+' errors logged.':'No errors logged yet.')+'</p><p class="empty-act">Errors are captured automatically from every module — a clean feed means a healthy bot.</p></div>';
-    }else{
-      errAll=d.errors;if(!errShown)errShown=25;
-      var shown=errAll.slice(0,errShown);
-      el.innerHTML=chips+'<div class="err-feed">'+shown.map(function(e){
-        var stackHtml=e.stack?'<pre class="err-stack">'+esc(e.stack)+'</pre>':'';
-        var metaHtml=e.meta?'<div class="err-meta">'+esc(e.meta)+'</div>':'';
-        var extraHtml=e.extra?'<span class="err-extra">'+esc(e.extra)+'</span>':'';
-        return '<div class="err-item"><div class="err-top"><span class="err-badge err-b-'+esc(e.tag)+'">'+esc(e.tag)+'</span><span class="err-msg">'+esc(e.message)+'</span>'+extraHtml+'</div>'+
-          '<div class="err-sub"><span class="err-time">'+tkTimeAgo(e.timestamp)+'</span>'+
-          (e.stack?'<button class="err-toggle" onclick="errToggleStack(this)">Show stack</button>':'')+
-          '</div>'+metaHtml+stackHtml+'</div>';
-       }).join('')+'</div>'+(errAll.length>errShown?'<button class="btn btn-s" onclick="errLoadMore()" style="margin:10px auto;display:block;padding:8px 20px;font-size:11px;">Load More ('+(errAll.length-errShown)+' remaining)</button>':'');
-    }
-    updateRefreshTimestamp('errors');
-  }catch{
-    el.innerHTML='<div class="empty"><p>Couldn\'t load errors.</p><p class="empty-act">The bot may be reconnecting.</p></div>';
-  }
-}
-var errAll=[],errShown=0;
-function errLoadMore(){errShown+=50;loadErrors()}
-function errSetFilter(tag){errTagFilter=tag||'';errShown=25;loadErrors()}
-function errToggleStack(btn){
-  var p=btn.closest('.err-item').querySelector('.err-stack');
-  if(!p)return;
-  var show=p.style.display!=='block';
-  p.style.display=show?'block':'none';
-  btn.textContent=show?'Hide stack':'Show stack';
-}
-function errClearLog(){
-  if(!confirm('Clear all logged errors?'))return;
-  fetch('/api/errors',{method:'DELETE'}).then(function(r){return r.json()}).then(function(d2){
-    if(d2.success){errTagFilter='';loadErrors();showToast('Error log cleared')}
-    else showToast('Failed to clear',true);
-  }).catch(function(){showToast('Failed to clear',true)});
-}
-
 // ═══ AUTO-MOD HELPERS ═══
-async function toggleAMRule(key){
+export async function toggleAMRule(key){
   var body=document.getElementById('am-body-'+key);
   var tg=document.querySelector('[data-am-rule="'+key+'"]');
   var sel=document.getElementById('amSrvSelect');
@@ -225,7 +164,7 @@ async function toggleAMRule(key){
   }catch{showToast('Failed to save',true);tg.classList.toggle('on');if(body)body.style.display=now?'block':'none'}
 }
 
-async function saveAMRule(key){
+export async function saveAMRule(key){
   var el=document.querySelector('[data-am-rule="'+key+'"]');
   if(!el)return;
   var enabled=el.classList.contains('on');
@@ -240,7 +179,7 @@ async function saveAMRule(key){
     if(d.success){showToast('Rule saved!');loadAutomod()}else showToast('Failed',true);
   }catch{showToast('Failed to save',true)}
 }
-async function addAMFilter(serverId,type){
+export async function addAMFilter(serverId,type){
   var input=document.getElementById(type==='words'?'amWordInput':'amLinkInput');
   if(!input||!input.value.trim())return;
   var pattern=input.value.trim().toLowerCase();
@@ -250,7 +189,7 @@ async function addAMFilter(serverId,type){
     if(d.success){input.value='';showToast('Filter added!');loadAutomod()}else showToast('Failed',true);
   }catch{showToast('Failed',true)}
 }
-async function deleteAMFilter(serverId,type,pattern){
+export async function deleteAMFilter(serverId,type,pattern){
   var raw=decodeURIComponent(pattern);
   if(!confirm('Remove "'+raw+'" from '+type+'?'))return;
   try{
@@ -259,7 +198,7 @@ async function deleteAMFilter(serverId,type,pattern){
     if(d.success){showToast('Filter removed!');loadAutomod()}else showToast('Failed',true);
   }catch{showToast('Failed',true)}
 }
-async function uploadTxtFilter(serverId,inp){
+export async function uploadTxtFilter(serverId,inp){
   var file=inp.files&&inp.files[0];
   if(!file)return;
   try{
@@ -274,7 +213,7 @@ async function uploadTxtFilter(serverId,inp){
   }catch(e){showToast('Error reading file: '+e.message,true);inp.value=''}
 }
 
-async function bulkAMFilter(serverId,type){
+export async function bulkAMFilter(serverId,type){
   var input=document.getElementById(type==='words'?'amWordBulk':'')||document.getElementById('amWordBulk');
   if(!input||!input.value.trim())return;
   try{
@@ -283,7 +222,7 @@ async function bulkAMFilter(serverId,type){
     if(d.success){input.value='';showToast('Added '+d.added+' filters!');loadAutomod()}else showToast('Failed',true);
   }catch{showToast('Failed',true)}
 }
-function toggleAMChannel(id,cb,checked){
+export function toggleAMChannel(id,cb,checked){
   if(!cb)return;
   var row=cb.parentElement;
   if(!row)return;
@@ -294,18 +233,18 @@ function toggleAMChannel(id,cb,checked){
   if(cb===inc&&checked&&exc)exc.checked=false;
   if(cb===exc&&checked&&inc)inc.checked=false;
 }
-function toggleAMRole(id,row){
+export function toggleAMRole(id,row){
   var cb=row.querySelector('[data-role="'+id+'"]');
   if(!cb)return;
   cb.checked=!cb.checked;
 }
-function toggleAMChanMode(){
+export function toggleAMChanMode(){
   var mode=document.getElementById('amChanMode').value;
   var panel=document.getElementById('amChanPanel');
   if(!panel)return;
   panel.style.display=(mode==='all')?'none':'block';
 }
-async function saveAMChannels(serverId){
+export async function saveAMChannels(serverId){
   var mode=document.getElementById('amChanMode')?.value||'all';
   var inc=[],exc=[];
   if(mode==='include'){
@@ -326,7 +265,7 @@ async function saveAMChannels(serverId){
     }else showToast('Failed',true);
   }catch(e){console.log('[AM] Save error:',e);showToast('Failed',true)}
 }
-async function saveAMRoles(serverId){
+export async function saveAMRoles(serverId){
   var wh=[];
   document.querySelectorAll('[data-role]:checked').forEach(function(cb){wh.push(cb.dataset.role)});
   try{
@@ -335,7 +274,7 @@ async function saveAMRoles(serverId){
     if(d.success){showToast('Role whitelist saved!');loadAutomod()}else showToast('Failed',true);
   }catch{showToast('Failed',true)}
 }
-async function exportAMConfig(serverId){
+export async function exportAMConfig(serverId){
   try{
     var r=await fetch('/api/server/'+serverId+'/automod/export');
     var d=await r.json();
@@ -345,7 +284,7 @@ async function exportAMConfig(serverId){
     URL.revokeObjectURL(url);showToast('Config exported!')
   }catch{showToast('Export failed',true)}
 }
-async function importAMConfig(serverId){
+export async function importAMConfig(serverId){
   var inp=document.createElement('input');inp.type='file';inp.accept='.json';
   inp.onchange=async function(){
     var file=inp.files[0];if(!file)return;
@@ -360,4 +299,3 @@ async function importAMConfig(serverId){
   };
   inp.click();
 }
-

@@ -8,8 +8,7 @@
   "scripts": {
     "start": "node index.js",
     "test": "node --test \"test/*.test.js\"",
-    "lint": "eslint .",
-    "seal:dashboard": "node scripts/split-dashboard.mjs seal"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@discordjs/voice": "^0.19.2",

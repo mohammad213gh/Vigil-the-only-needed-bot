@@ -1,5 +1,9 @@
+import { allServers, curSrv, esc, showToast, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ TEMP VOICE CHANNELS ═══
-async function loadTempVoice() {
+// Mirrors DEFAULT_TEMPLATE in src/tempVoice.js — the server falls back to
+// this when a guild has no custom template.
+const DEFAULT_TEMPLATE = "{name}'s channel";
+export async function loadTempVoice() {
     const sel = document.getElementById('tvSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {
@@ -76,14 +80,10 @@ async function loadTempVoice() {
             }).join('') + '</div>';
         }
 
-        // Panels
+        // Panels are managed from Discord (/tempvc) or the API — the dashboard
+        // does not expose panel creation, so no button is rendered.
         html += '<div class="stg" style="margin-top:16px;"><label>Control Panels</label>' +
-            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
-            '<select id="tvNewPanelChannel" style="flex:1;min-width:200px;"><option value="">Select text channel...</option>' + channels.filter(function(c){return c.type===0||c.type===5||c.type===15}).map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
-            '<button class="btn btn-s" onclick="addTempVoicePanel(\'' + serverId + '\')">Add Panel</button>' +
-            '</div>';
-        // Note: panels are not directly exposed, would need API extension
-        html += '<div class="stg-hint">Panels are registered per text channel. Use the API directly for panel management.</div></div>';
+            '<div class="stg-hint">Panels are registered per text channel. Manage them from Discord with /tempvc or the API.</div></div>';
 
         cont.innerHTML = html;
     } catch (e) {
@@ -92,7 +92,7 @@ async function loadTempVoice() {
     updateRefreshTimestamp('temp-voice');
 }
 
-async function saveTempVoiceConfig(serverId) {
+export async function saveTempVoiceConfig(serverId) {
     const nameTemplate = document.getElementById('tvNameTemplate')?.value;
     if (!nameTemplate) return showToast('Enter a template', true);
     try {
@@ -105,7 +105,7 @@ async function saveTempVoiceConfig(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function addTempVoiceTrigger(serverId) {
+export async function addTempVoiceTrigger(serverId) {
     const channelId = document.getElementById('tvNewTriggerChannel')?.value;
     const categoryId = document.getElementById('tvNewTriggerCategory')?.value;
     if (!channelId) return showToast('Select a voice channel', true);
@@ -119,7 +119,7 @@ async function addTempVoiceTrigger(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function removeTempVoiceTrigger(serverId, channelId) {
+export async function removeTempVoiceTrigger(serverId, channelId) {
     if (!confirm('Remove this trigger channel?')) return;
     try {
         const r = await fetch('/api/server/' + serverId + '/temp-voice/triggers', {
@@ -131,7 +131,7 @@ async function removeTempVoiceTrigger(serverId, channelId) {
     } catch { showToast('Failed', true); }
 }
 
-async function deleteTempVoiceChannel(serverId, channelId) {
+export async function deleteTempVoiceChannel(serverId, channelId) {
     if (!confirm('Delete this temp voice channel?')) return;
     try {
         // Note: This would need a dedicated API endpoint
@@ -140,7 +140,7 @@ async function deleteTempVoiceChannel(serverId, channelId) {
 }
 
 // ═══ WARNING THRESHOLDS ═══
-async function loadWarningThresholds() {
+export async function loadWarningThresholds() {
     const sel = document.getElementById('wtSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {
@@ -194,7 +194,7 @@ async function loadWarningThresholds() {
     updateRefreshTimestamp('warning-thresholds');
 }
 
-async function addWarningThresholdUI(serverId) {
+export async function addWarningThresholdUI(serverId) {
     const warnCount = parseInt(document.getElementById('wtWarnCount')?.value);
     const action = document.getElementById('wtAction')?.value;
     const duration = parseInt(document.getElementById('wtDuration')?.value) || null;
@@ -209,7 +209,7 @@ async function addWarningThresholdUI(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function removeWarningThresholdUI(serverId, warnCount) {
+export async function removeWarningThresholdUI(serverId, warnCount) {
     if (!confirm('Remove this warning threshold?')) return;
     try {
         const r = await fetch('/api/server/' + serverId + '/warning-thresholds', {
@@ -222,7 +222,7 @@ async function removeWarningThresholdUI(serverId, warnCount) {
 }
 
 // ═══ PREFIX COMMANDS ═══
-async function loadPrefixCommands() {
+export async function loadPrefixCommands() {
     const sel = document.getElementById('pcSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {
@@ -278,7 +278,7 @@ async function loadPrefixCommands() {
     updateRefreshTimestamp('prefix-commands');
 }
 
-async function savePrefixUI(serverId) {
+export async function savePrefixUI(serverId) {
     const prefix = document.getElementById('pcPrefixInput')?.value?.trim();
     if (!prefix || prefix.length > 5) return showToast('Prefix must be 1-5 characters', true);
     try {
@@ -323,7 +323,7 @@ async function loadRateLimits() {
     } catch { cont.innerHTML = '<div class="empty"><p>Failed to load rate limit config</p></div>'; }
 }
 
-async function saveRateLimits() {
+export async function saveRateLimits() {
     const config = {
         global: { windowMs: parseInt(document.getElementById('rlGlobalWindow')?.value) || 60000, max: parseInt(document.getElementById('rlGlobalMax')?.value) || 120 },
         login: { windowMs: parseInt(document.getElementById('rlLoginWindow')?.value) || 60000, max: parseInt(document.getElementById('rlLoginMax')?.value) || 10 },

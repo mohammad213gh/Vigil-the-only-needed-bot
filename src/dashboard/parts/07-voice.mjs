@@ -1,5 +1,6 @@
+import { allServers, curSrv, esc, showToast, timeSince, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ VOICE PRESENCE ═══
-async function loadVoicePresence() {
+export async function loadVoicePresence() {
     const sel = document.getElementById('vpSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {
@@ -69,7 +70,7 @@ async function loadVoicePresence() {
     updateRefreshTimestamp('voice-presence');
 }
 
-async function joinVoicePresenceUI(serverId) {
+export async function joinVoicePresenceUI(serverId) {
     const cont = document.getElementById('voicePresenceContent');
     if (!cont) return;
     try {
@@ -88,7 +89,7 @@ async function joinVoicePresenceUI(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function joinVoicePresence(serverId) {
+export async function joinVoicePresence(serverId) {
     const channelId = document.getElementById('vpJoinChannel')?.value;
     const status = document.getElementById('vpJoinStatus')?.value;
     if (!channelId) return showToast('Select a channel', true);
@@ -102,7 +103,7 @@ async function joinVoicePresence(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function leaveVoicePresence(serverId) {
+export async function leaveVoicePresence(serverId) {
     try {
         const r = await fetch('/api/server/' + serverId + '/voice-presence/leave', { method: 'POST' });
         const d = await r.json();
@@ -110,7 +111,7 @@ async function leaveVoicePresence(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function moveVoicePresenceUI(serverId) {
+export async function moveVoicePresenceUI(serverId) {
     const cont = document.getElementById('voicePresenceContent');
     if (!cont) return;
     try {
@@ -129,7 +130,7 @@ async function moveVoicePresenceUI(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function moveVoicePresence(serverId) {
+export async function moveVoicePresence(serverId) {
     const channelId = document.getElementById('vpMoveChannel')?.value;
     const status = document.getElementById('vpMoveStatus')?.value;
     if (!channelId) return showToast('Select a channel', true);
@@ -143,7 +144,7 @@ async function moveVoicePresence(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function setVoicePresenceStatus(serverId) {
+export async function setVoicePresenceStatus(serverId) {
     const status = document.getElementById('vpStatusInput')?.value;
     try {
         const r = await fetch('/api/server/' + serverId + '/voice-presence/status', {
@@ -163,25 +164,8 @@ async function restoreVoicePresence(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-// ═══ LOOK SWITCHER ═══
-function setLook(look){
-  // Remove all look classes
-  document.body.classList.remove('look-neo','look-classic','look-minimal');
-  // Add the selected look class
-  document.body.classList.add('look-'+look);
-  // Update UI
-  document.querySelectorAll('#lookGrid .bg-style-opt').forEach(function(btn){
-    btn.classList.toggle('active',btn.dataset.look===look);
-  });
-  // Save preference
-  cfg.dashboardLook=look;
-  // Show toast feedback
-  const names={neo:'Neo (Modern)',classic:'Classic',minimal:'Minimal'};
-  showToast('Switched to '+names[look]+' look');
-}
-
 // ═══ WEBHOOKS ═══
-async function loadWebhooks() {
+export async function loadWebhooks() {
     const srv = document.getElementById('whSrvSelect')?.value;
     const cont = document.getElementById('webhooksContent');
     if (!srv || !cont) return;
@@ -230,7 +214,7 @@ async function createWebhookUI() {
     } catch { showToast('Failed', true); }
 }
 
-async function deleteWebhook(serverId, webhookId) {
+export async function deleteWebhook(serverId, webhookId) {
     if (!confirm('Delete this webhook?')) return;
     try {
         const r = await fetch('/api/server/' + serverId + '/webhooks/' + webhookId, { method: 'DELETE' });
@@ -260,7 +244,7 @@ async function loadApiTokens() {
     } catch { cont.innerHTML = '<div class="empty"><p>Failed to load tokens</p></div>'; }
 }
 
-async function createApiToken() {
+export async function createApiToken() {
     const name = document.getElementById('apiTokenName')?.value;
     const scopesSel = document.getElementById('apiTokenScopes');
     const scopes = scopesSel ? Array.from(scopesSel.selectedOptions).map(o => o.value) : [];
@@ -282,7 +266,7 @@ async function createApiToken() {
     } catch { showToast('Failed', true); }
 }
 
-async function deleteApiToken(id) {
+export async function deleteApiToken(id) {
     if (!confirm('Revoke this API token?')) return;
     try {
         const r = await fetch('/api/tokens/' + id, { method: 'DELETE' });
@@ -290,4 +274,3 @@ async function deleteApiToken(id) {
         if (d.success) { showToast('Token revoked'); loadApiTokens(); } else showToast('Failed', true);
     } catch { showToast('Failed', true); }
 }
-

@@ -1,5 +1,6 @@
+import { allServers, curSrv, esc, showToast, tkTimeAgo, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ MOD TOOLS ═══
-async function loadSrvModTools(id){
+export async function loadSrvModTools(id){
   const el=document.getElementById('mgmtModTools');
   if(!el)return;
   el.innerHTML='<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Staff Notes</div><div style="padding:14px;">'
@@ -35,7 +36,7 @@ async function loadSrvModTools(id){
     document.getElementById('srvInviteStats').innerHTML='<div class="empty"><p>Could not load invite data.</p></div>';
   }
 }
-async function loadSrvNotes(id){
+export async function loadSrvNotes(id){
   const userId=document.getElementById('noteUserSearch').value.trim();
   if(!userId)return showToast('Enter a user ID',true);
   const el=document.getElementById('srvNotesList');
@@ -61,7 +62,7 @@ async function loadSrvNotes(id){
     el.innerHTML='<div class="empty"><p>Could not load notes.</p></div>';
   }
 }
-async function addSrvNote(serverId,userId){
+export async function addSrvNote(serverId,userId){
   const text=document.getElementById('newNoteText');if(!text||!text.value.trim())return showToast('Enter note text',true);
   try{
     const r=await fetch('/api/server/'+serverId+'/notes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({targetUserId:userId,note:text.value.trim()})});
@@ -70,7 +71,7 @@ async function addSrvNote(serverId,userId){
     else showToast(d.error||'Failed',true);
   }catch(e){showToast('Failed to add note',true);}
 }
-async function warnSrvMember(serverId){
+export async function warnSrvMember(serverId){
   const uidEl=document.getElementById('modUserSearch'),reasonEl=document.getElementById('modReason');if(!uidEl||!reasonEl)return showToast('Mod panel not ready',true);
   const uid=uidEl.value.trim(),reason=reasonEl.value.trim()||'No reason provided';
   if(!uid)return showToast('Enter a user ID',true);
@@ -82,7 +83,7 @@ async function warnSrvMember(serverId){
     else document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ '+esc(d.error)+'</div>';
   }catch{document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ Request failed</div>';}
 }
-async function kickSrvMember(serverId){
+export async function kickSrvMember(serverId){
   const uidEl=document.getElementById('modUserSearch'),reasonEl=document.getElementById('modReason');if(!uidEl||!reasonEl)return showToast('Mod panel not ready',true);
   const uid=uidEl.value.trim(),reason=reasonEl.value.trim()||'No reason provided';
   if(!uid)return showToast('Enter a user ID',true);
@@ -94,7 +95,7 @@ async function kickSrvMember(serverId){
     else document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ '+esc(d.error)+'</div>';
   }catch{document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ Request failed</div>';}
 }
-async function banSrvMember(serverId){
+export async function banSrvMember(serverId){
   const uidEl=document.getElementById('modUserSearch'),reasonEl=document.getElementById('modReason');if(!uidEl||!reasonEl)return showToast('Mod panel not ready',true);
   const uid=uidEl.value.trim(),reason=reasonEl.value.trim()||'No reason provided';
   if(!uid)return showToast('Enter a user ID',true);
@@ -106,7 +107,7 @@ async function banSrvMember(serverId){
     else document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ '+esc(d.error)+'</div>';
   }catch{document.getElementById('modActionResult').innerHTML='<div style="padding:12px 16px;background:rgba(237,66,69,0.08);border:1px solid rgba(237,66,69,0.15);border-radius:var(--radius-sm);color:#ed4245;font-size:13px;font-weight:500;">❌ Request failed</div>';}
 }
-async function timeoutSrvMember(serverId){
+export async function timeoutSrvMember(serverId){
   const uidEl=document.getElementById('modUserSearch'),reasonEl=document.getElementById('modReason');if(!uidEl||!reasonEl)return showToast('Mod panel not ready',true);
   const uid=uidEl.value.trim(),reason=reasonEl.value.trim()||'No reason provided';
   if(!uid)return showToast('Enter a user ID',true);
@@ -122,7 +123,7 @@ async function timeoutSrvMember(serverId){
 
 
 // ═══ MOD STATS ═══
-async function loadMod(){
+export async function loadMod(){
   const summary=document.getElementById('modSummary'),recent=document.getElementById('modRecent'),topW=document.getElementById('modTopWarned');
   if(!summary||!recent||!topW)return;
   summary.innerHTML='<div class="card sk" style="padding:20px 16px;text-align:center;"><div class="sk-line w40" style="margin:0 auto;"></div><div class="sk-line w30 h24" style="margin:6px auto 0;"></div></div><div class="card sk" style="padding:20px 16px;text-align:center;"><div class="sk-line w40" style="margin:0 auto;"></div><div class="sk-line w30 h24" style="margin:6px auto 0;"></div></div><div class="card sk" style="padding:20px 16px;text-align:center;"><div class="sk-line w40" style="margin:0 auto;"></div><div class="sk-line w30 h24" style="margin:6px auto 0;"></div></div><div class="card sk" style="padding:20px 16px;text-align:center;"><div class="sk-line w40" style="margin:0 auto;"></div><div class="sk-line w30 h24" style="margin:6px auto 0;"></div></div>';
@@ -179,13 +180,13 @@ async function loadMod(){
 }
 
 // ═══ MOD: MEMBER PROFILE LOOKUP ═══
-function loadMpServers(){
+export function loadMpServers(){
   var sel=document.getElementById('mpSrv');if(!sel)return;
   var cur=sel.value;
   sel.innerHTML='<option value="">Select server…</option>'+allServers.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');
   if(cur)sel.value=cur;
 }
-async function searchMembers(){
+export async function searchMembers(){
   var srv=document.getElementById('mpSrv').value;
   var q=document.getElementById('mpSearch').value.trim();
   var el=document.getElementById('mpResults');
@@ -199,7 +200,7 @@ async function searchMembers(){
     }).join('')+'</div>';
   }catch{el.innerHTML='<div class="empty"><p>Search failed.</p></div>'}
 }
-async function loadMemberProfile(srv,userId){
+export async function loadMemberProfile(srv,userId){
   var el=document.getElementById('mpProfile');
   el.style.display='block';
   el.innerHTML='<div class="empty"><p>Loading profile…</p></div>';
@@ -247,7 +248,7 @@ function renderMemberProfile(el,d){
 }
 
 // ═══ INSIGHTS ═══
-async function loadInsights(){
+export async function loadInsights(){
   const sel=document.getElementById('insSrvSelect');
   if(!sel)return;
   // Populate server select if empty
@@ -299,7 +300,7 @@ async function loadInsights(){
 }
 
 // ═══ INVITES ═══
-async function loadInvites(){
+export async function loadInvites(){
   const sel=document.getElementById('invSrvSelect');
   if(!sel)return;
   // Populate server select if empty
@@ -344,7 +345,7 @@ async function loadInvites(){
 }
 
 // ── Compact Mode Toggle (settings) ──
-function toggleCompact(){
+export function toggleCompact(){
   var t=document.getElementById('compactToggle');
   if(!t)return;
   var on=!t.classList.contains('on');
@@ -352,7 +353,7 @@ function toggleCompact(){
   document.documentElement.style.setProperty('--layout-dense',on?'0.7':'1');
   try{localStorage.setItem('layoutDensity',on?'compact':'normal')}catch(e){}
 }
-function applyCompactPref(){
+export function applyCompactPref(){
   var pref='normal';
   try{pref=localStorage.getItem('layoutDensity')||'normal'}catch(e){}
   var t=document.getElementById('compactToggle');

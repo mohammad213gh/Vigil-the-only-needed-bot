@@ -1,5 +1,6 @@
+import { allServers, curSrv, esc, showToast, timeSince, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ BOT ACTIVITY ═══
-async function loadBotActivity() {
+export async function loadBotActivity() {
     const cont = document.getElementById('botActivityFeed');
     if (!cont) return;
     const days = document.getElementById('activityDays')?.value || '7';
@@ -28,7 +29,7 @@ async function loadBotActivity() {
 }
 
 // ═══ SERVER COMPARISON ═══
-async function loadServerCompare() {
+export async function loadServerCompare() {
     const cont = document.getElementById('compareCards');
     if (!cont) return;
     const metric = document.getElementById('compareMetric')?.value || 'members';
@@ -53,7 +54,7 @@ async function loadServerCompare() {
 }
 
 // ═══ COMMAND HEATMAP ═══
-async function loadCmdHeatmap() {
+export async function loadCmdHeatmap() {
     const cont = document.getElementById('heatmapGrid');
     if (!cont) return;
     const days = document.getElementById('heatmapDays')?.value || '7';
@@ -96,12 +97,12 @@ async function loadCmdHeatmap() {
     } catch { cont.innerHTML = '<div class="empty"><p>Failed to load heatmap</p></div>'; }
 }
 
-function copyToClipboard(text) {
+export function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => showToast('Failed', true));
 }
 
 // ═══ BAN APPEALS ═══
-async function loadBanAppeals() {
+export async function loadBanAppeals() {
     const sel = document.getElementById('baSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {
@@ -183,7 +184,7 @@ async function loadBanAppeals() {
     updateRefreshTimestamp('ban-appeals');
 }
 
-async function submitBanAppealUI(serverId) {
+export async function submitBanAppealUI(serverId) {
     const userId = document.getElementById('baUserId')?.value;
     const userTag = document.getElementById('baUserTag')?.value;
     const reason = document.getElementById('baReason')?.value;
@@ -199,7 +200,7 @@ async function submitBanAppealUI(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function updateBanAppealStatusUI(serverId, appealId, status) {
+export async function updateBanAppealStatusUI(serverId, appealId, status) {
     const reviewNote = prompt('Enter review note (optional):') || null;
     try {
         const r = await fetch('/api/server/' + serverId + '/ban-appeals/' + appealId, {
@@ -252,7 +253,7 @@ async function loadReminders() {
     updateRefreshTimestamp('reminders');
 }
 
-async function createReminderUI() {
+export async function createReminderUI() {
     const userId = document.getElementById('remUserId')?.value;
     const channelId = document.getElementById('remChannelId')?.value;
     const text = document.getElementById('remText')?.value;
@@ -268,7 +269,7 @@ async function createReminderUI() {
     } catch { showToast('Failed', true); }
 }
 
-async function deleteReminderUI(id, userId) {
+export async function deleteReminderUI(id, userId) {
     if (!confirm('Delete this reminder?')) return;
     try {
         const r = await fetch('/api/reminders/' + id, {

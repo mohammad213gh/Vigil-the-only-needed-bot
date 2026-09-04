@@ -34,24 +34,24 @@ export default [
             eqeqeq: 'warn',
         },
     },
-    // The dashboard frontend runs in the browser and deliberately calls
-    // functions defined by other parts of the same bundle (concatenated at
-    // serve time), so undefined-name and unused-name checks don't apply
-    // there. Everything else still lints.
+    // The dashboard frontend runs in the browser and shares helpers across
+    // ES modules (import/export), so unused-name checks don't apply there.
+    // no-undef stays on for a *per-module* view; the window bridge in
+    // 00-entry.mjs deliberately assigns to window, so allow that pattern.
     {
-        files: ['src/dashboard/parts/**/*.js'],
+        files: ['src/dashboard/parts/**/*.mjs'],
         languageOptions: {
             ecmaVersion: 2022,
-            sourceType: 'commonjs',
+            sourceType: 'module',
             globals: globals.browser,
         },
         rules: {
-            'no-undef': 'off',
             'no-unused-vars': 'off',
             'no-redeclare': 'off', // legacy for-loop `var` reuse is pervasive here
             'no-unreachable': 'off', // legacy single-file dead code still applies
             'no-constant-condition': 'off',
             'no-empty': 'off',
+            'no-undef': ['error', { typeof: true }],
         },
     },
 ];

@@ -1,3 +1,6 @@
+import { backupNow, bgAnimId, cfg, checkAuth, esc, initBgStyles, initPalettes, initThemes, loadAct, loadAn, loadBackups, loadBrand, loadCfg, loadCmdUsage, loadCommands, loadGiveaways, loadOv, loadRm, loadServers, loadSrvAudit, loadSrvChannels, loadSrvLogging, loadSrvRoles, loadSys, saveSettings, showSkeleton, showToast, srObs, stRf, startBg, toggleTheme } from './01-foundation.mjs';
+import { applyCompactPref, loadSrvModTools } from './03-mod-tools.mjs';
+import { loadTickets } from './04-tickets.mjs';
 // ═══ COMMAND PALETTE (Ctrl+K) ═══
 const PAL_SECTIONS=[['overview','Overview'],['analytics','Analytics'],['servers','Servers'],['auditlog','Audit Log'],['moderation','Moderation'],['activity','Activity'],['insights','Insights'],['invites','Invites'],['giveaways','Giveaways'],['automod','Auto-Mod'],['tickets','Tickets'],['commands','Commands'],['reminders','Reminders'],['system','System'],['errors','Errors'],['settings','Customize']];
 const PAL_ACTIONS=PAL_SECTIONS.map(s=>({label:'Go to '+s[1],hint:'Section',run:()=>showSec(s[0])}))
@@ -8,6 +11,32 @@ const PAL_ACTIONS=PAL_SECTIONS.map(s=>({label:'Go to '+s[1],hint:'Section',run:(
     {label:'Load Servers',hint:'Refresh',run:loadServers},
     {label:'Load Giveaways',hint:'Refresh',run:loadGiveaways},
   ]);
+
+// ═══ TAB SWITCHER ═══
+export function showSec(n){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.notch-link').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.notch-mobile-link').forEach(s=>s.classList.remove('active'));
+  const sec=document.getElementById('sec-'+n);sec.classList.add('active');
+  sec.classList.remove('sec-enter');void sec.offsetWidth;sec.classList.add('sec-enter');
+  const nav=document.querySelector('.notch-link[data-sec="'+n+'"]');if(nav)nav.classList.add('active');
+  const mnav=document.querySelector('.notch-mobile-link[data-sec="'+n+'"]');if(mnav)mnav.classList.add('active');
+  setTimeout(()=>{document.querySelectorAll('#sec-'+n+' .sr').forEach(el=>srObs.observe(el))},50)
+}
+
+// ═══ SERVER MANAGEMENT ═══
+let srvMgmtTab='overview';
+export function showSrvTab(tab,serverId){
+  srvMgmtTab=tab;
+  document.querySelectorAll('.mgmt-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.mgmt-panel').forEach(p=>p.style.display=p.dataset.panel===tab?'':'none');
+  if(tab==='roles'&&serverId)loadSrvRoles(serverId);
+  if(tab==='channels'&&serverId)loadSrvChannels(serverId);
+  if(tab==='logging'&&serverId)loadSrvLogging(serverId);
+  if(tab==='audit'&&serverId)loadSrvAudit(serverId);
+  if(tab==='greetings'&&serverId)loadSrvGreetings(serverId);if(tab==='modtools'&&serverId)loadSrvModTools(serverId);
+  if(tab==='settings'&&serverId)loadSrvSettings(serverId)
+}
 let palSel=0,palItems=[];
 function buildPalette(){
   if(document.getElementById('cmdPalOv'))return;
@@ -29,7 +58,7 @@ function paletteRender(q){
 }
 function openPalette(){buildPalette();const ov=document.getElementById('cmdPalOv');ov.classList.add('open');const inp=document.getElementById('cmdPalInput');inp.value='';palSel=0;paletteRender('');setTimeout(()=>inp.focus(),20)}
 function closePalette(){const ov=document.getElementById('cmdPalOv');if(ov)ov.classList.remove('open')}
-function palRun(i){const a=palItems[i];if(!a)return;closePalette();try{a.run()}catch{}}
+export function palRun(i){const a=palItems[i];if(!a)return;closePalette();try{a.run()}catch{}}
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();const ov=document.getElementById('cmdPalOv');if(ov&&ov.classList.contains('open'))closePalette();else openPalette();return}
   const ov=document.getElementById('cmdPalOv');if(!ov||!ov.classList.contains('open'))return;
@@ -182,7 +211,7 @@ async function loadSrvGreetings(id){const el=document.getElementById('mgmtGreeti
 
 // ═══ GREETINGS: Preview updater ═══
 
-function updatePreview(serverId,type){
+export function updatePreview(serverId,type){
   var el=document.getElementById('pv_'+type+'_'+serverId);
   if(!el)return;
   var title=document.getElementById('grT_'+type+'_'+serverId)?.value||'';
@@ -212,7 +241,7 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
-async function toggleGreeting(serverId,type){
+export async function toggleGreeting(serverId,type){
   const tg=document.getElementById('tg_'+type+'_'+serverId);
   if(!tg)return;
   const enabled=!tg.classList.contains('on');
@@ -223,7 +252,7 @@ async function toggleGreeting(serverId,type){
   }catch{}
 }
 
-async function saveGreetingConfig(serverId,type){
+export async function saveGreetingConfig(serverId,type){
   const config={
     enabled:document.getElementById('tg_'+type+'_'+serverId)?.classList.contains('on')||false,
     channelId:document.getElementById('grCh_'+type+'_'+serverId)?.value||null,
@@ -246,7 +275,7 @@ async function saveGreetingConfig(serverId,type){
   }catch{showToast('Failed to save',true)}
 }
 
-async function resetGreetingConfig(serverId,type){
+export async function resetGreetingConfig(serverId,type){
   if(!confirm('Reset '+type+' settings to defaults?'))return;
   const defaults=type==='welcome'
     ?{enabled:false,channelId:null,content:null,embedTitle:'👋 Welcome!',embedDescription:'Welcome {user} to **{server}**!',embedColor:'#5865F2',embedFooter:'Member #{membercount}',embedFooterIcon:null,embedThumbnail:null,embedImage:null,embedAuthor:null,embedAuthorIcon:null}
@@ -260,21 +289,20 @@ async function resetGreetingConfig(serverId,type){
 }
 
 // ═══ Log Channel Config ═══
-async function saveAllLogSettings(serverId){const categories=[];const cats=["messages","reactions","members","roles","server","voice","threads","emojis","bans","invites","stickers","automod","scheduled","stage","webhooks","integrations"];for(const cat of cats){const sel=document.getElementById("logCh-"+cat);if(sel)categories.push({category:cat,channelId:sel.value||null});}try{const r=await fetch("/api/server/"+serverId+"/log/config/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({categories})});const d=await r.json();if(d.success){showToast("All log settings saved!");loadSrvLogging(serverId)}else showToast("Save failed",true)}catch{showToast("Save failed",true)}}
-async function addTrackedChannel(serverId){const chId=document.getElementById('trackedChSelect').value;if(!chId)return showToast('Select a channel',true);try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'add'})});showToast('Added!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
-async function removeTrackedChannel(serverId,chId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'remove'})});showToast('Removed!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
-async function clearTrackedChannels(serverId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannels:'clear'})});showToast('Cleared!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
-
+export async function saveAllLogSettings(serverId){const categories=[];const cats=["messages","reactions","members","roles","server","voice","threads","emojis","bans","invites","stickers","automod","scheduled","stage","webhooks","integrations"];for(const cat of cats){const sel=document.getElementById("logCh-"+cat);if(sel)categories.push({category:cat,channelId:sel.value||null});}try{const r=await fetch("/api/server/"+serverId+"/log/config/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({categories})});const d=await r.json();if(d.success){showToast("All log settings saved!");loadSrvLogging(serverId)}else showToast("Save failed",true)}catch{showToast("Save failed",true)}}
+export async function addTrackedChannel(serverId){const chId=document.getElementById('trackedChSelect').value;if(!chId)return showToast('Select a channel',true);try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'add'})});showToast('Added!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
+export async function removeTrackedChannel(serverId,chId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannel:chId,trackedChannels:'remove'})});showToast('Removed!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
+export async function clearTrackedChannels(serverId){try{await fetch('/api/server/'+serverId+'/log/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({trackedChannels:'clear'})});showToast('Cleared!');loadSrvLogging(serverId)}catch{showToast('Failed',true)}}
 
 // ═══ Message Search ═══
 var msgSearchTimeout=null;
-function onMsgSearchInput(id){if(msgSearchTimeout)clearTimeout(msgSearchTimeout);msgSearchTimeout=setTimeout(function(){loadSrvMessages(id)},300)}
-function msgSearchFilterChange(id){loadSrvMessages(id)}
+export function onMsgSearchInput(id){if(msgSearchTimeout)clearTimeout(msgSearchTimeout);msgSearchTimeout=setTimeout(function(){loadSrvMessages(id)},300)}
+export function msgSearchFilterChange(id){loadSrvMessages(id)}
 async function loadSrvMessages(id){var el=document.getElementById('mgmtMessages');var q=document.getElementById('msgSearchInput')?.value||'';var action=document.getElementById('msgSearchFilter')?.value||'all';showSkeleton(el,'msgs',1);try{var url='/api/server/'+id+'/messages?limit=50';if(action!=='all')url+='&action='+action;if(q)url+='&q='+encodeURIComponent(q);var r=await fetch(url),msgs=await r.json();var html='<div style="display:flex;gap:6px;margin-bottom:10px;padding:10px;"><input type="text" id="msgSearchInput" placeholder="Search message content..." value="'+q.replace(/"/g,'&quot;')+'" oninput="onMsgSearchInput(\''+id+'\')" style="flex:1;padding:8px 12px;background:rgba(255,255,255,0.02);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;outline:none;font-family:inherit;"><select id="msgSearchFilter" onchange="msgSearchFilterChange(\''+id+'\')" style="padding:8px 10px;background:rgba(255,255,255,0.02);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:11px;font-family:inherit;"><option value="all">All</option><option value="deleted"'+(action==='deleted'?' selected':'')+'>Deleted</option><option value="edited"'+(action==='edited'?' selected':'')+'>Edited</option></select></div>';if(!msgs||!msgs.length){html+='<div class="empty"><p>No messages found.</p></div>';el.innerHTML=html;return}html+=msgs.map(function(m){var time=new Date(m.loggedAt);var timeStr=time.toLocaleDateString()+' '+time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});var actionBadge=m.action==='deleted'?'<span class="tag red">🗑️ Deleted</span>':'<span class="tag yellow">✏️ Edited</span>';var content=m.content?m.content.slice(0,300):'(no content)';if(q&&content.toLowerCase().includes(q.toLowerCase())){var idx=content.toLowerCase().indexOf(q.toLowerCase());var before=content.slice(0,idx);var match=content.slice(idx,idx+q.length);var after=content.slice(idx+q.length);content=esc(before)+'<mark style="background:rgba(88,101,242,0.25);color:#fff;padding:0 2px;border-radius:2px;">'+esc(match)+'</mark>'+esc(after)}else{content=esc(content)}return'<div class="rmd" style="flex-wrap:wrap;"><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><strong style="font-size:12px;">'+esc(m.authorTag)+'</strong> '+actionBadge+' <span style="font-size:10px;color:var(--text-dim);">#'+esc(m.channelName)+'</span></div><div style="font-size:11px;color:var(--text);word-break:break-all;">'+content+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">'+timeStr+'</div></div></div>'}).join('');el.innerHTML=html}catch{document.getElementById('mgmtMessages').innerHTML='<div class="empty"><p>Failed to load.</p></div>'}}
 
 // ═══ SERVER SETTINGS TAB ═══
 async function loadSrvSettings(id){const el=document.getElementById('mgmtSettings');if(!el)return;showSkeleton(el,'logging',1);try{const r=await fetch('/api/server/'+id),d=await r.json();el.innerHTML='<div class="stg"><label>Command Prefix</label><div class="stg-inl"><input type="text" id="srvPrefixInput" value="'+esc(d.prefix||';')+'" maxlength="5" style="flex:0 0 120px;"><button class="btn btn-s" onclick="saveSrvSettings(\''+id+'\')" style="padding:9px 14px;font-size:11px;">Save</button></div><div class="stg-hint">Prefix for text commands (default: ;). Max 5 characters, no spaces.</div></div><div class="stg"><label>Embed Color</label><div class="stg-inl"><input type="color" id="srvEmbedColor" value="'+(d.embedColor||'#5865F2')+'" onchange="document.getElementById(\'srvEmbedClear\').checked=false" style="flex:0 0 60px;height:36px;padding:2px;"><span style="font-size:12px;color:var(--text-dim);font-family:monospace;">'+esc(d.embedColor||'Bot default')+'</span><label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim);margin-left:auto;"><input type="checkbox" id="srvEmbedClear"> Use bot default</label></div><div class="stg-hint">Accent color for this server\u2019s embeds (welcome messages, giveaways, and other embeds that read guild config).</div></div>'}catch{el.innerHTML='<div class="empty"><p>Could not load server settings.</p></div>'}}
-async function saveSrvSettings(id){const prefixEl=document.getElementById('srvPrefixInput'),colorEl=document.getElementById('srvEmbedColor'),clearEl=document.getElementById('srvEmbedClear');if(!prefixEl)return;const prefix=prefixEl.value.trim();const embedColor=clearEl&&clearEl.checked?'':colorEl.value;try{const r=await fetch('/api/server/'+id+'/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prefix,embedColor})}),d=await r.json();if(d.success)showToast('Server settings saved!');else showToast(d.error||'Failed to save',true)}catch{showToast('Failed to save settings',true)}}
+export async function saveSrvSettings(id){const prefixEl=document.getElementById('srvPrefixInput'),colorEl=document.getElementById('srvEmbedColor'),clearEl=document.getElementById('srvEmbedClear');if(!prefixEl)return;const prefix=prefixEl.value.trim();const embedColor=clearEl&&clearEl.checked?'':colorEl.value;try{const r=await fetch('/api/server/'+id+'/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prefix,embedColor})}),d=await r.json();if(d.success)showToast('Server settings saved!');else showToast(d.error||'Failed to save',true)}catch{showToast('Failed to save settings',true)}}
 
 // ═══ SSE Events ═══
 let sseSource=null;
@@ -303,5 +331,3 @@ function initSSE(){
 window.addEventListener('beforeunload',()=>{if(bgAnimId)cancelAnimationFrame(bgAnimId)});
 
 checkAuth().then(async ok=>{if(!ok)return;initThemes();initPalettes();initBgStyles();applyCompactPref();await loadCfg();startBg(cfg.backgroundStyle||'dots');await loadOv();await loadAn();await loadServers();await loadAct();await loadCommands();await loadRm();await loadSys();await loadTickets();loadCmdUsage();loadBrand();stRf();initSSE()});
-
-

@@ -1,5 +1,6 @@
+import { allServers, curSrv, esc, showToast, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ REACTION ROLES ═══
-async function loadReactionRoles() {
+export async function loadReactionRoles() {
     const sel = document.getElementById('rrSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {
@@ -63,7 +64,7 @@ async function loadReactionRoles() {
     updateRefreshTimestamp('reaction-roles');
 }
 
-async function createReactionRoleUI() {
+export async function createReactionRoleUI() {
     const serverId = document.getElementById('rrSrvSelect')?.value;
     const channelId = document.getElementById('rrNewChannel')?.value;
     const messageId = document.getElementById('rrNewMessageId')?.value;
@@ -84,7 +85,7 @@ async function createReactionRoleUI() {
     } catch { showToast('Failed', true); }
 }
 
-async function deleteReactionRole(serverId, messageId, emoji) {
+export async function deleteReactionRole(serverId, messageId, emoji) {
     if (!confirm('Delete this reaction role?')) return;
     try {
         const r = await fetch('/api/server/' + serverId + '/reaction-roles', {
@@ -118,7 +119,7 @@ async function createReactionRoleMessageUI() {
 }
 
 // ═══ ROLE MENUS ═══
-async function loadRoleMenus() {
+export async function loadRoleMenus() {
     const sel = document.getElementById('rmSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {
@@ -179,7 +180,7 @@ async function loadRoleMenus() {
     updateRefreshTimestamp('role-menus');
 }
 
-async function createRoleMenuUI() {
+export async function createRoleMenuUI() {
     const serverId = document.getElementById('rmSrvSelect')?.value;
     const channelId = document.getElementById('rmNewChannel')?.value;
     const title = document.getElementById('rmNewTitle')?.value;
@@ -197,7 +198,7 @@ async function createRoleMenuUI() {
     } catch { showToast('Failed', true); }
 }
 
-async function editRoleMenuUI(serverId, messageId, title, channelId) {
+export async function editRoleMenuUI(serverId, messageId, title, channelId) {
     const cont = document.getElementById('roleMenusContent');
     if (!cont) return;
     try {
@@ -251,7 +252,7 @@ async function editRoleMenuUI(serverId, messageId, title, channelId) {
     }
 }
 
-async function saveRoleMenuTitle(serverId, messageId) {
+export async function saveRoleMenuTitle(serverId, messageId) {
     const title = document.getElementById('rmEditTitle')?.value;
     if (!title) return showToast('Enter a title', true);
     try {
@@ -264,7 +265,7 @@ async function saveRoleMenuTitle(serverId, messageId) {
     } catch { showToast('Failed', true); }
 }
 
-async function addRoleMenuOptionUI(serverId, messageId) {
+export async function addRoleMenuOptionUI(serverId, messageId) {
     const roleId = document.getElementById('rmAddRole')?.value;
     const label = document.getElementById('rmAddLabel')?.value;
     const emoji = document.getElementById('rmAddEmoji')?.value;
@@ -280,7 +281,7 @@ async function addRoleMenuOptionUI(serverId, messageId) {
     } catch { showToast('Failed', true); }
 }
 
-async function removeRoleMenuOptionUI(serverId, messageId, roleId) {
+export async function removeRoleMenuOptionUI(serverId, messageId, roleId) {
     try {
         const r = await fetch('/api/server/' + serverId + '/role-menus/' + messageId + '/options', {
             method: 'DELETE', headers: { 'Content-Type': 'application/json' },
@@ -291,7 +292,7 @@ async function removeRoleMenuOptionUI(serverId, messageId, roleId) {
     } catch { showToast('Failed', true); }
 }
 
-async function publishRoleMenuUI(serverId, messageId, channelId) {
+export async function publishRoleMenuUI(serverId, messageId, channelId) {
     try {
         const r = await fetch('/api/server/' + serverId + '/role-menus/' + messageId + '/publish?channelId=' + channelId, { method: 'PUT' });
         const d = await r.json();
@@ -299,7 +300,7 @@ async function publishRoleMenuUI(serverId, messageId, channelId) {
     } catch { showToast('Failed', true); }
 }
 
-async function deleteRoleMenu(serverId, messageId, channelId) {
+export async function deleteRoleMenu(serverId, messageId, channelId) {
     if (!confirm('Delete this role menu and its message?')) return;
     try {
         const r = await fetch('/api/server/' + serverId + '/role-menus/' + messageId + '?channelId=' + channelId, { method: 'DELETE' });

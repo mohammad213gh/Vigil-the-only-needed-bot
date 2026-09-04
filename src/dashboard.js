@@ -3308,33 +3308,9 @@ function createDashboard() {
     });
 
     // ── Serve Frontend ──
-    // The dashboard frontend is kept as ordered modules in dashboard/parts/
-    // (see scripts/split-dashboard.mjs) and served concatenated here, so the
-    // browser receives byte-identical output to the old single-file build
-    // while each section remains a separate, navigable source file. Rebuilt
-    // lazily when any part changes (a few mtime stats per request is cheap).
-    const FRONTEND_PARTS_DIR = path.join(__dirname, 'dashboard', 'parts');
-    let frontendBundle = null;
-    let frontendBundleKey = '';
-    function getFrontendBundle() {
-        let files;
-        try {
-            files = fs.readdirSync(FRONTEND_PARTS_DIR).filter((f) => f.endsWith('.js')).sort();
-        } catch {
-            return null;
-        }
-        const key = files.map((f) => f + ':' + fs.statSync(path.join(FRONTEND_PARTS_DIR, f)).mtimeMs).join('|');
-        if (key !== frontendBundleKey) {
-            frontendBundle = files.map((f) => fs.readFileSync(path.join(FRONTEND_PARTS_DIR, f), 'utf8')).join('');
-            frontendBundleKey = key;
-        }
-        return frontendBundle;
-    }
-    app.get('/static/dashboard.js', (req, res) => {
-        const bundle = getFrontendBundle();
-        if (bundle === null) return res.status(404).type('text').send('Frontend bundle not found');
-        res.type('application/javascript').send(bundle);
-    });
+    // The dashboard frontend is served as true ES modules from
+    // dashboard/parts/ (index.html loads 00-entry.mjs); express.static below
+    // serves them with a JavaScript MIME type.
     app.get('/', (req, res) => {
         if (!req.authenticated) return res.redirect('/login');
         res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));

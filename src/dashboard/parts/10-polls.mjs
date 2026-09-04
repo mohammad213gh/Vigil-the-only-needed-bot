@@ -1,5 +1,6 @@
+import { allServers, curSrv, esc, showToast, timeSince, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ POLLS & ANNOUNCEMENTS ═══
-async function loadPollsAnnouncements() {
+export async function loadPollsAnnouncements() {
     const sel = document.getElementById('paSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {
@@ -53,7 +54,7 @@ async function loadPollsAnnouncements() {
     updateRefreshTimestamp('polls-announcements');
 }
 
-async function createPollUI(serverId) {
+export async function createPollUI(serverId) {
     const question = document.getElementById('paPollQuestion')?.value;
     const opt1 = document.getElementById('paPollOpt1')?.value;
     const opt2 = document.getElementById('paPollOpt2')?.value;
@@ -74,7 +75,7 @@ async function createPollUI(serverId) {
     } catch { showToast('Failed', true); }
 }
 
-async function createAnnouncementUI(serverId) {
+export async function createAnnouncementUI(serverId) {
     const title = document.getElementById('paAnnounceTitle')?.value;
     const message = document.getElementById('paAnnounceMessage')?.value;
     const color = document.getElementById('paAnnounceColor')?.value;
@@ -309,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-async function loadGreetingsEditor() {
+export async function loadGreetingsEditor() {
     const sel = document.getElementById('geSrvSelect');
     if (!sel) return;
     if (sel.options.length <= 1 && allServers.length) {

@@ -1,7 +1,8 @@
+import { allServers, curSrv, esc, showToast, srObs, tkTimeAgo, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ TICKETS ═══
 // Drag-drop state
 
-async function loadTickets(){
+export async function loadTickets(){
   const sel=document.getElementById('tkSrvSelect');
   if(!sel)return;
   if(sel.options.length<=1&&allServers.length){
@@ -187,7 +188,7 @@ async function loadTickets(){
 }
 
 // ── Inline Question Editor ──
-function editQuestions(serverId,panelId,typeId){
+export function editQuestions(serverId,panelId,typeId){
   var overlay=document.createElement('div');
   overlay.className='tk-overlay';
   overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
@@ -275,7 +276,7 @@ list.innerHTML=qHtml;
 // ── Live preview simulation state (declared before first use) ──
 var tkPrevState={types:[],srvName:'',srvIcon:'',color:'#5865F2'};
 
-function previewTicketPanel(serverId,panelId){
+export function previewTicketPanel(serverId,panelId){
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var panel=null;
     for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
@@ -391,7 +392,7 @@ function tkPrevEmbedHtml(o){
   '</div></div>';
 }
 
-function tkPrevPick(typeId){
+export function tkPrevPick(typeId){
   var type=tkPrevFindType(typeId);
   if(!type)return;
   var flow=document.getElementById('tk-prev-flow');
@@ -418,7 +419,7 @@ function tkPrevPick(typeId){
   flow.innerHTML=html;
 }
 
-function tkPrevCreate(){
+export function tkPrevCreate(){
   var flow=document.getElementById('tk-prev-flow');
   if(!flow)return;
   var types=tkPrevState.types;
@@ -428,12 +429,12 @@ function tkPrevCreate(){
 }
 
 // ── Ticket Dashboard CRUD Helpers (Modal-based UX) ──
-function ticketToggle(serverId,newVal){fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:newVal})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Ticket system '+(newVal?'enabled':'disabled')+'!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
-function ticketToggleLeave(serverId,newVal){fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({closeOnLeave:newVal})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Auto-close '+(newVal?'enabled':'disabled')+'!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
-function ticketSetLog(serverId){var v=document.getElementById('tkLogCh').value;fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({logChannelId:v||null})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Log channel updated!')}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
+export function ticketToggle(serverId,newVal){fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:newVal})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Ticket system '+(newVal?'enabled':'disabled')+'!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
+export function ticketToggleLeave(serverId,newVal){fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({closeOnLeave:newVal})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Auto-close '+(newVal?'enabled':'disabled')+'!');loadTickets()}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
+export function ticketSetLog(serverId){var v=document.getElementById('tkLogCh').value;fetch('/api/server/'+serverId+'/tickets/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({logChannelId:v||null})}).then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Log channel updated!')}else showToast('Failed',true)}).catch(function(){showToast('Failed',true)})}
 
 // ── Modern Modal: Create Panel ──
-function createTicketPanel(serverId){
+export function createTicketPanel(serverId){
   var overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;';
   overlay.onclick=function(e){if(e.target===overlay)document.body.removeChild(overlay)};
@@ -487,7 +488,7 @@ function editTicketPanel(serverId,panelId,panelName,panelColor,panelDesc){
 }
 
 // ── Modern Modal: Add Type ──
-function addTicketType(serverId,panelId){
+export function addTicketType(serverId,panelId){
   // Fetch server data for dropdowns
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var categories=(d2.channels||[]).filter(function(c){return c.type===4}).map(function(c){return '<option value="'+c.id+'">'+esc(c.name)+'</option>'});
@@ -527,7 +528,7 @@ function addTicketType(serverId,panelId){
 }
 
 // ── Modern Modal: Edit Type Settings ──
-function editTicketTypeSettings(serverId,panelId,typeId){
+export function editTicketTypeSettings(serverId,panelId,typeId){
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     // Look up the type from fresh API data
     var currentType=null;
@@ -582,7 +583,7 @@ function editTicketTypeSettings(serverId,panelId,typeId){
 }
 
 
-function tkCloseModal(btn){var overlay=btn.closest('[style*="fixed"]');if(overlay)document.body.removeChild(overlay)}
+export function tkCloseModal(btn){var overlay=btn.closest('[style*="fixed"]');if(overlay)document.body.removeChild(overlay)}
 
 // ── Recent Tickets filter (state lives at file scope so tabs survive reloads of the tab) ──
 var tkRecFilter='',tkRecData=[];
@@ -605,7 +606,7 @@ function tkRecRender(){
     return '<div class="mod-item"><div class="mod-body"><div class="mod-top"><span class="mod-type">#'+tk.ticketNumber+' '+esc(tk.creatorTag||'Unknown')+panelType+'</span></div>'+subHtml+'</div><div class="mod-count"><span class="tk-status-pill tk-st-'+tk.status+'">'+tkRecStatusLabel(tk.status)+'</span></div></div>';
   }).join('');
 }
-function tkRecFilterSet(f){tkRecFilter=f;tkRecRender()}
+export function tkRecFilterSet(f){tkRecFilter=f;tkRecRender()}
 
 // ── Role chip picker (replaces Ctrl+click multi-selects) ──
 function parseTkArray(v){
@@ -628,7 +629,7 @@ function tkRoleChipsHtml(roles,selectedIds,containerId){
   html+='</div>';
   return html;
 }
-function tkToggleRoleChip(btn){btn.classList.toggle('on');if(btn.closest('#tk-freq-roles'))tkMarkUnsaved()}
+export function tkToggleRoleChip(btn){btn.classList.toggle('on');if(btn.closest('#tk-freq-roles'))tkMarkUnsaved()}
 function tkGetSelectedRoles(containerId){
   var out=[];
   var box=document.getElementById(containerId);
@@ -638,7 +639,7 @@ function tkGetSelectedRoles(containerId){
 function tkPill(title,sub,fn){return '<button type="button" class="tk-pill" onclick="'+fn+'"><span class="tk-pill-t">'+esc(title)+'</span>'+(sub?'<span class="tk-pill-s">'+esc(sub)+'</span>':'')+'<span class="tk-pill-a">\u203A</span></button>'}
 
 // ── New helpers: Rename, Clone, Set Count, Card Click, Freq Config, Unsaved ──
-function tkRenamePanel(serverId,panelId){
+export function tkRenamePanel(serverId,panelId){
   // Fetch current name
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var curName='';
@@ -660,24 +661,24 @@ function tkRenamePanel(serverId,panelId){
     };
   }).catch(function(e){showToast('Failed to load panel data',true)});
 }
-function tkClonePanel(serverId,panelId){
+export function tkClonePanel(serverId,panelId){
   fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/clone',{method:'POST'})
   .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel cloned!');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)})
   .catch(function(){showToast('Failed to clone',true)});
 }
-function tkDeletePanel(serverId,panelId){
+export function tkDeletePanel(serverId,panelId){
   if(!confirm('Delete this panel and all its types? This cannot be undone.'))return;
   fetch('/api/server/'+serverId+'/tickets/panels/'+panelId,{method:'DELETE'})
   .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Panel deleted');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)})
   .catch(function(e){showToast('Failed: '+e.message,true)});
 }
-function deleteTicketType(serverId,panelId,typeId){
+export function deleteTicketType(serverId,panelId,typeId){
   if(!confirm('Delete this ticket type? This cannot be undone.'))return;
   fetch('/api/server/'+serverId+'/tickets/panels/'+panelId+'/types/'+typeId,{method:'DELETE'})
   .then(function(r){return r.json()}).then(function(d){if(d.success){showToast('Type deleted');loadTickets()}else showToast('Failed: '+(d.error||'unknown'),true)})
   .catch(function(e){showToast('Failed: '+e.message,true)});
 }
-function tkEditPanel(serverId,panelId){
+export function tkEditPanel(serverId,panelId){
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var panel=null;
     for(var pi=0;pi<(d2.panels||[]).length;pi++){if(d2.panels[pi].id===panelId){panel=d2.panels[pi];break}}
@@ -685,7 +686,7 @@ function tkEditPanel(serverId,panelId){
     editTicketPanel(serverId,panelId,panel.name||'',panel.color||'#5865F2',panel.description||'');
   }).catch(function(e){showToast('Failed to load panel data',true)});
 }
-function tkSetCount(serverId,panelId){
+export function tkSetCount(serverId,panelId){
   if(!panelId){showToast('Select a panel first',true);return}
   // Fetch current counters (per-panel + global fallback)
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
@@ -763,7 +764,7 @@ function tkCardClick(cardId,serverId,panelId){
 }
 
 // ── Frequently Used Configs Helpers ──
-function tkToggleFreq(){
+export function tkToggleFreq(){
   var body=document.getElementById('tk-freq-body');
   var caret=document.getElementById('tk-freq-caret');
   if(!body||!caret)return;
@@ -771,7 +772,7 @@ function tkToggleFreq(){
   body.style.display=vis?'none':'grid';
   caret.style.transform=vis?'rotate(-90deg)':'rotate(0deg)';
 }
-function tkEditMessage(serverId,type){
+export function tkEditMessage(serverId,type){
   var label=type==='panel'?'Panel Message':'Ticket Message';
   fetch('/api/server/'+serverId+'/tickets').then(function(r){return r.json()}).then(function(d2){
     var sel=document.getElementById('tkSelPanel');
@@ -821,17 +822,17 @@ function tkEditMessage(serverId,type){
 
 // ── Unsaved Changes Bar ──
 var tkUnsavedState=null;
-function tkMarkUnsaved(){
+export function tkMarkUnsaved(){
   var bar=document.getElementById('tk-unsaved-bar');
   if(bar){bar.style.display='flex'}
 }
-function tkResetChanges(){
+export function tkResetChanges(){
   var bar=document.getElementById('tk-unsaved-bar');
   if(bar)bar.style.display='none';
   loadTickets();
   showToast('Changes reset');
 }
-function tkSaveChanges(){
+export function tkSaveChanges(){
   var bar=document.getElementById('tk-unsaved-bar');
   var selRoles=tkGetSelectedRoles('tk-freq-roles');
   var catSel=document.getElementById('tk-freq-cats');

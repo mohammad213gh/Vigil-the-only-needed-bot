@@ -10,7 +10,7 @@ const path = require('path');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vp-test-'));
 process.env.DATA_DIR = tmp;
 
-const { getDb, closeDb } = require('../src/db');
+const { closeDb } = require('../src/db');
 const vp = require('../src/voicePresence');
 
 after(() => {
