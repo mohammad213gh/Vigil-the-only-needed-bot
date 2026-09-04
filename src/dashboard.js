@@ -3215,7 +3215,7 @@ function createDashboard() {
     app.get('/api/errors/alert', requireAuth, requireOwner, (req, res) => {
         if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can configure alerts' });
         const row = getDb().prepare('SELECT value FROM bot_config WHERE key = ?').get('bot_error_alert_channel');
-        let channelId = (row && row.value) || '';
+        const channelId = (row && row.value) || '';
         const guilds = client ? Array.from(client.guilds.cache.values()).slice(0, 40).map(g => ({
             id: g.id,
             name: g.name,

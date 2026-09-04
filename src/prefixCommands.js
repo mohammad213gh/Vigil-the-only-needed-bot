@@ -1198,8 +1198,8 @@ handlers.logs = async (message) => {
     const limit = Math.min(parseInt(args.find(a => a.startsWith('limit:'))?.slice(6)) || 15, 50);
 
     const db = getDb();
-    let whereClauses = ['guild_id = ?'];
-    let params = [message.guild.id];
+    const whereClauses = ['guild_id = ?'];
+    const params = [message.guild.id];
 
     if (searchUser) {
         whereClauses.push('author_id = ?');

@@ -14,8 +14,8 @@ async function executeLogs(interaction) {
         const db = getDb();
 
         // Build query dynamically
-        let whereClauses = ['guild_id = ?'];
-        let params = [guild.id];
+        const whereClauses = ['guild_id = ?'];
+        const params = [guild.id];
 
         if (searchUser) {
             whereClauses.push('author_id = ?');

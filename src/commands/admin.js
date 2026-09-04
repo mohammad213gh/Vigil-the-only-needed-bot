@@ -353,7 +353,7 @@ async function executePoll(interaction) {
     else if (durationLabel) embedColor = 0xE67E22;
 
     // ── Build mode badges ──
-    let badges = [];
+    const badges = [];
     if (multi) badges.push('\uD83D\uDD01 Multi-vote');
     if (anonymous) badges.push('\uD83D\uDD75\uFE0F Anonymous');
     if (durationLabel) badges.push('\u23F3 ' + durationLabel);

@@ -24,7 +24,7 @@ const DEFAULT_RULES = {
 
 function getAutoModConfig(guildId) {
     const db = getDb();
-    let row = db.prepare('SELECT * FROM automod_config WHERE guild_id = ?').get(guildId);
+    const row = db.prepare('SELECT * FROM automod_config WHERE guild_id = ?').get(guildId);
     if (!row) {
         // Insert defaults
         db.prepare('INSERT OR REPLACE INTO automod_config (guild_id, included_channels, excluded_channels, whitelisted_roles) VALUES (?, ?, ?, ?)')
@@ -129,7 +129,7 @@ const SPAM_WINDOW = 120000; // 2 minutes
 const SPAM_MAX_ENTRIES = 10000; // Global cap to prevent unbounded growth
 const SPAM_MAX_PER_USER = 100; // Per-user timestamp cap
 
-setInterval(() => {
+const spamCleanupTimer = setInterval(() => {
     const cutoff = Date.now() - SPAM_WINDOW;
     try {
         // Phase 1: Remove expired timestamps, delete empty arrays
@@ -155,6 +155,7 @@ setInterval(() => {
         console.error('[AutoMod] Spam tracker cleanup error:', err.message);
     }
 }, SPAM_CLEANUP_INTERVAL);
+spamCleanupTimer.unref?.(); // background cleanup must not keep the process (or test runner) alive
 
 function checkSpam(guildId, userId, threshold, timeWindow) {
     const key = guildId + '_' + userId;
@@ -192,7 +193,7 @@ async function checkMessage(message, guildId) {
     // Check role whitelist
     if (isRoleWhitelisted(guildId, member)) return;
 
-    let violations = [];
+    const violations = [];
 
     // ── Spam check ──
     if (rules.spam.enabled && content.length > 0) {

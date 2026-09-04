@@ -190,8 +190,8 @@ async function handleRoleMenuSelect(interaction) {
 
     const roleIds = new Set(options.map(o => o.role_id));
     const currentRoles = new Set(member.roles.cache.keys());
-    let added = [];
-    let removed = [];
+    const added = [];
+    const removed = [];
 
     // Add selected roles if user doesn't have them
     for (const roleId of selectedRoles) {

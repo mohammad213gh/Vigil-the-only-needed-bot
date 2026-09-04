@@ -204,7 +204,7 @@ async function sendTicketPanel(panelInput, channel) {
     if (panel.image_url) embed.setImage(panel.image_url);
 
     // If there are multiple types, show a select menu
-    let components = [];
+    const components = [];
 
     if (types.length > 1) {
         const select = new StringSelectMenuBuilder()
