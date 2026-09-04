@@ -310,6 +310,110 @@
       <div id="automodContent"></div>
     </div>
 
+    <!-- ═══ REACTION ROLES ═══ -->
+    <div class="section" id="sec-reaction-roles">
+      <h1 class="pg-title">Reaction Roles</h1>
+      <p class="pg-sub">Manage self-assignable reaction roles. <span class="rfsh-tm" id="rfsh-reaction-roles"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="rrSrvSelect" onchange="loadReactionRoles()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="reactionRolesContent"></div>
+    </div>
+
+    <!-- ═══ ROLE MENUS ═══ -->
+    <div class="section" id="sec-role-menus">
+      <h1 class="pg-title">Role Menus</h1>
+      <p class="pg-sub">Manage self-assignable role dropdown menus. <span class="rfsh-tm" id="rfsh-role-menus"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="rmSrvSelect" onchange="loadRoleMenus()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="roleMenusContent"></div>
+    </div>
+
+    <!-- ═══ VOICE PRESENCE ═══ -->
+    <div class="section" id="sec-voice-presence">
+      <h1 class="pg-title">Voice Presence</h1>
+      <p class="pg-sub">Manage the bot's 24/7 voice channel presence. <span class="rfsh-tm" id="rfsh-voice-presence"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="vpSrvSelect" onchange="loadVoicePresence()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="voicePresenceContent"></div>
+    </div>
+
+    <!-- ═══ TEMP VOICE CHANNELS ═══ -->
+    <div class="section" id="sec-temp-voice">
+      <h1 class="pg-title">Temp Voice Channels</h1>
+      <p class="pg-sub">Configure join-to-create voice channels and control panels. <span class="rfsh-tm" id="rfsh-temp-voice"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="tvSrvSelect" onchange="loadTempVoice()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="tempVoiceContent"></div>
+    </div>
+
+    <!-- ═══ WARNING THRESHOLDS ═══ -->
+    <div class="section" id="sec-warning-thresholds">
+      <h1 class="pg-title">Warning Thresholds</h1>
+      <p class="pg-sub">Configure auto-punishment at warning milestones. <span class="rfsh-tm" id="rfsh-warning-thresholds"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="wtSrvSelect" onchange="loadWarningThresholds()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="warningThresholdsContent"></div>
+    </div>
+
+    <!-- ═══ BAN APPEALS ═══ -->
+    <div class="section" id="sec-ban-appeals">
+      <h1 class="pg-title">Ban Appeals</h1>
+      <p class="pg-sub">Review and manage ban appeals. <span class="rfsh-tm" id="rfsh-ban-appeals"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="baSrvSelect" onchange="loadBanAppeals()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="baStatusFilter" onchange="loadBanAppeals()" style="flex:0 0 150px;">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="denied">Denied</option>
+        </select>
+      </div>
+      <div class="grid grid-4" id="baStats" style="margin-bottom:16px;"></div>
+      <div id="banAppealsContent"></div>
+    </div>
+
+    <!-- ═══ POLLS & ANNOUNCEMENTS ═══ -->
+    <div class="section" id="sec-polls-announcements">
+      <h1 class="pg-title">Polls & Announcements</h1>
+      <p class="pg-sub">Create and manage polls and announcements. <span class="rfsh-tm" id="rfsh-polls-announcements"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="paSrvSelect" onchange="loadPollsAnnouncements()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="pollsAnnouncementsContent"></div>
+    </div>
+
+    <!-- ═══ GREETINGS EDITOR ═══ -->
+    <div class="section" id="sec-greetings-editor">
+      <h1 class="pg-title">Greetings Editor</h1>
+      <p class="pg-sub">Visual editor for welcome and goodbye messages with live preview. <span class="rfsh-tm" id="rfsh-greetings-editor"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="geSrvSelect" onchange="loadGreetingsEditor()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="greetingsEditorContent"></div>
+    </div>
+
+    <!-- ═══ PREFIX COMMANDS ═══ -->
+    <div class="section" id="sec-prefix-commands">
+      <h1 class="pg-title">Prefix Commands</h1>
+      <p class="pg-sub">Manage text command prefix and view prefix usage stats. <span class="rfsh-tm" id="rfsh-prefix-commands"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="pcSrvSelect" onchange="loadPrefixCommands()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="prefixCommandsContent"></div>
+    </div>
+
+    <!-- ═══ REMINDERS ═══ -->
+    <div class="section" id="sec-reminders">
+      <h1 class="pg-title">Reminders</h1>
+      <p class="pg-sub">View and manage all pending reminders. <span class="rfsh-tm" id="rfsh-reminders"></span></p>
+      <div id="remindersContent"></div>
+    </div>
+
     <!-- ═══ TICKETS ═══ -->
     <div class="section" id="sec-tickets">
       <h1 class="pg-title">Tickets</h1>
@@ -318,6 +422,102 @@
         <select id="tkSrvSelect" onchange="loadTickets()" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="ticketsContent"></div>
+    </div>
+
+    <!-- ═══ WEBHOOKS ═══ -->
+    <div class="section" id="sec-webhooks">
+      <h1 class="pg-title">Webhooks</h1>
+      <p class="pg-sub">Manage server webhooks. <span class="rfsh-tm" id="rfsh-webhooks"></span></p>
+      <div class="srv-search" style="margin-bottom:16px;">
+        <select id="whSrvSelect" onchange="loadWebhooks()" style="flex:1;"><option value="">Select a server...</option></select>
+      </div>
+      <div id="webhooksContent"></div>
+    </div>
+
+    <!-- ═══ API TOKENS ═══ -->
+    <div class="section" id="sec-api-tokens">
+      <h1 class="pg-title">API Tokens</h1>
+      <p class="pg-sub">Manage API tokens for external integrations. <span class="rfsh-tm" id="rfsh-api-tokens"></span></p>
+      <div class="stg" style="margin-bottom:16px;"><label>Create API Token</label>
+        <div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">
+          <input type="text" id="apiTokenName" placeholder="Token name (e.g. CI/CD, Monitoring)" style="flex:1;min-width:200px;">
+          <select id="apiTokenScopes" multiple style="flex:1;min-width:200px;height:80px;">
+            <option value="read:servers">Read Servers</option>
+            <option value="read:stats">Read Statistics</option>
+            <option value="read:logs">Read Logs</option>
+            <option value="write:webhooks">Manage Webhooks</option>
+            <option value="admin:all">Full Access</option>
+          </select>
+          <input type="number" id="apiTokenExpiry" placeholder="Expiry (days, 0=never)" min="0" max="3650" style="flex:0 0 150px;">
+          <button class="btn btn-s" onclick="createApiToken()" style="padding:9px 14px;font-size:11px;">Create Token</button>
+        </div>
+      </div>
+      <div id="apiTokensList"></div>
+    </div>
+
+    <!-- ═══ RATE LIMITS ═══ -->
+    <div class="section" id="sec-rate-limits">
+      <h1 class="pg-title">Rate Limits</h1>
+      <p class="pg-sub">Configure rate limiting for the dashboard API. <span class="rfsh-tm" id="rfsh-rate-limits"></span></p>
+      <div id="rateLimitsContent"></div>
+    </div>
+
+    <!-- ═══ BOT ACTIVITY ═══ -->
+    <div class="section" id="sec-bot-activity">
+      <h1 class="pg-title">Bot Activity</h1>
+      <p class="pg-sub">Recent bot activity timeline. <span class="rfsh-tm" id="rfsh-bot-activity"></span></p>
+      <div class="stg-inl" style="margin-bottom:16px;">
+        <select id="activityDays" onchange="loadBotActivity()" style="flex:0 0 150px;">
+          <option value="1">Last 24h</option>
+          <option value="7" selected>Last 7 days</option>
+          <option value="30">Last 30 days</option>
+        </select>
+        <select id="activityType" onchange="loadBotActivity()" style="flex:0 0 150px;">
+          <option value="">All Types</option>
+          <option value="command">Commands</option>
+          <option value="event">Events</option>
+          <option value="error">Errors</option>
+          <option value="mod">Moderation</option>
+        </select>
+      </div>
+      <div id="botActivityFeed"></div>
+    </div>
+
+    <!-- ═══ SERVER COMPARISON ═══ -->
+    <div class="section" id="sec-server-compare">
+      <h1 class="pg-title">Server Comparison</h1>
+      <p class="pg-sub">Compare servers by metrics. <span class="rfsh-tm" id="rfsh-server-compare"></span></p>
+      <div class="stg-inl" style="margin-bottom:16px;">
+        <select id="compareMetric" onchange="loadServerCompare()" style="flex:1;">
+          <option value="members">Members</option>
+          <option value="growth">Net Growth</option>
+          <option value="joins">Joins</option>
+          <option value="leaves">Leaves</option>
+          <option value="boosts">Boosts</option>
+          <option value="channels">Channels</option>
+        </select>
+        <select id="compareLimit" onchange="loadServerCompare()" style="flex:0 0 150px;">
+          <option value="5">Top 5</option>
+          <option value="10" selected>Top 10</option>
+          <option value="25">Top 25</option>
+          <option value="50">Top 50</option>
+        </select>
+      </div>
+      <div class="grid grid-5" id="compareCards"></div>
+    </div>
+
+    <!-- ═══ COMMAND HEATMAP ═══ -->
+    <div class="section" id="sec-cmd-heatmap">
+      <h1 class="pg-title">Command Heatmap</h1>
+      <p class="pg-sub">Command usage across servers. <span class="rfsh-tm" id="rfsh-cmd-heatmap"></span></p>
+      <div class="stg-inl" style="margin-bottom:16px;">
+        <select id="heatmapDays" onchange="loadCmdHeatmap()" style="flex:0 0 150px;">
+          <option value="1">Last 24h</option>
+          <option value="7" selected>Last 7 days</option>
+          <option value="30">Last 30 days</option>
+        </select>
+      </div>
+      <div id="heatmapGrid"></div>
     </div>
 
     <!-- ═══ SETTINGS ═══ -->

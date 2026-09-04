@@ -8,6 +8,7 @@ const { createCase, closeCase } = require('./modCases');
 const { getDb } = require('./db');
 const { getLeadingOption, isOwner } = require('./helpers');
 const { logError } = require('./logError');
+const { sanitizeForEmbed, sanitizeForDM, validateModalInput } = require('./helpers');
 
 // ─── Custom ID Prefixes ───
 //   ck_{initiatorId}_{targetId}         = confirm kick
@@ -344,12 +345,19 @@ async function handleModal(interaction) {
 async function handleWarnSubmit(interaction, parts) {
     const initiatorId = parts[1];
     const targetId = parts.slice(2).join('_');
-    const reason = interaction.fields.getTextInputValue('warn_reason');
+    const rawReason = interaction.fields.getTextInputValue('warn_reason');
 
     // Security check
     if (interaction.user.id !== initiatorId) {
         return interaction.reply({ content: '❌ This isn\'t your warning form.', ephemeral: true });
     }
+
+    // Validate and sanitize the reason
+    const validation = validateModalInput(rawReason, { required: true, maxLength: 1000 });
+    if (!validation.valid) {
+        return interaction.reply({ content: '❌ ' + validation.error, ephemeral: true });
+    }
+    const reason = validation.value;
 
     const warnings = addWarning(interaction.guild.id, targetId, interaction.user.tag, reason);
     createCase(interaction.guild.id, targetId, interaction.user.id, interaction.user.tag, 'warn', reason);
@@ -368,10 +376,10 @@ async function handleWarnSubmit(interaction, parts) {
 
     await interaction.reply({ embeds: [embed] });
 
-    // DM the user
+    // DM the user (sanitized for DM)
     try {
         const user = await interaction.client.users.fetch(targetId);
-        await user.send('⚠️ You have been warned in **' + interaction.guild.name + '**.\nReason: ' + reason);
+        await user.send('⚠️ You have been warned in **' + interaction.guild.name + '**.\nReason: ' + sanitizeForDM(reason));
     } catch {
         // DMs closed, silently skip
     }
@@ -1121,11 +1129,15 @@ async function handleTempVcModal(interaction, parts) {
     }
 
     if (action === 'rename') {
-        const name = interaction.fields.getTextInputValue('tvc_rename_name').trim().slice(0, tv.MAX_CHANNEL_NAME);
-        if (!name) return interaction.reply({ content: '❌ Name can\'t be empty.', ephemeral: true });
+        const rawName = interaction.fields.getTextInputValue('tvc_rename_name');
+        const validation = validateModalInput(rawName, { required: true, maxLength: tv.MAX_CHANNEL_NAME, allowMarkdown: false });
+        if (!validation.valid) {
+            return interaction.reply({ content: '❌ ' + validation.error, ephemeral: true });
+        }
+        const name = validation.value;
         try {
             await channel.setName(name, 'Temp VC renamed');
-            return interaction.reply({ content: '✅ Renamed to **' + name + '**.', ephemeral: true });
+            return interaction.reply({ content: '✅ Renamed to **' + sanitizeForEmbed(name) + '**.', ephemeral: true });
         } catch (err) {
             return interaction.reply({ content: '❌ Failed to rename: ' + (err.message || err), ephemeral: true });
         }

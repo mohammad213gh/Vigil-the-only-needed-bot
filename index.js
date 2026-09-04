@@ -142,9 +142,8 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
     try { handleTempVoiceUpdate(oldState, newState); } catch { /* never crash on voice state */ }
 });
 
-// ──────────────────── Cooldown System ────────────────────
+// ──────────────────── Cooldown System (Persistent) ────────────────────
 
-const cooldowns = new Map();
 const DEFAULT_COOLDOWN = 3; // seconds
 const COOLDOWN_OVERRIDES = {
     ping: 2,
@@ -162,37 +161,70 @@ const COOLDOWN_OVERRIDES = {
     presence: 5,
 };
 
-function checkCooldown(interaction) {
+// In-memory cache for hot cooldowns (falls back to DB)
+const cooldownCache = new Map();
+const COOLDOWN_CACHE_TTL = 5000; // 5 seconds
+
+async function checkCooldown(interaction) {
     const cmd = interaction.commandName;
     const userId = interaction.user.id;
+    const guildId = interaction.guild.id;
     const cooldownTime = (COOLDOWN_OVERRIDES[cmd] || DEFAULT_COOLDOWN) * 1000;
 
     if (cooldownTime <= 0) return true; // no cooldown
 
-    if (!cooldowns.has(cmd)) {
-        cooldowns.set(cmd, new Map());
-    }
-
-    const timestamps = cooldowns.get(cmd);
+    const cacheKey = `${guildId}:${cmd}:${userId}`;
     const now = Date.now();
-    const expiration = timestamps.get(userId);
 
-    if (expiration && now < expiration) {
-        const remaining = ((expiration - now) / 1000).toFixed(1);
+    // Check in-memory cache first
+    const cached = cooldownCache.get(cacheKey);
+    if (cached && now < cached.expiresAt) {
+        const remaining = ((cached.expiresAt - now) / 1000).toFixed(1);
         return { remaining };
     }
 
-    timestamps.set(userId, now + cooldownTime);
+    // Check database
+    const { getDb } = require('./src/db');
+    const db = getDb();
+    const row = db.prepare('SELECT expires_at FROM command_cooldowns WHERE guild_id = ? AND command = ? AND user_id = ?')
+        .get(guildId, cmd, userId);
 
-    // Clean up expired entries once the map grows
-    if (timestamps.size > 50) {
-        for (const [uid, ts] of timestamps.entries()) {
-            if (ts <= now) timestamps.delete(uid);
+    if (row && now < row.expires_at) {
+        // Cache the result
+        cooldownCache.set(cacheKey, { expiresAt: row.expires_at });
+        const remaining = ((row.expires_at - now) / 1000).toFixed(1);
+        return { remaining };
+    }
+
+    // No active cooldown — set new one
+    const expiresAt = now + cooldownTime;
+    db.prepare('INSERT OR REPLACE INTO command_cooldowns (guild_id, command, user_id, expires_at) VALUES (?, ?, ?, ?)')
+        .run(guildId, cmd, userId, expiresAt);
+
+    // Cache it
+    cooldownCache.set(cacheKey, { expiresAt });
+
+    // Periodic cleanup of expired cache entries
+    if (cooldownCache.size > 500) {
+        for (const [key, val] of cooldownCache.entries()) {
+            if (val.expiresAt <= now) cooldownCache.delete(key);
         }
     }
 
     return true;
 }
+
+// Cleanup expired DB cooldowns on startup
+function cleanupExpiredCooldowns() {
+    try {
+        const { getDb } = require('./src/db');
+        const db = getDb();
+        db.prepare('DELETE FROM command_cooldowns WHERE expires_at <= ?').run(Date.now());
+    } catch (err) {
+        console.error('[Cooldown] Cleanup failed:', err.message);
+    }
+}
+cleanupExpiredCooldowns();
 
 // ──────────────────── Interaction Handler ────────────────────
 
@@ -214,7 +246,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         const { commandName } = interaction;
 
         // Cooldown check
-        const cooldownResult = checkCooldown(interaction);
+        const cooldownResult = await checkCooldown(interaction);
         if (cooldownResult !== true) {
             return interaction.reply({
                 content: '⏳ Please wait **' + cooldownResult.remaining + 's** before using `/' + commandName + '` again.',

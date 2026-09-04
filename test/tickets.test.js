@@ -10,7 +10,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'tk-test-'));
 process.env.DATA_DIR = tmp;
 
 const { getDb, closeDb } = require('../src/db');
-const { getBlockingOpenTicket, closeDeletedChannelTickets, handleTicketChannelDeleted } = require('../src/tickets');
+const { getBlockingOpenTicket, closeDeletedChannelTickets, handleTicketChannelDeleted, isTicketStaff } = require('../src/tickets');
 
 // A guild whose channel cache never contains anything (all channels "deleted").
 function makeGuild() {
@@ -58,4 +58,24 @@ test('channelDelete hook closes the matching ticket with the right reason', () =
     const row = db.prepare("SELECT status, closed_reason FROM tickets WHERE id='t-stale-1'").get();
     assert.strictEqual(row.status, 'closed');
     assert.strictEqual(row.closed_reason, 'Channel deleted');
+});
+
+test('ticket management is limited to configured support staff', async () => {
+    const db = getDb();
+    db.prepare(`INSERT OR REPLACE INTO ticket_panel_types
+        (id, panel_id, guild_id, name, support_roles, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)`)
+        .run('support-type', 'panel-1', 'guild-1', 'Support', JSON.stringify(['support-role']), Date.now());
+
+    const ticket = { panel_type_id: 'support-type' };
+    const guild = { id: 'guild-1', ownerId: 'owner-id', members: { cache: new Map() } };
+    const member = (id, roleIds = []) => ({
+        id,
+        roles: { cache: new Map(roleIds.map(roleId => [roleId, {}])) },
+        permissions: { has: () => false },
+    });
+
+    assert.strictEqual(await isTicketStaff(guild, ticket, member('member-id')), false);
+    assert.strictEqual(await isTicketStaff(guild, ticket, member('support-id', ['support-role'])), true);
+    assert.strictEqual(await isTicketStaff(guild, ticket, member('owner-id')), true);
 });

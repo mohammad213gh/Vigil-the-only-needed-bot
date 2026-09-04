@@ -126,16 +126,29 @@ const spamTracker = new Map(); // guildId_userId → [timestamps]
 // Periodic cleanup of stale spam entries (every 5 minutes)
 const SPAM_CLEANUP_INTERVAL = 300000; // 5 minutes
 const SPAM_WINDOW = 120000; // 2 minutes
+const SPAM_MAX_ENTRIES = 10000; // Global cap to prevent unbounded growth
+const SPAM_MAX_PER_USER = 100; // Per-user timestamp cap
 
 setInterval(() => {
     const cutoff = Date.now() - SPAM_WINDOW;
     try {
+        // Phase 1: Remove expired timestamps, delete empty arrays
         for (const [key, timestamps] of spamTracker.entries()) {
             while (timestamps.length > 0 && timestamps[0] < cutoff) {
                 timestamps.shift();
             }
             if (timestamps.length === 0) {
                 spamTracker.delete(key);
+            }
+        }
+
+        // Phase 2: Enforce global cap — remove oldest 20% if over limit
+        if (spamTracker.size > SPAM_MAX_ENTRIES) {
+            const entries = [...spamTracker.entries()]
+                .sort((a, b) => (a[1][0] || 0) - (b[1][0] || 0)); // Sort by oldest timestamp
+            const toRemove = Math.floor(SPAM_MAX_ENTRIES * 0.2);
+            for (let i = 0; i < toRemove; i++) {
+                spamTracker.delete(entries[i][0]);
             }
         }
     } catch (err) {
@@ -154,9 +167,9 @@ function checkSpam(guildId, userId, threshold, timeWindow) {
         timestamps.shift();
     }
     timestamps.push(now);
-    // Keep only last 100 timestamps to prevent memory leaks
-    if (timestamps.length > 100) {
-        timestamps.splice(0, timestamps.length - 100);
+    // Enforce per-user cap
+    if (timestamps.length > SPAM_MAX_PER_USER) {
+        timestamps.splice(0, timestamps.length - SPAM_MAX_PER_USER);
     }
     return timestamps.length >= threshold;
 }

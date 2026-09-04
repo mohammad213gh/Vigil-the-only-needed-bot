@@ -1,5 +1,63 @@
 const { COUNTRY_FLAGS } = require('./constants');
 const { logError } = require('./logError');
+const { escapeMarkdown } = require('discord.js');
+
+// ──────────────────── Input Sanitization ────────────────────
+
+// Sanitize user input for safe embedding in Discord embeds
+// Removes markdown that could be abused, escapes mentions, limits length
+function sanitizeForEmbed(str, maxLen = 1024) {
+    if (!str) return '*Empty*';
+    const cleaned = escapeMarkdown(String(str))
+        .replace(/@(everyone|here)/g, '@\u200b$1') // Zero-width space to prevent pings
+        .replace(/<@!?&?\d+>/g, '') // Remove raw mention strings
+        .slice(0, maxLen);
+    return cleaned.length < String(str).length ? cleaned + '…' : cleaned;
+}
+
+// Sanitize user input for DMs (stricter, no markdown rendering)
+function sanitizeForDM(str, maxLen = 2000) {
+    if (!str) return '';
+    return String(str)
+        .replace(/@(everyone|here)/g, '@\u200b$1')
+        .replace(/<@!?&?\d+>/g, '')
+        .slice(0, maxLen);
+}
+
+// Sanitize user input for database storage (no length limit, just safety)
+function sanitizeForDB(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/@(everyone|here)/g, '@\u200b$1')
+        .replace(/<@!?&?\d+>/g, '');
+}
+
+// Sanitize channel/role names for display
+function sanitizeName(str, maxLen = 100) {
+    if (!str) return 'Unnamed';
+    return escapeMarkdown(String(str))
+        .replace(/@(everyone|here)/g, '@\u200b$1')
+        .slice(0, maxLen);
+}
+
+// Validate and sanitize modal text input
+function validateModalInput(str, { required = true, minLength = 1, maxLength = 1000, allowMarkdown = false } = {}) {
+    if (!str || !str.trim()) {
+        if (required) return { valid: false, error: 'This field is required' };
+        return { valid: true, value: '' };
+    }
+    const trimmed = str.trim();
+    if (trimmed.length < minLength) {
+        return { valid: false, error: `Must be at least ${minLength} characters` };
+    }
+    if (trimmed.length > maxLength) {
+        return { valid: false, error: `Must be ${maxLength} characters or less` };
+    }
+    const sanitized = allowMarkdown
+        ? sanitizeForEmbed(trimmed, maxLength)
+        : sanitizeForDM(trimmed, maxLength);
+    return { valid: true, value: sanitized };
+}
 
 // ──────────────────── String Utilities ────────────────────
 
@@ -203,6 +261,124 @@ function replacePlaceholders(text, member, type) {
     return result;
 }
 
+// ──────────────────── Circuit Breaker & Retry ────────────────────
+
+class CircuitBreaker {
+    constructor(options = {}) {
+        this.failureThreshold = options.failureThreshold || 5;
+        this.successThreshold = options.successThreshold || 2;
+        this.timeout = options.timeout || 30000;
+        this.state = 'closed';
+        this.failures = 0;
+        this.successes = 0;
+        this.lastFailureTime = null;
+        this.onStateChange = options.onStateChange || (() => {});
+    }
+
+    async execute(fn) {
+        if (this.state === 'open') {
+            if (Date.now() - this.lastFailureTime > this.timeout) {
+                this.state = 'half-open';
+                this.onStateChange('half-open');
+            } else {
+                throw new Error('Circuit breaker is open');
+            }
+        }
+
+        try {
+            const result = await fn();
+            this.onSuccess();
+            return result;
+        } catch (err) {
+            this.onFailure();
+            throw err;
+        }
+    }
+
+    onSuccess() {
+        this.failures = 0;
+        if (this.state === 'half-open') {
+            this.successes++;
+            if (this.successes >= this.successThreshold) {
+                this.state = 'closed';
+                this.successes = 0;
+                this.onStateChange('closed');
+            }
+        }
+    }
+
+    onFailure() {
+        this.failures++;
+        this.lastFailureTime = Date.now();
+        if (this.state === 'half-open' || this.failures >= this.failureThreshold) {
+            this.state = 'open';
+            this.successes = 0;
+            this.onStateChange('open');
+        }
+    }
+
+    getState() {
+        return this.state;
+    }
+
+    reset() {
+        this.state = 'closed';
+        this.failures = 0;
+        this.successes = 0;
+        this.lastFailureTime = null;
+    }
+}
+
+// Discord API circuit breaker instance
+const discordApiBreaker = new CircuitBreaker({
+    failureThreshold: 10,
+    successThreshold: 3,
+    timeout: 60000,
+    onStateChange: (state) => {
+        logWarn(`Discord API circuit breaker: ${state}`, 'circuit-breaker');
+    },
+});
+
+// Retry with exponential backoff
+async function withRetry(fn, options = {}) {
+    const maxRetries = options.maxRetries ?? 3;
+    const baseDelay = options.baseDelay ?? 1000;
+    const maxDelay = options.maxDelay ?? 10000;
+    const retryableErrors = options.retryableErrors ?? ['rate limited', 'timeout', 'ECONNRESET', 'ETIMEDOUT', '502', '503', '504'];
+
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            lastError = err;
+            const msg = err.message?.toLowerCase() || '';
+            const isRetryable = retryableErrors.some(e => msg.includes(e.toLowerCase()));
+            
+            if (!isRetryable || attempt === maxRetries) {
+                throw err;
+            }
+            
+            const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
+            const jitter = delay * 0.1 * Math.random();
+            await new Promise(r => setTimeout(r, delay + jitter));
+        }
+    }
+    throw lastError;
+}
+
+// Execute Discord API call with circuit breaker + retry
+async function discordApiCall(fn, context = '') {
+    return discordApiBreaker.execute(() => withRetry(fn, {
+        maxRetries: 3,
+        baseDelay: 1000,
+        retryableErrors: ['rate limited', 'timeout', '502', '503', '504', 'ECONNRESET', 'ETIMEDOUT'],
+    })).catch(err => {
+        logError(err, 'discord-api', context);
+        throw err;
+    });
+}
+
 module.exports = {
     truncate,
     reverseText,
@@ -220,4 +396,13 @@ module.exports = {
     makePollBar,
     getLeadingOption,
     replacePlaceholders,
+    sanitizeForEmbed,
+    sanitizeForDM,
+    sanitizeForDB,
+    sanitizeName,
+    validateModalInput,
+    CircuitBreaker,
+    withRetry,
+    discordApiCall,
+    discordApiBreaker,
 };

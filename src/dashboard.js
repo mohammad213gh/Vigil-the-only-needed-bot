@@ -2,9 +2,10 @@ const express = require('express');
 const path = require('path');
 const os = require('os');
 const fs = require('fs');
-const { formatUptime, formatNumber } = require('./helpers');
+const crypto = require('crypto');
+const { formatUptime, formatNumber, sanitizeForEmbed, sanitizeForDB, sanitizeName } = require('./helpers');
 const { getBotConfig, getGuildConfig, updateGuildConfig, getWelcomeConfig, getGoodbyeConfig, updateWelcomeConfig } = require('./config');
-const { getDb, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup } = require('./db');
+const { getDb, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup, recordAuditTrail } = require('./db');
 const { getDataDir } = require('./data');
 const { getGuildStats } = require('./stats');
 const { getWarnings } = require('./warnings');
@@ -12,11 +13,16 @@ const { getNotesForUser } = require('./staffNotes');
 const { getCases } = require('./modCases');
 const { getInviterStats } = require('./invites');
 const { getReactionRoles } = require('./reactionRoles');
+const { createRoleMenu, getRoleMenus, removeRoleMenu, addRoleMenuOption, getRoleMenuOptions, removeRoleMenuOption } = require('./roleMenus');
+const { getPresence, savePresence, clearPresence, joinChannel, moveChannel, leaveChannel, setStatusText, restoreAllPresences } = require('./voicePresence');
+const { getConfig: getTempVoiceConfig, setConfig: setTempVoiceConfig, getTriggers, getTriggerForChannel, setTrigger, removeTrigger, getSpawned, getSpawnedChannel, getSpawnedByOwner, addSpawned, removeSpawned, registerPanel, getPanels, unregisterPanel, updatePanels, spawnChannel, cancelDeletion, scheduleDeletionIfEmpty, getMemberChannelFor, setChannelLocked, createForMember, deleteOwnedChannel, buildPanelMessage, buildPanelComponents, cleanupOrphans } = require('./tempVoice');
+const { getThresholds, setThresholds, addThreshold, removeThreshold } = require('./warningThresholds');
+const { createBanAppeal, getBanAppeal, getBanAppeals, updateBanAppealStatus, deleteBanAppeal, getBanAppealCount } = require('./banAppeals');
 const { getAllPermissions } = require('./permissions');
 const { LOG_CATEGORIES, WS_STATUS } = require('./constants');
-const { logError } = require('./logError');
+const { logError, logInfo, logWarn } = require('./logError');
+const { discordApiBreaker } = require('./helpers');
 const multer = require('multer');
-const crypto = require('crypto');
 
 // ──── Rate Limiter ────
 const loginAttempts = new Map();
@@ -39,7 +45,7 @@ function checkRateLimit(ip) {
 }
 
 // Clean up old entries every 5 minutes
-setInterval(() => {
+const loginAttemptReaper = setInterval(() => {
     const now = Date.now();
     for (const [ip, entry] of loginAttempts.entries()) {
         if (now - entry.windowStart > RATE_LIMIT_WINDOW * 2) {
@@ -47,6 +53,7 @@ setInterval(() => {
         }
     }
 }, 5 * 60 * 1000);
+loginAttemptReaper.unref();
 
 let client = null;
 let dashboardPassword = '';
@@ -206,7 +213,7 @@ function generateSession() {
 }
 
 // Reap expired sessions every 10 minutes so the Map doesn't grow unbounded.
-setInterval(() => {
+const sessionReaper = setInterval(() => {
     const now = Date.now();
     for (const [token, session] of sessions.entries()) {
         const pastMax = session.createdAt && now > session.createdAt + SESSION_MAX_MS;
@@ -215,6 +222,7 @@ setInterval(() => {
         }
     }
 }, 10 * 60 * 1000);
+sessionReaper.unref();
 
 // ──── File Upload Setup ────
 const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
@@ -256,6 +264,19 @@ function createDashboard() {
         next();
     });
 
+    // Request ID + timing for observability
+    app.use((req, res, next) => {
+        const requestId = req.headers['x-request-id'] || crypto.randomUUID();
+        req.requestId = requestId;
+        res.setHeader('X-Request-ID', requestId);
+        const start = process.hrtime.bigint();
+        res.on('finish', () => {
+            const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
+            logInfo(`${req.method} ${req.path} ${res.statusCode} ${durationMs.toFixed(2)}ms`, 'http', { requestId, ip: req.ip, userAgent: req.headers['user-agent'] });
+        });
+        next();
+    });
+
     app.use((req, res, next) => {
         const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
         if (token && sessions.has(token)) {
@@ -283,6 +304,53 @@ function createDashboard() {
         } else {
             req.authenticated = false;
         }
+        next();
+    });
+
+    // ── Global API Rate Limiter (applies to all authenticated endpoints) ──
+    const apiLimiter = new Map();
+    const API_LIMIT_WINDOW = 60 * 1000; // 1 minute
+    const API_LIMIT_MAX = 120; // 120 requests per minute per IP
+
+    function checkApiRateLimit(ip) {
+        const now = Date.now();
+        let entry = apiLimiter.get(ip);
+        if (!entry || now - entry.windowStart > API_LIMIT_WINDOW) {
+            entry = { count: 1, windowStart: now };
+            apiLimiter.set(ip, entry);
+            return { allowed: true, remaining: API_LIMIT_MAX - 1 };
+        }
+        entry.count++;
+        if (entry.count > API_LIMIT_MAX) {
+            return { allowed: false, remaining: 0 };
+        }
+        return { allowed: true, remaining: API_LIMIT_MAX - entry.count };
+    }
+
+    // Clean up old entries every 5 minutes
+    const apiLimiterReaper = setInterval(() => {
+        const now = Date.now();
+        for (const [ip, entry] of apiLimiter.entries()) {
+            if (now - entry.windowStart > API_LIMIT_WINDOW * 2) {
+                apiLimiter.delete(ip);
+            }
+        }
+    }, 5 * 60 * 1000);
+    apiLimiterReaper.unref();
+
+    // Apply rate limiting to all /api/ routes except login, branding, health
+    app.use('/api/', (req, res, next) => {
+        const exempt = ['/api/login', '/api/branding', '/api/logout'];
+        if (exempt.includes(req.path)) return next();
+
+        const ip = req.ip || req.connection.remoteAddress || 'unknown';
+        const rateCheck = checkApiRateLimit(ip);
+        if (!rateCheck.allowed) {
+            console.warn('[Dashboard] API rate limit hit for IP:', ip);
+            return res.status(429).json({ success: false, error: 'Too many requests. Please slow down.' });
+        }
+        res.setHeader('X-RateLimit-Limit', API_LIMIT_MAX);
+        res.setHeader('X-RateLimit-Remaining', rateCheck.remaining);
         next();
     });
 
@@ -670,7 +738,13 @@ function createDashboard() {
             const allowedFields = ['enabled', 'channelId', 'content', 'embedTitle', 'embedDescription', 'embedColor', 'embedFooter', 'embedFooterIcon', 'embedThumbnail', 'embedImage', 'embedAuthor', 'embedAuthorIcon'];
             for (const field of allowedFields) {
                 if (req.body[field] !== undefined) {
-                    cfg[field] = req.body[field];
+                    // Sanitize text fields
+                    const textFields = ['content', 'embedTitle', 'embedDescription', 'embedFooter', 'embedAuthor'];
+                    if (textFields.includes(field)) {
+                        cfg[field] = sanitizeForDB(req.body[field]).slice(0, field === 'content' ? 2000 : 1024);
+                    } else {
+                        cfg[field] = req.body[field];
+                    }
                 }
             }
             return cfg;
@@ -758,13 +832,14 @@ function createDashboard() {
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         const { userId, reason } = req.body;
         if (!userId || !reason) return res.status(400).json({ error: 'Missing userId or reason' });
+        const safeReason = sanitizeForDB(reason).slice(0, 1000);
 
         try {
             const { addWarning } = require('./warnings');
             const { createCase } = require('./modCases');
             const sessionUser = getSessionUser(req);
-            const warnings = addWarning(guild.id, userId, 'Dashboard (' + sessionUser + ')', reason);
-            createCase(guild.id, userId, sessionUser, 'Dashboard', 'warn', reason);
+            const warnings = addWarning(guild.id, userId, 'Dashboard (' + sessionUser + ')', safeReason);
+            createCase(guild.id, userId, sessionUser, 'Dashboard', 'warn', safeReason);
             res.json({ success: true, warningCount: warnings.length });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -778,15 +853,16 @@ function createDashboard() {
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         const { userId, reason } = req.body;
         if (!userId || !reason) return res.status(400).json({ error: 'Missing userId or reason' });
+        const safeReason = sanitizeForDB(reason).slice(0, 1000);
 
         try {
             const member = await guild.members.fetch(userId).catch(() => null);
             if (!member) return res.status(404).json({ error: 'Member not found in this server' });
             if (!member.kickable) return res.status(403).json({ error: 'Cannot kick this user - role hierarchy prevents it' });
 
-            await member.kick('[Dashboard] ' + reason);
+            await member.kick('[Dashboard] ' + safeReason);
             const { createCase } = require('./modCases');
-            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'kick', reason);
+            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'kick', safeReason);
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -800,12 +876,13 @@ function createDashboard() {
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         const { userId, reason, deleteMessages } = req.body;
         if (!userId || !reason) return res.status(400).json({ error: 'Missing userId or reason' });
+        const safeReason = sanitizeForDB(reason).slice(0, 1000);
 
         try {
             const deleteSeconds = deleteMessages === '24hours' ? 86400 : (deleteMessages === '6hours' ? 21600 : (deleteMessages === 'hour' ? 3600 : 0));
-            await guild.bans.create(userId, { reason: '[Dashboard] ' + reason, deleteMessageSeconds: deleteSeconds });
+            await guild.bans.create(userId, { reason: '[Dashboard] ' + safeReason, deleteMessageSeconds: deleteSeconds });
             const { createCase } = require('./modCases');
-            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'ban', reason);
+            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'ban', safeReason);
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -819,6 +896,7 @@ function createDashboard() {
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         const { userId, duration, reason } = req.body;
         if (!userId || !duration || !reason) return res.status(400).json({ error: 'Missing userId, duration, or reason' });
+        const safeReason = sanitizeForDB(reason).slice(0, 1000);
 
         try {
             const member = await guild.members.fetch(userId).catch(() => null);
@@ -833,9 +911,9 @@ function createDashboard() {
             // Discord caps timeout length at 28 days
             if (ms > 28 * 24 * 60 * 60000) return res.status(400).json({ error: 'Timeout cannot exceed 28 days' });
 
-            await member.timeout(ms, '[Dashboard] ' + reason);
+            await member.timeout(ms, '[Dashboard] ' + safeReason);
             const { createCase } = require('./modCases');
-            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'timeout', reason);
+            createCase(guild.id, userId, getSessionUser(req), 'Dashboard', 'timeout', safeReason);
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: err.message });
@@ -868,8 +946,9 @@ function createDashboard() {
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         const { targetUserId, note } = req.body;
         if (!targetUserId || !note) return res.status(400).json({ error: 'Missing targetUserId or note' });
+        const safeNote = sanitizeForDB(note).slice(0, 2000);
         const { addNote } = require('./staffNotes');
-        const created = addNote(guild.id, targetUserId, 'dashboard', 'Dashboard', note);
+        const created = addNote(guild.id, targetUserId, 'dashboard', 'Dashboard', safeNote);
         res.json({ success: true, note: created });
     });
 
@@ -879,6 +958,713 @@ function createDashboard() {
         const removed = removeNote(req.params.noteId);
         if (!removed) return res.status(404).json({ error: 'Note not found' });
         res.json({ success: true });
+    });
+
+    // ── Webhook Management ──
+    app.get('/api/server/:id/webhooks', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage webhooks' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const webhooks = await guild.fetchWebhooks();
+            res.json(webhooks.map(w => ({
+                id: w.id,
+                name: w.name,
+                avatar: w.avatarURL({ size: 64 }) || null,
+                channelId: w.channelId,
+                channelName: guild.channels.cache.get(w.channelId)?.name || 'Unknown',
+                type: w.type,
+                owner: w.owner ? w.owner.tag : 'Unknown',
+                createdAt: w.createdTimestamp,
+                url: w.url,
+            })));
+        } catch (err) {
+            logError(err, 'dashboard', 'webhooks_fetch');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/webhooks', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can create webhooks' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { name, channelId, avatar } = req.body;
+        if (!name || !channelId) return res.status(400).json({ error: 'Missing name or channelId' });
+        const channel = guild.channels.cache.get(channelId);
+        if (!channel || !channel.isTextBased()) return res.status(400).json({ error: 'Invalid channel' });
+        try {
+            const webhook = await channel.createWebhook({ name: sanitizeName(name), avatar });
+            res.json({ success: true, webhook: { id: webhook.id, name: webhook.name, url: webhook.url } });
+        } catch (err) {
+            logError(err, 'dashboard', 'webhook_create');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/server/:id/webhooks/:webhookId', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can delete webhooks' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const webhook = await guild.fetchWebhook(req.params.webhookId);
+            if (!webhook) return res.status(404).json({ error: 'Webhook not found' });
+            await webhook.delete();
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'webhook_delete');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── API Tokens (for external integrations) ──
+    app.get('/api/tokens', requireAuth, requireOwner, (req, res) => {
+        const db = getDb();
+        const tokens = db.prepare('SELECT id, name, token_hash, scopes, created_at, last_used_at, expires_at FROM api_tokens ORDER BY created_at DESC').all();
+        res.json(tokens.map(t => ({ ...t, token_hash: t.token_hash.slice(0, 8) + '...' })));
+    });
+
+    app.post('/api/tokens', requireAuth, requireOwner, (req, res) => {
+        const { name, scopes, expiresInDays } = req.body;
+        if (!name) return res.status(400).json({ error: 'Missing name' });
+        const token = 'nlux_' + crypto.randomBytes(32).toString('base64url');
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const expiresAt = expiresInDays ? Date.now() + expiresInDays * 24 * 60 * 60 * 1000 : null;
+        const db = getDb();
+        db.prepare('INSERT INTO api_tokens (name, token_hash, scopes, expires_at) VALUES (?, ?, ?, ?)')
+            .run(name, tokenHash, JSON.stringify(scopes || []), expiresAt);
+        res.json({ success: true, token }); // Only time the full token is returned
+    });
+
+    app.delete('/api/tokens/:id', requireAuth, requireOwner, (req, res) => {
+        const db = getDb();
+        const result = db.prepare('DELETE FROM api_tokens WHERE id = ?').run(req.params.id);
+        res.json({ success: result.changes > 0 });
+    });
+
+    // ── Rate Limit Configuration ──
+    app.get('/api/ratelimit/config', requireAuth, requireOwner, (req, res) => {
+        const db = getDb();
+        const row = db.prepare('SELECT value FROM bot_config WHERE key = ?').get('ratelimit_config');
+        const config = row ? JSON.parse(row.value) : {
+            global: { windowMs: 60000, max: 120 },
+            login: { windowMs: 60000, max: 10 },
+            api: { windowMs: 60000, max: 100 },
+            modActions: { windowMs: 60000, max: 30 },
+        };
+        res.json(config);
+    });
+
+    app.post('/api/ratelimit/config', requireAuth, requireOwner, (req, res) => {
+        const { global, login, api, modActions } = req.body;
+        const db = getDb();
+        const config = {};
+        if (global) config.global = { windowMs: Math.max(1000, global.windowMs), max: Math.max(1, global.max) };
+        if (login) config.login = { windowMs: Math.max(1000, login.windowMs), max: Math.max(1, login.max) };
+        if (api) config.api = { windowMs: Math.max(1000, api.windowMs), max: Math.max(1, api.max) };
+        if (modActions) config.modActions = { windowMs: Math.max(1000, modActions.windowMs), max: Math.max(1, modActions.max) };
+        db.prepare('INSERT OR REPLACE INTO bot_config (key, value) VALUES (?, ?)').run('ratelimit_config', JSON.stringify(config));
+        res.json({ success: true, config });
+    });
+
+    // ── Bot Activity Timeline ──
+    app.get('/api/activity/timeline', requireAuth, (req, res) => {
+        if (!client) return res.json([]);
+        const days = Math.min(parseInt(req.query.days) || 7, 30);
+        const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+        const db = getDb();
+        const events = db.prepare('SELECT * FROM bot_activity WHERE timestamp > ? ORDER BY timestamp DESC LIMIT 1000').all(cutoff);
+        res.json(events);
+    });
+
+    // Log bot activity events
+    global.logBotActivity = function(type, data = {}) {
+        try {
+            const db = getDb();
+            db.prepare('INSERT INTO bot_activity (type, data, timestamp) VALUES (?, ?, ?)')
+                .run(type, JSON.stringify(data), Date.now());
+            // Keep last 10000 events
+            db.prepare('DELETE FROM bot_activity WHERE id NOT IN (SELECT id FROM bot_activity ORDER BY timestamp DESC LIMIT 10000)').run();
+        } catch {}
+    };
+
+    // ── Server Comparison / Multi-server Analytics ──
+    app.get('/api/analytics/servers/compare', requireAuth, (req, res) => {
+        if (!client) return res.json([]);
+        const metric = req.query.metric || 'members'; // members, joins, leaves, boosts, channels
+        const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+        const servers = client.guilds.cache.map(g => {
+            const stats = getGuildStats(g.id);
+            let value = g.memberCount;
+            if (metric === 'joins') value = stats.totalJoins || 0;
+            else if (metric === 'leaves') value = stats.totalLeaves || 0;
+            else if (metric === 'boosts') value = g.premiumSubscriptionCount || 0;
+            else if (metric === 'channels') value = g.channels.cache.size;
+            else if (metric === 'growth') value = (stats.totalJoins || 0) - (stats.totalLeaves || 0);
+            return { id: g.id, name: g.name, icon: g.iconURL({ size: 32 }), value };
+        }).sort((a, b) => b.value - a.value).slice(0, limit);
+        res.json({ metric, servers });
+    });
+
+    // ── Command Usage Heatmap ──
+    app.get('/api/stats/commands/heatmap', requireAuth, (req, res) => {
+        if (!client) return res.json({});
+        const days = Math.min(parseInt(req.query.days) || 7, 30);
+        const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+        const db = getDb();
+        const rows = db.prepare('SELECT command, guild_id, COUNT(*) as count FROM command_usage WHERE used_at > ? GROUP BY command, guild_id ORDER BY count DESC LIMIT 500').all(cutoff);
+        const heatmap = {};
+        for (const r of rows) {
+            if (!heatmap[r.command]) heatmap[r.command] = {};
+            heatmap[r.command][r.guild_id] = r.count;
+        }
+        res.json(heatmap);
+    });
+
+    // ── Reaction Roles API ──
+    app.get('/api/server/:id/reaction-roles', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const roles = getReactionRoles(guild.id);
+            const channels = guild.channels.cache
+                .filter(c => c.type === 0 || c.type === 5 || c.type === 15)
+                .sort((a, b) => a.position - b.position)
+                .map(c => ({ id: c.id, name: '#' + c.name }));
+            const rolesList = guild.roles.cache
+                .filter(r => r.name !== '@everyone' && !r.managed)
+                .sort((a, b) => b.position - a.position)
+                .map(r => ({ id: r.id, name: r.name, color: r.hexColor === '#000000' ? null : r.hexColor }));
+            res.json({ roles, channels, rolesList });
+        } catch { res.json({ roles: [], channels: [], rolesList: [] }); }
+    });
+
+    app.post('/api/server/:id/reaction-roles', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { messageId, channelId, emoji, roleId, label } = req.body;
+        if (!messageId || !channelId || !emoji || !roleId) return res.status(400).json({ error: 'Missing required fields' });
+        try {
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel) return res.status(400).json({ error: 'Channel not found' });
+            const role = guild.roles.cache.get(roleId);
+            if (!role) return res.status(400).json({ error: 'Role not found' });
+            const result = addReactionRole(guild.id, messageId, channelId, emoji, roleId, label || null);
+            res.json({ success: true, roles: result });
+        } catch (err) {
+            logError(err, 'dashboard', 'reactionrole_add');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/server/:id/reaction-roles', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { messageId, emoji } = req.body;
+        if (!messageId || !emoji) return res.status(400).json({ error: 'Missing messageId or emoji' });
+        try {
+            const result = removeReactionRole(guild.id, messageId, emoji);
+            if (!result) return res.status(404).json({ error: 'Reaction role not found' });
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'reactionrole_remove');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/reaction-roles/message', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { channelId, content, roles } = req.body;
+        if (!channelId || !roles?.length) return res.status(400).json({ error: 'Missing channelId or roles' });
+        try {
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || !channel.isTextBased()) return res.status(400).json({ error: 'Invalid text channel' });
+            const embed = new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle('Reaction Roles')
+                .setDescription(content || 'React to get roles!')
+                .setFooter({ text: 'Click a reaction to get/remove the role' });
+            const msg = await channel.send({ embeds: [embed] });
+            for (const r of roles) {
+                await addReactionRole(guild.id, msg.id, channelId, r.emoji, r.roleId, r.label || null);
+                try { await msg.react(r.emoji); } catch {}
+            }
+            res.json({ success: true, messageId: msg.id });
+        } catch (err) {
+            logError(err, 'dashboard', 'reactionrole_message');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── Role Menus API ──
+    app.get('/api/server/:id/role-menus', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const menus = getRoleMenus(guild.id);
+            const channels = guild.channels.cache
+                .filter(c => c.type === 0 || c.type === 5 || c.type === 15)
+                .sort((a, b) => a.position - b.position)
+                .map(c => ({ id: c.id, name: '#' + c.name }));
+            const rolesList = guild.roles.cache
+                .filter(r => r.name !== '@everyone' && !r.managed)
+                .sort((a, b) => b.position - a.position)
+                .map(r => ({ id: r.id, name: r.name, color: r.hexColor === '#000000' ? null : r.hexColor }));
+            res.json({ menus, channels, rolesList });
+        } catch { res.json({ menus: [], channels: [], rolesList: [] }); }
+    });
+
+    app.post('/api/server/:id/role-menus', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { channelId, title } = req.body;
+        if (!channelId) return res.status(400).json({ error: 'Missing channelId' });
+        try {
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || !channel.isTextBased()) return res.status(400).json({ error: 'Invalid text channel' });
+            if (!guild.members.me.permissions.has('ManageRoles')) return res.status(403).json({ error: 'Bot needs Manage Roles permission' });
+            const embed = new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle('🌟 ' + (title || 'Self-Assignable Roles'))
+                .setDescription('Select the roles you want from the dropdown below!\n*(You can select multiple)*')
+                .setFooter({ text: guild.name, iconURL: guild.iconURL() })
+                .setTimestamp();
+            const msg = await channel.send({ embeds: [embed] });
+            createRoleMenu(guild.id, msg.id, channelId, title || 'Self-Assignable Roles');
+            res.json({ success: true, messageId: msg.id, menu: getRoleMenus(guild.id).find(m => m.message_id === msg.id) });
+        } catch (err) {
+            logError(err, 'dashboard', 'rolemenu_create');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/role-menus/:messageId/options', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { roleId, label, emoji, description } = req.body;
+        if (!roleId) return res.status(400).json({ error: 'Missing roleId' });
+        try {
+            const role = guild.roles.cache.get(roleId);
+            if (!role) return res.status(400).json({ error: 'Role not found' });
+            if (role.managed) return res.status(400).json({ error: 'Cannot add managed/bot roles' });
+            if (role.comparePositionTo(guild.members.me.roles.highest) >= 0) return res.status(400).json({ error: 'Role is higher than bot\'s highest role' });
+            addRoleMenuOption(req.params.messageId, roleId, label || role.name, emoji || null, description || null);
+            res.json({ success: true, options: getRoleMenuOptions(req.params.messageId) });
+        } catch (err) {
+            logError(err, 'dashboard', 'rolemenu_add_option');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/server/:id/role-menus/:messageId/options', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { roleId } = req.body;
+        if (!roleId) return res.status(400).json({ error: 'Missing roleId' });
+        try {
+            const result = removeRoleMenuOption(req.params.messageId, roleId);
+            if (!result) return res.status(404).json({ error: 'Option not found' });
+            res.json({ success: true, options: getRoleMenuOptions(req.params.messageId) });
+        } catch (err) {
+            logError(err, 'dashboard', 'rolemenu_remove_option');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.put('/api/server/:id/role-menus/:messageId/publish', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const channel = guild.channels.cache.get(req.query.channelId) || guild.channels.cache.get(req.body?.channelId);
+            if (!channel) return res.status(400).json({ error: 'Channel not found' });
+            const msg = await channel.messages.fetch(req.params.messageId).catch(() => null);
+            if (!msg) return res.status(404).json({ error: 'Message not found' });
+            const options = getRoleMenuOptions(req.params.messageId);
+            if (!options.length) return res.status(400).json({ error: 'Menu has no roles! Add some first.' });
+            const embed = new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle('🌟 ' + (msg.embeds[0]?.title || 'Self-Assignable Roles'))
+                .setDescription('Select the roles you want from the dropdown below!\n*(You can select multiple)*')
+                .setFooter({ text: guild.name, iconURL: guild.iconURL() })
+                .setTimestamp();
+            const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId('rm_' + req.params.messageId)
+                .setPlaceholder('Select roles...')
+                .setMinValues(0)
+                .setMaxValues(options.length)
+                .addOptions(options.map(o => new StringSelectMenuOptionBuilder()
+                    .setLabel(o.label || guild.roles.cache.get(o.role_id)?.name || o.role_id)
+                    .setValue(o.role_id)
+                    .setDescription(o.description || null)
+                    .setEmoji(o.emoji || null)
+                ));
+            const row = new ActionRowBuilder().addComponents(selectMenu);
+            await msg.edit({ embeds: [embed], components: [row] });
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'rolemenu_publish');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/server/:id/role-menus/:messageId', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const channel = guild.channels.cache.get(req.query.channelId) || guild.channels.cache.get(req.body?.channelId);
+            if (channel) {
+                const msg = await channel.messages.fetch(req.params.messageId).catch(() => null);
+                if (msg) await msg.delete().catch(() => {});
+            }
+            const result = removeRoleMenu(guild.id, req.params.messageId);
+            if (!result) return res.status(404).json({ error: 'Menu not found' });
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'rolemenu_delete');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── Voice Presence API ──
+    app.get('/api/server/:id/voice-presence', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const presence = getPresence(guild.id);
+            const channels = guild.channels.cache
+                .filter(c => c.type === 2)
+                .sort((a, b) => a.position - b.position)
+                .map(c => ({ id: c.id, name: c.name }));
+            res.json({ presence, channels });
+        } catch { res.json({ presence: null, channels: [] }); }
+    });
+
+    app.post('/api/server/:id/voice-presence/join', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { channelId, status } = req.body;
+        if (!channelId) return res.status(400).json({ error: 'Missing channelId' });
+        try {
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || channel.type !== 2) return res.status(400).json({ error: 'Invalid voice channel' });
+            if (!guild.members.me) return res.status(503).json({ error: 'Bot member not loaded' });
+            const result = await joinChannel(guild, channel, status || null);
+            res.json({ success: true, presence: getPresence(guild.id) });
+        } catch (err) {
+            logError(err, 'dashboard', 'voice_presence_join');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/voice-presence/move', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { channelId, status } = req.body;
+        if (!channelId) return res.status(400).json({ error: 'Missing channelId' });
+        try {
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || channel.type !== 2) return res.status(400).json({ error: 'Invalid voice channel' });
+            const presence = getPresence(guild.id);
+            if (!presence) return res.status(400).json({ error: 'Bot is not in a voice channel. Use join first.' });
+            await moveChannel(guild, channel, status || presence.status);
+            res.json({ success: true, presence: getPresence(guild.id) });
+        } catch (err) {
+            logError(err, 'dashboard', 'voice_presence_move');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/voice-presence/leave', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            await leaveChannel(guild);
+            res.json({ success: true, presence: null });
+        } catch (err) {
+            logError(err, 'dashboard', 'voice_presence_leave');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/voice-presence/status', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { status } = req.body;
+        try {
+            const clean = await setStatusText(guild, status || '');
+            res.json({ success: true, status: clean, presence: getPresence(guild.id) });
+        } catch (err) {
+            logError(err, 'dashboard', 'voice_presence_status');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/voice-presence/restore', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            await restoreAllPresences(client);
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'voice_presence_restore');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── Temp Voice Channels API ──
+    app.get('/api/server/:id/temp-voice', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const config = getTempVoiceConfig(guild.id);
+            const triggers = getTriggers(guild.id);
+            const spawned = getSpawned(guild.id);
+            const channels = guild.channels.cache
+                .filter(c => c.type === 2 || c.type === 4)
+                .sort((a, b) => a.position - b.position)
+                .map(c => ({ id: c.id, name: c.name, type: c.type }));
+            res.json({ config, triggers, spawned, channels });
+        } catch { res.json({ config: { name_template: DEFAULT_TEMPLATE }, triggers: [], spawned: [], channels: [] }); }
+    });
+
+    app.post('/api/server/:id/temp-voice/triggers', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { channelId, categoryId } = req.body;
+        if (!channelId) return res.status(400).json({ error: 'Missing channelId' });
+        try {
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || channel.type !== 2) return res.status(400).json({ error: 'Invalid voice channel' });
+            setTrigger(guild.id, channelId, categoryId || null);
+            res.json({ success: true, triggers: getTriggers(guild.id) });
+        } catch (err) {
+            logError(err, 'dashboard', 'tempvoice_add_trigger');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/server/:id/temp-voice/triggers', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { channelId } = req.body;
+        if (!channelId) return res.status(400).json({ error: 'Missing channelId' });
+        try {
+            removeTrigger(guild.id, channelId);
+            res.json({ success: true, triggers: getTriggers(guild.id) });
+        } catch (err) {
+            logError(err, 'dashboard', 'tempvoice_remove_trigger');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/temp-voice/config', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { nameTemplate } = req.body;
+        if (!nameTemplate) return res.status(400).json({ error: 'Missing nameTemplate' });
+        try {
+            setTempVoiceConfig(guild.id, nameTemplate);
+            res.json({ success: true, config: getTempVoiceConfig(guild.id) });
+        } catch (err) {
+            logError(err, 'dashboard', 'tempvoice_config');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/temp-voice/panels', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { channelId } = req.body;
+        if (!channelId) return res.status(400).json({ error: 'Missing channelId' });
+        try {
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || !channel.isTextBased()) return res.status(400).json({ error: 'Invalid text channel' });
+            const panel = registerPanel(guild.id, channelId);
+            res.json({ success: true, panel });
+        } catch (err) {
+            logError(err, 'dashboard', 'tempvoice_panel_register');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/server/:id/temp-voice/panels', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { channelId } = req.body;
+        if (!channelId) return res.status(400).json({ error: 'Missing channelId' });
+        try {
+            unregisterPanel(guild.id, channelId);
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'tempvoice_panel_unregister');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/temp-voice/panels/refresh', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            await updatePanels(guild);
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'tempvoice_panel_refresh');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/server/:id/temp-voice/cleanup', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            cleanupOrphans(guild);
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'tempvoice_cleanup');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── Warning Thresholds API ──
+    app.get('/api/server/:id/warning-thresholds', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const thresholds = getThresholds(guild.id);
+            res.json({ thresholds });
+        } catch { res.json({ thresholds: [] }); }
+    });
+
+    app.post('/api/server/:id/warning-thresholds', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { warnCount, action, duration } = req.body;
+        if (!warnCount || !action) return res.status(400).json({ error: 'Missing warnCount or action' });
+        if (!DEFAULT_ACTIONS.includes(action)) return res.status(400).json({ error: 'Invalid action' });
+        if (warnCount <= 0) return res.status(400).json({ error: 'warnCount must be positive' });
+        try {
+            const result = addThreshold(guild.id, warnCount, action, duration || null);
+            res.json({ success: true, thresholds: result });
+        } catch (err) {
+            logError(err, 'dashboard', 'warning_thresholds_add');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/server/:id/warning-thresholds', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { warnCount } = req.body;
+        if (!warnCount) return res.status(400).json({ error: 'Missing warnCount' });
+        try {
+            const result = removeThreshold(guild.id, warnCount);
+            res.json({ success: true, thresholds: result });
+        } catch (err) {
+            logError(err, 'dashboard', 'warning_thresholds_remove');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── Ban Appeals API ──
+    app.get('/api/server/:id/ban-appeals', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const status = req.query.status || null;
+        try {
+            const appeals = getBanAppeals(guild.id, status);
+            res.json({ appeals });
+        } catch { res.json({ appeals: [] }); }
+    });
+
+    app.get('/api/server/:id/ban-appeals/stats', requireAuth, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const stats = {
+                pending: getBanAppealCount(guild.id, 'pending'),
+                approved: getBanAppealCount(guild.id, 'approved'),
+                denied: getBanAppealCount(guild.id, 'denied'),
+                total: getBanAppealCount(guild.id),
+            };
+            res.json(stats);
+        } catch { res.json({ pending: 0, approved: 0, denied: 0, total: 0 }); }
+    });
+
+    app.post('/api/server/:id/ban-appeals', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { userId, userTag, reason, message } = req.body;
+        if (!userId || !userTag || !reason || !message) return res.status(400).json({ error: 'Missing required fields' });
+        try {
+            const appeal = createBanAppeal(guild.id, userId, userTag, reason, message);
+            res.json({ success: true, appeal });
+        } catch (err) {
+            logError(err, 'dashboard', 'ban_appeal_create');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.put('/api/server/:id/ban-appeals/:appealId', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        const { status, reviewedBy, reviewNote } = req.body;
+        if (!status) return res.status(400).json({ error: 'Missing status' });
+        try {
+            const result = updateBanAppealStatus(req.params.appealId, status, reviewedBy || 'Dashboard', reviewNote);
+            if (!result) return res.status(404).json({ error: 'Appeal not found' });
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'ban_appeal_update');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/server/:id/ban-appeals/:appealId', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const guild = client.guilds.cache.get(req.params.id);
+        if (!guild) return res.status(404).json({ error: 'Server not found' });
+        try {
+            const result = deleteBanAppeal(req.params.appealId);
+            if (!result) return res.status(404).json({ error: 'Appeal not found' });
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'ban_appeal_delete');
+            res.status(500).json({ error: err.message });
+        }
     });
 
     // ── Invite Stats API ──
@@ -951,6 +1737,35 @@ function createDashboard() {
         } catch { res.json([]); }
     });
 
+    app.post('/api/reminders', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const { userId, channelId, text, durationMs } = req.body;
+        if (!userId || !text || !durationMs) return res.status(400).json({ error: 'Missing required fields' });
+        try {
+            const reminders = require('./reminders');
+            const reminder = reminders.addReminder(userId, channelId || null, text, durationMs);
+            res.json({ success: true, reminder });
+        } catch (err) {
+            logError(err, 'dashboard', 'reminder_create');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.delete('/api/reminders/:id', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ error: 'Missing userId' });
+        try {
+            const reminders = require('./reminders');
+            const result = reminders.removeReminder(req.params.id, userId);
+            if (!result) return res.status(404).json({ error: 'Reminder not found' });
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'reminder_delete');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
     // ── Giveaways Manager ──
     app.get('/api/giveaways', requireAuth, (req, res) => {
         try {
@@ -993,12 +1808,12 @@ function createDashboard() {
             const g = gw.createGiveaway({
                 guildId: guild.id,
                 channelId: channel.id,
-                prize: prize.trim().slice(0, 200),
+                prize: sanitizeForDB(prize).slice(0, 200),
                 durationMs: Math.round(hours * 3600000),
                 winners: winnerCount,
                 hostId: 'dashboard',
                 hostTag: 'Dashboard',
-                description: (description || '').toString().trim().slice(0, 500) || undefined,
+                description: description ? sanitizeForDB(description).slice(0, 500) : undefined,
             });
             await gw.postGiveaway(channel, g);
             res.json({ success: true, id: g.id });
@@ -1036,6 +1851,97 @@ function createDashboard() {
             res.json({ success: true, winners: winners || [] });
         } catch (err) {
             res.status(500).json({ error: err.message || 'Failed to reroll' });
+        }
+    });
+
+    // ── Polls/Announcements ──
+    app.post('/api/polls/create', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can create polls' });
+        const { guildId, channelId, question, options, multi, anonymous, durationHours } = req.body || {};
+        if (!guildId || !channelId || !question || !options || options.length < 2) return res.status(400).json({ error: 'Missing required fields' });
+        try {
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) return res.status(400).json({ error: 'Bot is not in that server' });
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || !channel.isTextBased()) return res.status(400).json({ error: 'Invalid text channel' });
+            
+            const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+            const { getDb } = require('./db');
+            
+            const pollId = 'poll_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const endsAt = Date.now() + (parseFloat(durationHours) || 24) * 3600000;
+            
+            const db = getDb();
+            db.prepare('INSERT INTO poll_votes (message_id, user_id, option_index, voted_at, poll_type) VALUES (?, ?, ?, ?, ?)')
+                .run(pollId, 'system', -1, Date.now(), multi ? 'multi' : anonymous ? 'anonymous' : 'single');
+            
+            const embed = new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle('📊 ' + sanitizeForDB(question).slice(0, 256))
+                .setDescription(options.map((opt, i) => `${i + 1}. ${sanitizeForDB(opt).slice(0, 100)}`).join('\n'))
+                .setFooter({ text: 'Poll ends <t:' + Math.floor(endsAt / 1000) + ':R>' });
+            
+            const buttons = options.map((opt, i) => new ButtonBuilder()
+                .setCustomId((multi ? 'pm' : anonymous ? 'pa' : 'pv') + '_vote_' + i + '_' + pollId)
+                .setLabel(opt.slice(0, 80))
+                .setStyle(ButtonStyle.Primary));
+            
+            const rows = [];
+            for (let i = 0; i < buttons.length; i += 5) {
+                rows.push(new ActionRowBuilder().addComponents(buttons.slice(i, i + 5)));
+            }
+            rows.push(new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('pvv_' + pollId).setLabel('Show Voters').setStyle(ButtonStyle.Secondary)
+            ));
+            
+            const msg = await channel.send({ embeds: [embed], components: rows });
+            
+            db.prepare('UPDATE poll_votes SET message_id = ? WHERE message_id = ?').run(msg.id, pollId);
+            
+            res.json({ success: true, messageId: msg.id, pollId });
+        } catch (err) {
+            logError(err, 'dashboard', 'poll_create');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/polls/end', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can end polls' });
+        const { messageId } = req.body || {};
+        if (!messageId) return res.status(400).json({ error: 'Missing messageId' });
+        try {
+            await require('./interactions').endPoll(messageId);
+            res.json({ success: true });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/announcements/create', requireAuth, async (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can send announcements' });
+        const { guildId, channelId, title, message, color } = req.body || {};
+        if (!guildId || !channelId || !title || !message) return res.status(400).json({ error: 'Missing required fields' });
+        try {
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) return res.status(400).json({ error: 'Bot is not in that server' });
+            const channel = guild.channels.cache.get(channelId);
+            if (!channel || !channel.isTextBased()) return res.status(400).json({ error: 'Invalid text channel' });
+            
+            const { EmbedBuilder } = require('discord.js');
+            const embed = new EmbedBuilder()
+                .setColor(color ? sanitizeForDB(color) : 0x5865F2)
+                .setTitle(sanitizeForEmbed(title).slice(0, 256))
+                .setDescription(sanitizeForDB(message).slice(0, 4096))
+                .setTimestamp();
+            
+            await channel.send({ embeds: [embed] });
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'announcement_create');
+            res.status(500).json({ error: err.message });
         }
     });
 
@@ -2069,6 +2975,78 @@ function createDashboard() {
         });
     });
 
+    // ── Prometheus Metrics (no auth — for scraping) ──
+    app.get('/metrics', (req, res) => {
+        const mem = process.memoryUsage();
+        const cpu = process.cpuUsage();
+        const guildCount = client?.guilds?.cache?.size || 0;
+        const userCount = client?.guilds?.cache?.reduce((a, g) => a + g.memberCount, 0) || 0;
+        const uptime = process.uptime();
+        
+        // Command usage from DB
+        let cmdTotal = 0, cmdUnique = 0;
+        try {
+            const db = getDb();
+            const total = db.prepare('SELECT COUNT(*) as total FROM command_usage').get();
+            const unique = db.prepare('SELECT COUNT(DISTINCT user_id) as users FROM command_usage').get();
+            cmdTotal = total?.total || 0;
+            cmdUnique = unique?.users || 0;
+        } catch {}
+
+        const metrics = [
+            '# HELP bot_uptime_seconds Bot uptime in seconds',
+            '# TYPE bot_uptime_seconds gauge',
+            `bot_uptime_seconds ${uptime.toFixed(1)}`,
+            '',
+            '# HELP bot_guilds_total Number of guilds the bot is in',
+            '# TYPE bot_guilds_total gauge',
+            `bot_guilds_total ${guildCount}`,
+            '',
+            '# HELP bot_users_total Total users across all guilds',
+            '# TYPE bot_users_total gauge',
+            `bot_users_total ${userCount}`,
+            '',
+            '# HELP bot_memory_rss_bytes Resident set size in bytes',
+            '# TYPE bot_memory_rss_bytes gauge',
+            `bot_memory_rss_bytes ${mem.rss}`,
+            '',
+            '# HELP bot_memory_heap_used_bytes Heap used in bytes',
+            '# TYPE bot_memory_heap_used_bytes gauge',
+            `bot_memory_heap_used_bytes ${mem.heapUsed}`,
+            '',
+            '# HELP bot_memory_heap_total_bytes Heap total in bytes',
+            '# TYPE bot_memory_heap_total_bytes gauge',
+            `bot_memory_heap_total_bytes ${mem.heapTotal}`,
+            '',
+            '# HELP bot_cpu_user_microseconds CPU user time in microseconds',
+            '# TYPE bot_cpu_user_microseconds counter',
+            `bot_cpu_user_microseconds ${cpu.user}`,
+            '',
+            '# HELP bot_cpu_system_microseconds CPU system time in microseconds',
+            '# TYPE bot_cpu_system_microseconds counter',
+            `bot_cpu_system_microseconds ${cpu.system}`,
+            '',
+            '# HELP bot_commands_total Total command executions',
+            '# TYPE bot_commands_total counter',
+            `bot_commands_total ${cmdTotal}`,
+            '',
+            '# HELP bot_commands_unique_users Unique command users',
+            '# TYPE bot_commands_unique_users gauge',
+            `bot_commands_unique_users ${cmdUnique}`,
+            '',
+            '# HELP bot_discord_ping_ms Discord websocket ping',
+            '# TYPE bot_discord_ping_ms gauge',
+            `bot_discord_ping_ms ${client?.ws?.ping || 0}`,
+            '',
+            '# HELP bot_circuit_breaker_state Discord API circuit breaker state (0=closed, 1=half-open, 2=open)',
+            '# TYPE bot_circuit_breaker_state gauge',
+            `bot_circuit_breaker_state ${({closed:0,'half-open':1,open:2}[discordApiBreaker?.getState?.() || 'closed'])}`,
+        ].join('\n');
+
+        res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+        res.send(metrics);
+    });
+
     // ── Database Backups (owner-only) ──
     app.get('/api/backups', requireAuth, (req, res) => {
         if (!checkOwner(req)) return res.status(403).json({ error: 'Only the bot owner can manage backups' });
@@ -2093,6 +3071,143 @@ function createDashboard() {
         const name = req.params.name;
         if (!/^bot-\d{14}\.db$/.test(name)) return res.status(400).json({ error: 'Invalid backup name' });
         res.json({ success: deleteBackup(name), backups: listBackups() });
+    });
+
+    // ── Bulk Export/Import (owner-only) ──
+    app.get('/api/export/all', requireAuth, requireOwner, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        try {
+            const db = getDb();
+            const exportData = {
+                exportedAt: new Date().toISOString(),
+                botName: client.user?.tag || 'Unknown',
+                version: require('../package.json').version || '1.0.0',
+                // Core config
+                guildConfigs: db.prepare('SELECT * FROM guild_config').all(),
+                botConfig: db.prepare('SELECT * FROM bot_config').all(),
+                permissions: db.prepare('SELECT * FROM permissions').all(),
+                reactionRoles: db.prepare('SELECT * FROM reaction_roles').all(),
+                // Moderation
+                warnings: db.prepare('SELECT * FROM warnings').all(),
+                modCases: db.prepare('SELECT * FROM mod_cases').all(),
+                modCaseCounters: db.prepare('SELECT * FROM mod_case_counters').all(),
+                banAppeals: db.prepare('SELECT * FROM ban_appeals').all(),
+                warningThresholds: db.prepare('SELECT * FROM warning_thresholds').all(),
+                // Auto-mod
+                automodRules: db.prepare('SELECT * FROM automod_rules').all(),
+                automodFilters: db.prepare('SELECT * FROM automod_filters').all(),
+                automodConfig: db.prepare('SELECT * FROM automod_config').all(),
+                // Reminders & Giveaways
+                reminders: db.prepare('SELECT * FROM reminders').all(),
+                giveaways: db.prepare('SELECT * FROM giveaways').all(),
+                // Voice & Temp VC
+                voicePresence: db.prepare('SELECT * FROM voice_presence').all(),
+                tempVcConfig: db.prepare('SELECT * FROM temp_vc_config').all(),
+                tempVcTriggers: db.prepare('SELECT * FROM temp_vc_triggers').all(),
+                tempVcChannels: db.prepare('SELECT * FROM temp_vc_channels').all(),
+                tempVcPanels: db.prepare('SELECT * FROM temp_vc_panels').all(),
+                // Tickets
+                ticketConfig: db.prepare('SELECT * FROM ticket_config').all(),
+                ticketPanels: db.prepare('SELECT * FROM ticket_panels').all(),
+                ticketPanelTypes: db.prepare('SELECT * FROM ticket_panel_types').all(),
+                tickets: db.prepare('SELECT * FROM tickets').all(),
+                ticketMessages: db.prepare('SELECT * FROM ticket_messages').all(),
+                ticketRatings: db.prepare('SELECT * FROM ticket_ratings').all(),
+                ticketBlacklist: db.prepare('SELECT * FROM ticket_blacklist').all(),
+                // Reaction roles & role menus
+                roleMenus: db.prepare('SELECT * FROM role_menus').all(),
+                roleMenuOptions: db.prepare('SELECT * FROM role_menu_options').all(),
+                // Server stats & activity
+                guildStats: db.prepare('SELECT * FROM guild_stats').all(),
+                statsSnapshots: db.prepare('SELECT * FROM stats_snapshots').all(),
+                activityCounts: db.prepare('SELECT * FROM activity_counts').all(),
+                messageLog: db.prepare('SELECT * FROM message_log').all(),
+                // Polls
+                pollVotes: db.prepare('SELECT * FROM poll_votes').all(),
+                // Invites
+                inviteTracking: db.prepare('SELECT * FROM invite_tracking').all(),
+                inviteUses: db.prepare('SELECT * FROM invite_uses').all(),
+                // Staff notes
+                staffNotes: db.prepare('SELECT * FROM staff_notes').all(),
+                // Temp bans
+                tempBans: db.prepare('SELECT * FROM temp_bans').all(),
+                // Dashboard
+                dashConfig: db.prepare('SELECT * FROM dash_config').all(),
+                dashUsers: db.prepare('SELECT * FROM dash_users').all(),
+                dashUserGuilds: db.prepare('SELECT * FROM dash_user_guilds').all(),
+                // Dashboard config
+                dashConfigSingle: db.prepare('SELECT * FROM dash_config WHERE id = 1').get(),
+            };
+            res.json({ success: true, data: exportData });
+        } catch (err) {
+            logError(err, 'dashboard', 'export_all');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    app.post('/api/import/all', requireAuth, requireOwner, (req, res) => {
+        if (!client) return res.status(503).json({ error: 'Bot not ready' });
+        const data = req.body?.data;
+        if (!data) return res.status(400).json({ error: 'Missing data' });
+        try {
+            const db = getDb();
+            const tx = db.transaction(() => {
+                // Import all tables with conflict resolution
+                const tables = [
+                    'guild_config', 'bot_config', 'permissions', 'reaction_roles', 'warnings',
+                    'mod_cases', 'mod_case_counters', 'ban_appeals', 'warning_thresholds',
+                    'automod_rules', 'automod_filters', 'automod_config', 'reminders', 'giveaways',
+                    'voice_presence', 'temp_vc_config', 'temp_vc_triggers', 'temp_vc_channels', 'temp_vc_panels',
+                    'ticket_config', 'ticket_panels', 'ticket_panel_types', 'tickets', 'ticket_messages',
+                    'ticket_ratings', 'ticket_blacklist', 'role_menus', 'role_menu_options',
+                    'guild_stats', 'stats_snapshots', 'activity_counts', 'message_log',
+                    'poll_votes', 'invite_tracking', 'invite_uses', 'staff_notes', 'temp_bans',
+                    'dash_config', 'dash_users', 'dash_user_guilds'
+                ];
+                for (const table of tables) {
+                    if (data[table] && Array.isArray(data[table])) {
+                        db.prepare(`DELETE FROM ${table}`).run();
+                        if (data[table].length > 0) {
+                            const cols = Object.keys(data[table][0]);
+                            const placeholders = cols.map(() => '?').join(',');
+                            const insert = db.prepare(`INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES (${placeholders})`);
+                            const tx2 = db.transaction((rows) => {
+                                for (const row of rows) {
+                                    insert.run(...cols.map(c => row[c]));
+                                }
+                            });
+                            tx2(data[table]);
+                        }
+                    }
+                }
+            });
+            tx();
+            res.json({ success: true });
+        } catch (err) {
+            logError(err, 'dashboard', 'import_all');
+            res.status(500).json({ error: err.message });
+        }
+    });
+
+    // ── Dashboard Audit Trail (owner-only) ──
+    app.get('/api/audit-trail', requireAuth, requireOwner, (req, res) => {
+        const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+        const offset = parseInt(req.query.offset) || 0;
+        const type = req.query.type || null;
+        try {
+            const db = getDb();
+            let query = 'SELECT * FROM audit_trail ORDER BY created_at DESC LIMIT ? OFFSET ?';
+            let params = [limit, offset];
+            if (type) {
+                query = 'SELECT * FROM audit_trail WHERE type = ? ORDER BY created_at DESC LIMIT ? OFFSET ?';
+                params = [type, limit, offset];
+            }
+            const trails = db.prepare(query).all(...params);
+            res.json({ trails });
+        } catch (err) {
+            logError(err, 'dashboard', 'audit_trail_get');
+            res.status(500).json({ error: err.message });
+        }
     });
 
     // ── Error Alert Channel (owner-only) ──

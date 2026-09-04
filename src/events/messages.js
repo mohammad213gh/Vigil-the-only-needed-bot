@@ -32,6 +32,8 @@ function logMessageAction(guildId, channelId, messageId, authorId, authorTag, co
 
 // Prefix cache — avoids a config read per message; 30s staleness window
 const prefixCache = new Map();
+const PREFIX_CACHE_MAX = 500; // Max guilds to cache
+
 function getCachedPrefix(guildId) {
     const cached = prefixCache.get(guildId);
     if (cached && Date.now() - cached.ts < 30000) return cached.prefix;
@@ -40,6 +42,11 @@ function getCachedPrefix(guildId) {
         prefix = getGuildConfig(guildId).prefix || ';';
     } catch (err) {
         logError(err, 'events', 'messages/prefix');
+    }
+    // Enforce size cap with LRU eviction
+    if (prefixCache.size >= PREFIX_CACHE_MAX) {
+        const oldestKey = prefixCache.keys().next().value;
+        prefixCache.delete(oldestKey);
     }
     prefixCache.set(guildId, { prefix, ts: Date.now() });
     return prefix;

@@ -2485,6 +2485,481 @@ async function importAMConfig(serverId){
   inp.click();
 }
 
+// ═══ REACTION ROLES ═══
+async function loadReactionRoles() {
+    const sel = document.getElementById('rrSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('reactionRolesContent');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to manage reaction roles</p></div>';
+        updateRefreshTimestamp('reaction-roles');
+        return;
+    }
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const r = await fetch('/api/server/' + serverId + '/reaction-roles');
+        const d = await r.json();
+        const roles = d.roles || [];
+        const channels = d.channels || [];
+        const rolesList = d.rolesList || [];
+
+        // Build reaction roles list
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Create New Reaction Role</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<select id="rrNewChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + channels.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('') + '</select>' +
+            '<input type="text" id="rrNewMessageId" placeholder="Message ID (leave empty to create new)" style="flex:1;min-width:200px;">' +
+            '<input type="text" id="rrNewEmoji" placeholder="Emoji (e.g. 🎉 or name:id)" style="flex:0 0 120px;">' +
+            '<select id="rrNewRole" style="flex:1;min-width:200px;"><option value="">Select role...</option>' + rolesList.map(function (r) { return '<option value="' + r.id + '" style="color:' + (r.color || '#fff') + '">' + esc(r.name) + '</option>'; }).join('') + '</select>' +
+            '<input type="text" id="rrNewLabel" placeholder="Label (optional)" style="flex:1;min-width:150px;">' +
+            '<button class="btn btn-s" onclick="createReactionRoleUI()" style="padding:9px 14px;font-size:11px;">Add Reaction Role</button>' +
+            '</div></div>';
+
+        if (!roles.length) {
+            html += '<div class="empty"><p>No reaction roles configured</p><p class="empty-act">Add a reaction role above to get started.</p></div>';
+        } else {
+            html += roles.map(function (rr) {
+                var ch = channels.find(function (c) { return c.id === rr.channelId; });
+                var rl = rolesList.find(function (r) { return r.id === rr.roleId; });
+                return '<div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+                    '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                    '<span style="font-size:24px;">' + esc(rr.emoji) + '</span>' +
+                    '<div>' +
+                    '<strong style="font-family:monospace;">' + esc(rr.messageId) + '</strong>' +
+                    '<span class="sub">#' + esc(ch?.name || rr.channelId) + ' · ' + esc(rl?.name || rr.roleId) + '</span>' +
+                    (rr.label ? '<span class="sub">' + esc(rr.label) + '</span>' : '') +
+                    '</div>' +
+                    '</div>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteReactionRole(\'' + serverId + '\',\'' + rr.messageId + '\',\'' + esc(rr.emoji).replace(/'/g, "\\'") + '\')">Delete</button>' +
+                    '</div>';
+            }).join('');
+        }
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load reaction roles</p></div>';
+    }
+    updateRefreshTimestamp('reaction-roles');
+}
+
+async function createReactionRoleUI() {
+    const serverId = document.getElementById('rrSrvSelect')?.value;
+    const channelId = document.getElementById('rrNewChannel')?.value;
+    const messageId = document.getElementById('rrNewMessageId')?.value;
+    const emoji = document.getElementById('rrNewEmoji')?.value;
+    const roleId = document.getElementById('rrNewRole')?.value;
+    const label = document.getElementById('rrNewLabel')?.value;
+    if (!serverId || !channelId || !emoji || !roleId) return showToast('Fill all required fields', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/reaction-roles', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId: messageId || null, channelId, emoji, roleId, label: label || null })
+        });
+        const d = await r.json();
+        if (d.success) {
+            showToast('Reaction role added!');
+            loadReactionRoles();
+        } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function deleteReactionRole(serverId, messageId, emoji) {
+    if (!confirm('Delete this reaction role?')) return;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/reaction-roles', {
+            method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId, emoji })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Reaction role deleted'); loadReactionRoles(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function createReactionRoleMessageUI() {
+    const serverId = document.getElementById('rrSrvSelect')?.value;
+    const channelId = document.getElementById('rrMsgChannel')?.value;
+    const content = document.getElementById('rrMsgContent')?.value;
+    const rolesInput = document.getElementById('rrMsgRoles')?.value;
+    if (!serverId || !channelId || !rolesInput) return showToast('Fill all fields', true);
+    try {
+        const roles = rolesInput.split(',').map(function (r) {
+            var parts = r.split(':').map(function (s) { return s.trim(); });
+            return { emoji: parts[0], roleId: parts[1], label: parts[2] || null };
+        }).filter(function (r) { return r.emoji && r.roleId; });
+        if (!roles.length) return showToast('No valid roles', true);
+        const r = await fetch('/api/server/' + serverId + '/reaction-roles/message', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channelId, content: content || '', roles })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Message created!'); loadReactionRoles(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ ROLE MENUS ═══
+async function loadRoleMenus() {
+    const sel = document.getElementById('rmSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('roleMenusContent');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to manage role menus</p></div>';
+        updateRefreshTimestamp('role-menus');
+        return;
+    }
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const r = await fetch('/api/server/' + serverId + '/role-menus');
+        const d = await r.json();
+        const menus = d.menus || [];
+        const channels = d.channels || [];
+        const rolesList = d.rolesList || [];
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Create New Role Menu</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<input type="text" id="rmNewTitle" placeholder="Menu title (e.g. Self-Assignable Roles)" style="flex:1;min-width:200px;">' +
+            '<select id="rmNewChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + channels.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('') + '</select>' +
+            '<button class="btn btn-s" onclick="createRoleMenuUI()" style="padding:9px 14px;font-size:11px;">Create Menu</button>' +
+            '</div></div>';
+
+        if (!menus.length) {
+            html += '<div class="empty"><p>No role menus configured</p><p class="empty-act">Create a role menu above to get started.</p></div>';
+        } else {
+            html += menus.map(function (m) {
+                var ch = channels.find(function (c) { return c.id === m.channel_id; });
+                return '<div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+                    '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                    '<div>' +
+                    '<strong>' + esc(m.title || 'Role Menu') + '</strong>' +
+                    '<span class="sub">#' + esc(ch?.name || m.channel_id) + ' · ID: ' + esc(m.message_id) + '</span>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                    '<button class="btn btn-s" onclick="editRoleMenuUI(\'' + serverId + '\',\'' + m.message_id + '\',\'' + esc(m.title || '').replace(/'/g, "\\'") + '\',\'' + m.channel_id + '\')">Edit</button>' +
+                    '<button class="btn btn-s" onclick="publishRoleMenuUI(\'' + serverId + '\',\'' + m.message_id + '\',\'' + m.channel_id + '\')">Publish</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteRoleMenu(\'' + serverId + '\',\'' + m.message_id + '\',\'' + m.channel_id + '\')">Delete</button>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+        }
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load role menus</p></div>';
+    }
+    updateRefreshTimestamp('role-menus');
+}
+
+async function createRoleMenuUI() {
+    const serverId = document.getElementById('rmSrvSelect')?.value;
+    const channelId = document.getElementById('rmNewChannel')?.value;
+    const title = document.getElementById('rmNewTitle')?.value;
+    if (!serverId || !channelId) return showToast('Fill all fields', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/role-menus', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channelId, title: title || 'Self-Assignable Roles' })
+        });
+        const d = await r.json();
+        if (d.success) {
+            showToast('Role menu created!');
+            loadRoleMenus();
+        } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function editRoleMenuUI(serverId, messageId, title, channelId) {
+    const cont = document.getElementById('roleMenusContent');
+    if (!cont) return;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/role-menus');
+        const d = await r.json();
+        const rolesList = d.rolesList || [];
+        const optionsRes = await fetch('/api/server/' + serverId + '/role-menus/' + messageId + '/options');
+        const optionsData = await optionsRes.json();
+        const options = optionsData.options || [];
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Edit Role Menu: ' + esc(title) + '</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<input type="text" id="rmEditTitle" value="' + esc(title) + '" placeholder="Menu title" style="flex:1;min-width:200px;">' +
+            '<button class="btn btn-s" onclick="saveRoleMenuTitle(\'' + serverId + '\',\'' + messageId + '\')">Save Title</button>' +
+            '</div></div>';
+
+        html += '<div class="stg" style="margin-bottom:16px;"><label>Add Role Option</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<select id="rmAddRole" style="flex:1;min-width:200px;"><option value="">Select role...</option>' + rolesList.map(function (r) { return '<option value="' + r.id + '" style="color:' + (r.color || '#fff') + '">' + esc(r.name) + '</option>'; }).join('') + '</select>' +
+            '<input type="text" id="rmAddLabel" placeholder="Label (optional)" style="flex:1;min-width:150px;">' +
+            '<input type="text" id="rmAddEmoji" placeholder="Emoji (optional)" style="flex:0 0 100px;">' +
+            '<input type="text" id="rmAddDesc" placeholder="Description (optional)" style="flex:1;min-width:150px;">' +
+            '<button class="btn btn-s" onclick="addRoleMenuOptionUI(\'' + serverId + '\',\'' + messageId + '\')">Add Role</button>' +
+            '</div></div>';
+
+        if (!options.length) {
+            html += '<div class="empty"><p>No roles in this menu yet</p></div>';
+        } else {
+            html += '<div style="max-height:300px;overflow-y:auto;">' + options.map(function (o) {
+                var rl = rolesList.find(function (r) { return r.id === o.role_id; });
+                return '<div class="card" style="margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+                    '<div style="display:flex;align-items:center;gap:8px;">' +
+                    (o.emoji ? '<span>' + esc(o.emoji) + '</span>' : '') +
+                    '<strong>' + esc(o.label || (rl ? rl.name : o.role_id)) + '</strong>' +
+                    '<span class="sub">' + esc(o.description || '') + '</span>' +
+                    '</div>' +
+                    '<button class="btn btn-s" style="background:var(--danger);padding:3px 8px;font-size:10px;" onclick="removeRoleMenuOptionUI(\'' + serverId + '\',\'' + messageId + '\',\'' + o.role_id + '\')">Remove</button>' +
+                    '</div>';
+            }).join('') + '</div>';
+        }
+
+        html += '<div style="margin-top:16px;display:flex;gap:8px;">' +
+            '<button class="btn btn-s" onclick="publishRoleMenuUI(\'' + serverId + '\',\'' + messageId + '\',\'' + channelId + '\')">Publish Menu</button>' +
+            '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteRoleMenu(\'' + serverId + '\',\'' + messageId + '\',\'' + channelId + '\')">Delete Menu</button>' +
+            '<button class="btn btn-s" onclick="loadRoleMenus()">Back</button>' +
+            '</div>';
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load role menu editor</p></div>';
+    }
+}
+
+async function saveRoleMenuTitle(serverId, messageId) {
+    const title = document.getElementById('rmEditTitle')?.value;
+    if (!title) return showToast('Enter a title', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/role-menus/' + messageId, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Title updated!'); editRoleMenuUI(serverId, messageId, title, ''); } else showToast('Failed', true);
+    } catch { showToast('Failed', true); }
+}
+
+async function addRoleMenuOptionUI(serverId, messageId) {
+    const roleId = document.getElementById('rmAddRole')?.value;
+    const label = document.getElementById('rmAddLabel')?.value;
+    const emoji = document.getElementById('rmAddEmoji')?.value;
+    const description = document.getElementById('rmAddDesc')?.value;
+    if (!roleId) return showToast('Select a role', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/role-menus/' + messageId + '/options', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roleId, label: label || null, emoji: emoji || null, description: description || null })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Role added!'); editRoleMenuUI(serverId, messageId, '', ''); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function removeRoleMenuOptionUI(serverId, messageId, roleId) {
+    try {
+        const r = await fetch('/api/server/' + serverId + '/role-menus/' + messageId + '/options', {
+            method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roleId })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Role removed!'); editRoleMenuUI(serverId, messageId, '', ''); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function publishRoleMenuUI(serverId, messageId, channelId) {
+    try {
+        const r = await fetch('/api/server/' + serverId + '/role-menus/' + messageId + '/publish?channelId=' + channelId, { method: 'PUT' });
+        const d = await r.json();
+        if (d.success) { showToast('Menu published!'); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function deleteRoleMenu(serverId, messageId, channelId) {
+    if (!confirm('Delete this role menu and its message?')) return;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/role-menus/' + messageId + '?channelId=' + channelId, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.success) { showToast('Role menu deleted'); loadRoleMenus(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ VOICE PRESENCE ═══
+async function loadVoicePresence() {
+    const sel = document.getElementById('vpSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('voicePresenceContent');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to manage voice presence</p></div>';
+        updateRefreshTimestamp('voice-presence');
+        return;
+    }
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const r = await fetch('/api/server/' + serverId + '/voice-presence');
+        const d = await r.json();
+        const presence = d.presence;
+        const channels = d.channels || [];
+
+        var html = '<div class="card" style="margin-bottom:16px;padding:16px;">' +
+            '<h3 style="margin-bottom:12px;">Current Status</h3>' +
+            (presence ? '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                '<span class="badge" style="background:' + (presence.status ? 'rgba(59,165,92,0.2)' : 'rgba(237,66,69,0.2)') + ';color:' + (presence.status ? '#3ba55c' : '#ed4245') + ';">' +
+                (presence.status ? '🎧 Connected' : '⭕ Disconnected') + '</span>' +
+                '<div style="flex:1;min-width:200px;">' +
+                '<strong>Channel:</strong> #' + esc(channels.find(function(c){return c.id===presence.channel_id})?.name || presence.channel_id) + '<br>' +
+                '<strong>Status:</strong> ' + esc(presence.status || 'None') +
+                '</div>' +
+                '<button class="btn btn-s" onclick="leaveVoicePresence(\'' + serverId + '\')">Disconnect</button>' +
+                '<button class="btn btn-s" onclick="moveVoicePresenceUI(\'' + serverId + '\')">Move Channel</button>' +
+                '</div>' :
+                '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                '<span class="badge" style="background:rgba(237,66,69,0.2);color:#ed4245;">⭕ Not Connected</span>' +
+                '<div style="flex:1;min-width:200px;">Bot is not in a voice channel</div>' +
+                '<button class="btn btn-s" onclick="joinVoicePresenceUI(\'' + serverId + '\')">Join Channel</button>' +
+                '</div>') + '</div>';
+
+        html += '<div class="card" style="margin-bottom:16px;padding:16px;">' +
+            '<h3 style="margin-bottom:12px;">Listening Status</h3>' +
+            '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+            '<input type="text" id="vpStatusInput" placeholder="Listening to..." value="' + esc(presence?.status || '') + '" style="flex:1;min-width:200px;">' +
+            '<button class="btn btn-s" onclick="setVoicePresenceStatus(\'' + serverId + '\')">Update Status</button>' +
+            '</div>' +
+            (presence ? '<div class="stg-hint">Current: ' + esc(presence.status || 'None') + '</div>' : '') +
+            '</div>';
+
+        if (presence) {
+            html += '<div class="card" style="padding:16px;">' +
+                '<h3 style="margin-bottom:12px;">Move to Another Channel</h3>' +
+                '<div class="stg-inl" style="margin-bottom:8px;">' +
+                '<select id="vpMoveChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + channels.map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
+                '<input type="text" id="vpMoveStatus" placeholder="New status (optional)" style="flex:1;min-width:200px;">' +
+                '<button class="btn btn-s" onclick="moveVoicePresence(\'' + serverId + '\')">Move</button>' +
+                '</div></div>';
+        }
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load voice presence</p></div>';
+    }
+    updateRefreshTimestamp('voice-presence');
+}
+
+async function joinVoicePresenceUI(serverId) {
+    const cont = document.getElementById('voicePresenceContent');
+    if (!cont) return;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/voice-presence');
+        const d = await r.json();
+        const channels = d.channels || [];
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Join Voice Channel</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<select id="vpJoinChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + channels.map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
+            '<input type="text" id="vpJoinStatus" placeholder="Listening status (optional)" style="flex:1;min-width:200px;">' +
+            '<button class="btn btn-s" onclick="joinVoicePresence(\'' + serverId + '\')">Join</button>' +
+            '</div></div>' +
+            '<button class="btn btn-s" onclick="loadVoicePresence()">Back</button>';
+        cont.innerHTML = html;
+    } catch { showToast('Failed', true); }
+}
+
+async function joinVoicePresence(serverId) {
+    const channelId = document.getElementById('vpJoinChannel')?.value;
+    const status = document.getElementById('vpJoinStatus')?.value;
+    if (!channelId) return showToast('Select a channel', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/voice-presence/join', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channelId, status: status || null })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Joined voice channel!'); loadVoicePresence(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function leaveVoicePresence(serverId) {
+    try {
+        const r = await fetch('/api/server/' + serverId + '/voice-presence/leave', { method: 'POST' });
+        const d = await r.json();
+        if (d.success) { showToast('Left voice channel'); loadVoicePresence(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function moveVoicePresenceUI(serverId) {
+    const cont = document.getElementById('voicePresenceContent');
+    if (!cont) return;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/voice-presence');
+        const d = await r.json();
+        const channels = d.channels || [];
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Move to Another Channel</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<select id="vpMoveChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + channels.map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
+            '<input type="text" id="vpMoveStatus" placeholder="New status (optional)" style="flex:1;min-width:200px;">' +
+            '<button class="btn btn-s" onclick="moveVoicePresence(\'' + serverId + '\')">Move</button>' +
+            '</div></div>' +
+            '<button class="btn btn-s" onclick="loadVoicePresence()">Back</button>';
+        cont.innerHTML = html;
+    } catch { showToast('Failed', true); }
+}
+
+async function moveVoicePresence(serverId) {
+    const channelId = document.getElementById('vpMoveChannel')?.value;
+    const status = document.getElementById('vpMoveStatus')?.value;
+    if (!channelId) return showToast('Select a channel', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/voice-presence/move', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channelId, status: status || null })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Moved to new channel!'); loadVoicePresence(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function setVoicePresenceStatus(serverId) {
+    const status = document.getElementById('vpStatusInput')?.value;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/voice-presence/status', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status || '' })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Status updated!'); loadVoicePresence(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function restoreVoicePresence(serverId) {
+    try {
+        const r = await fetch('/api/server/' + serverId + '/voice-presence/restore', { method: 'POST' });
+        const d = await r.json();
+        if (d.success) { showToast('Presences restored!'); loadVoicePresence(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
 // ═══ LOOK SWITCHER ═══
 function setLook(look){
   // Remove all look classes
@@ -2501,3 +2976,1171 @@ function setLook(look){
   const names={neo:'Neo (Modern)',classic:'Classic',minimal:'Minimal'};
   showToast('Switched to '+names[look]+' look');
 }
+
+// ═══ WEBHOOKS ═══
+async function loadWebhooks() {
+    const srv = document.getElementById('whSrvSelect')?.value;
+    const cont = document.getElementById('webhooksContent');
+    if (!srv || !cont) return;
+    cont.innerHTML = '<div class="sk"><div class="sk-line w40"></div></div>';
+    try {
+        const r = await fetch('/api/server/' + srv + '/webhooks');
+        const webhooks = await r.json();
+        if (!webhooks.length) {
+            cont.innerHTML = '<div class="empty"><p>No webhooks found</p><p class="empty-act">Create a webhook to send messages via external integrations.</p></div>';
+            return;
+        }
+        cont.innerHTML = webhooks.map(w => `
+            <div class="card" style="margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:200px;">
+                        <strong>${esc(w.name)}</strong>
+                        <span class="sub">#${esc(w.channelName)} · ${esc(w.type === 1 ? 'Incoming' : 'Channel Follower')}</span>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button class="btn btn-s" onclick="copyToClipboard('${esc(w.url)}')">Copy URL</button>
+                        <button class="btn btn-s" style="background:var(--danger)" onclick="deleteWebhook('${srv}','${w.id}')">Delete</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } catch {
+        cont.innerHTML = '<div class="empty"><p>Failed to load webhooks</p></div>';
+    }
+}
+
+async function createWebhookUI() {
+    const srv = document.getElementById('whSrvSelect')?.value;
+    const name = document.getElementById('whNewName')?.value;
+    const channelId = document.getElementById('whNewChannel')?.value;
+    if (!srv || !name || !channelId) return showToast('Fill all fields', true);
+    try {
+        const r = await fetch('/api/server/' + srv + '/webhooks', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, channelId })
+        });
+        const d = await r.json();
+        if (d.success) {
+            showToast('Webhook created! URL: ' + d.webhook.url);
+            loadWebhooks();
+        } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function deleteWebhook(serverId, webhookId) {
+    if (!confirm('Delete this webhook?')) return;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/webhooks/' + webhookId, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.success) { showToast('Webhook deleted'); loadWebhooks(); } else showToast('Failed', true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ API TOKENS ═══
+async function loadApiTokens() {
+    const cont = document.getElementById('apiTokensList');
+    if (!cont) return;
+    try {
+        const r = await fetch('/api/tokens');
+        const tokens = await r.json();
+        cont.innerHTML = tokens.map(t => `
+            <div class="card" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <strong>${esc(t.name)}</strong>
+                    <span class="sub">${esc(t.token_hash)} · Scopes: ${esc((t.scopes||[]).join(', ') || 'none')} · Created: ${new Date(t.created_at).toLocaleDateString()}</span>
+                    ${t.expires_at ? '<span class="sub">Expires: ' + new Date(t.expires_at).toLocaleDateString() + '</span>' : ''}
+                    ${t.last_used_at ? '<span class="sub">Last used: ' + timeSince(t.last_used_at) + '</span>' : '<span class="sub">Never used</span>'}
+                </div>
+                <button class="btn btn-s" style="background:var(--danger)" onclick="deleteApiToken(${t.id})">Revoke</button>
+            </div>
+        `).join('');
+    } catch { cont.innerHTML = '<div class="empty"><p>Failed to load tokens</p></div>'; }
+}
+
+async function createApiToken() {
+    const name = document.getElementById('apiTokenName')?.value;
+    const scopesSel = document.getElementById('apiTokenScopes');
+    const scopes = scopesSel ? Array.from(scopesSel.selectedOptions).map(o => o.value) : [];
+    const expiresInDays = parseInt(document.getElementById('apiTokenExpiry')?.value) || 0;
+    if (!name) return showToast('Enter a name', true);
+    try {
+        const r = await fetch('/api/tokens', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, scopes, expiresInDays })
+        });
+        const d = await r.json();
+        if (d.success) {
+            showToast('Token created! Save it now: ' + d.token);
+            document.getElementById('apiTokenName').value = '';
+            if (scopesSel) Array.from(scopesSel.options).forEach(o => o.selected = false);
+            document.getElementById('apiTokenExpiry').value = '';
+            loadApiTokens();
+        } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function deleteApiToken(id) {
+    if (!confirm('Revoke this API token?')) return;
+    try {
+        const r = await fetch('/api/tokens/' + id, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.success) { showToast('Token revoked'); loadApiTokens(); } else showToast('Failed', true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ TEMP VOICE CHANNELS ═══
+async function loadTempVoice() {
+    const sel = document.getElementById('tvSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('tempVoiceContent');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to configure temp voice channels</p></div>';
+        updateRefreshTimestamp('temp-voice');
+        return;
+    }
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const r = await fetch('/api/server/' + serverId + '/temp-voice');
+        const d = await r.json();
+        const config = d.config || { name_template: DEFAULT_TEMPLATE };
+        const triggers = d.triggers || [];
+        const spawned = d.spawned || [];
+        const channels = d.channels || [];
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Channel Name Template</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;">' +
+            '<input type="text" id="tvNameTemplate" value="' + esc(config.name_template || DEFAULT_TEMPLATE) + '" placeholder="' + esc(DEFAULT_TEMPLATE) + '" style="flex:1;min-width:200px;">' +
+            '<button class="btn btn-s" onclick="saveTempVoiceConfig(\'' + serverId + '\')">Save Template</button>' +
+            '</div>' +
+            '<div class="stg-hint">Use {name} for username and {number} for spawn counter. Max 100 chars.</div>' +
+            '</div>';
+
+        // Triggers
+        html += '<div class="stg" style="margin-bottom:16px;"><label>Trigger Channels (Join to Create)</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<select id="tvNewTriggerChannel" style="flex:1;min-width:200px;"><option value="">Select voice channel...</option>' + channels.filter(function(c){return c.type===2}).map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
+            '<select id="tvNewTriggerCategory" style="flex:1;min-width:200px;"><option value="">Category (optional)</option>' + channels.filter(function(c){return c.type===4}).map(function(c){return '<option value="' + c.id + '">' + esc(c.name) + '</option>';}).join('') + '</select>' +
+            '<button class="btn btn-s" onclick="addTempVoiceTrigger(\'' + serverId + '\')">Add Trigger</button>' +
+            '</div></div>';
+
+        if (!triggers.length) {
+            html += '<div class="empty"><p>No trigger channels configured</p></div>';
+        } else {
+            html += triggers.map(function (t) {
+                var ch = channels.find(function (c) { return c.id === t.channel_id; });
+                var cat = channels.find(function (c) { return c.id === t.category_id; });
+                return '<div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">' +
+                    '<div>' +
+                    '<strong>#' + esc(ch?.name || t.channel_id) + '</strong>' +
+                    (cat ? '<span class="sub"> → Category: #' + esc(cat.name) + '</span>' : '') +
+                    '</div>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" onclick="removeTempVoiceTrigger(\'' + serverId + '\',\'' + t.channel_id + '\')">Remove</button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        // Spawned channels
+        html += '<div class="stg" style="margin-top:16px;"><label>Active Temp Channels</label>';
+        if (!spawned.length) {
+            html += '<div class="empty"><p>No active temp channels</p></div></div>';
+        } else {
+            html += spawned.map(function (s) {
+                var ch = channels.find(function (c) { return c.id === s.channel_id; });
+                return '<div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+                    '<div>' +
+                    '<strong>' + esc(ch?.name || s.channel_id) + '</strong>' +
+                    '<span class="sub">Owner: <@' + s.owner_id + '> · Trigger: ' + esc(s.trigger_id || 'N/A') + '</span>' +
+                    '</div>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteTempVoiceChannel(\'' + serverId + '\',\'' + s.channel_id + '\')">Delete</button>' +
+                    '</div>';
+            }).join('') + '</div>';
+        }
+
+        // Panels
+        html += '<div class="stg" style="margin-top:16px;"><label>Control Panels</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<select id="tvNewPanelChannel" style="flex:1;min-width:200px;"><option value="">Select text channel...</option>' + channels.filter(function(c){return c.type===0||c.type===5||c.type===15}).map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
+            '<button class="btn btn-s" onclick="addTempVoicePanel(\'' + serverId + '\')">Add Panel</button>' +
+            '</div>';
+        // Note: panels are not directly exposed, would need API extension
+        html += '<div class="stg-hint">Panels are registered per text channel. Use the API directly for panel management.</div></div>';
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load temp voice config</p></div>';
+    }
+    updateRefreshTimestamp('temp-voice');
+}
+
+async function saveTempVoiceConfig(serverId) {
+    const nameTemplate = document.getElementById('tvNameTemplate')?.value;
+    if (!nameTemplate) return showToast('Enter a template', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/temp-voice/config', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nameTemplate })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Template saved!'); loadTempVoice(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function addTempVoiceTrigger(serverId) {
+    const channelId = document.getElementById('tvNewTriggerChannel')?.value;
+    const categoryId = document.getElementById('tvNewTriggerCategory')?.value;
+    if (!channelId) return showToast('Select a voice channel', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/temp-voice/triggers', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channelId, categoryId: categoryId || null })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Trigger added!'); loadTempVoice(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function removeTempVoiceTrigger(serverId, channelId) {
+    if (!confirm('Remove this trigger channel?')) return;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/temp-voice/triggers', {
+            method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channelId })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Trigger removed!'); loadTempVoice(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function deleteTempVoiceChannel(serverId, channelId) {
+    if (!confirm('Delete this temp voice channel?')) return;
+    try {
+        // Note: This would need a dedicated API endpoint
+        showToast('Use /tempvc delete in Discord or the panel controls', true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ WARNING THRESHOLDS ═══
+async function loadWarningThresholds() {
+    const sel = document.getElementById('wtSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('warningThresholdsContent');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to configure warning thresholds</p></div>';
+        updateRefreshTimestamp('warning-thresholds');
+        return;
+    }
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const r = await fetch('/api/server/' + serverId + '/warning-thresholds');
+        const d = await r.json();
+        const thresholds = d.thresholds || [];
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Add Warning Threshold</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<input type="number" id="wtWarnCount" placeholder="Warning count (e.g. 3)" min="1" max="100" style="flex:0 0 150px;">' +
+            '<select id="wtAction" style="flex:0 0 150px;"><option value="timeout">Timeout</option><option value="kick">Kick</option><option value="ban">Ban</option></select>' +
+            '<input type="number" id="wtDuration" placeholder="Duration (min, for timeout)" min="1" max="40320" style="flex:0 0 150px;">' +
+            '<button class="btn btn-s" onclick="addWarningThresholdUI(\'' + serverId + '\')">Add Threshold</button>' +
+            '</div></div>';
+
+        if (!thresholds.length) {
+            html += '<div class="empty"><p>No warning thresholds configured</p><p class="empty-act">Add a threshold above to enable auto-punishment at warning milestones.</p></div>';
+        } else {
+            html += thresholds.map(function (t) {
+                return '<div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+                    '<div>' +
+                    '<strong>' + t.warnCount + ' warnings</strong> → <strong>' + t.action + '</strong>' +
+                    (t.action === 'timeout' && t.duration ? ' for ' + t.duration + ' min' : '') +
+                    '</div>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" onclick="removeWarningThresholdUI(\'' + serverId + '\', ' + t.warnCount + ')">Remove</button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load warning thresholds</p></div>';
+    }
+    updateRefreshTimestamp('warning-thresholds');
+}
+
+async function addWarningThresholdUI(serverId) {
+    const warnCount = parseInt(document.getElementById('wtWarnCount')?.value);
+    const action = document.getElementById('wtAction')?.value;
+    const duration = parseInt(document.getElementById('wtDuration')?.value) || null;
+    if (!warnCount || !action) return showToast('Fill all fields', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/warning-thresholds', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ warnCount, action, duration })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Threshold added!'); loadWarningThresholds(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function removeWarningThresholdUI(serverId, warnCount) {
+    if (!confirm('Remove this warning threshold?')) return;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/warning-thresholds', {
+            method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ warnCount })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Threshold removed!'); loadWarningThresholds(); } else showToast('Failed: ' + d.error, true);
+} catch { showToast('Failed', true); }
+}
+
+// ═══ PREFIX COMMANDS ═══
+async function loadPrefixCommands() {
+    const sel = document.getElementById('pcSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('prefixCommandsContent');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to manage prefix commands</p></div>';
+        updateRefreshTimestamp('prefix-commands');
+        return;
+    }
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const r = await fetch('/api/server/' + serverId);
+        const d = await r.json();
+        const prefix = d.prefix || ';';
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Command Prefix</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;">' +
+            '<input type="text" id="pcPrefixInput" value="' + esc(prefix) + '" maxlength="5" style="flex:0 0 120px;">' +
+            '<button class="btn btn-s" onclick="savePrefixUI(\'' + serverId + '\')">Save Prefix</button>' +
+            '</div>' +
+            '<div class="stg-hint">Prefix for text commands (default: ;). Max 5 characters, no spaces.</div>' +
+            '</div>';
+
+        // Show prefix usage stats
+        try {
+            const statsRes = await fetch('/api/stats/commands');
+            const statsData = await statsRes.json();
+            const prefixUsage = statsData.perServer?.filter(function(r) { return r.guild_id === serverId; }) || [];
+            if (prefixUsage.length > 0) {
+                html += '<div class="stg" style="margin-top:16px;"><label>Prefix Command Usage (this server)</label>';
+                html += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+                html += '<thead><tr style="background:var(--surface-2);"><th style="padding:8px;text-align:left;">Command</th><th style="padding:8px;text-align:center;">Uses</th></tr></thead><tbody>';
+                prefixUsage.forEach(function(r) {
+                    html += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-family:monospace;">' + esc(r.command) + '</td><td style="padding:8px;text-align:center;">' + r.count.toLocaleString() + '</td></tr>';
+                });
+                html += '</tbody></table></div>';
+            }
+        } catch {}
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load prefix commands</p></div>';
+    }
+    updateRefreshTimestamp('prefix-commands');
+}
+
+async function savePrefixUI(serverId) {
+    const prefix = document.getElementById('pcPrefixInput')?.value?.trim();
+    if (!prefix || prefix.length > 5) return showToast('Prefix must be 1-5 characters', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/prefix', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prefix })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Prefix saved!'); loadPrefixCommands(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ RATE LIMITS ═══
+
+async function loadRateLimits() {
+    const cont = document.getElementById('rateLimitsContent');
+    if (!cont) return;
+    try {
+        const r = await fetch('/api/ratelimit/config');
+        const config = await r.json();
+        cont.innerHTML = `
+            <div class="grid grid-2">
+                <div class="card"><h4>Global API</h4>
+                    <input type="number" id="rlGlobalWindow" placeholder="Window (ms)" value="${config.global?.windowMs||60000}" style="width:100%;margin-bottom:8px;">
+                    <input type="number" id="rlGlobalMax" placeholder="Max requests" value="${config.global?.max||120}" style="width:100%;">
+                </div>
+                <div class="card"><h4>Login</h4>
+                    <input type="number" id="rlLoginWindow" placeholder="Window (ms)" value="${config.login?.windowMs||60000}" style="width:100%;margin-bottom:8px;">
+                    <input type="number" id="rlLoginMax" placeholder="Max attempts" value="${config.login?.max||10}" style="width:100%;">
+                </div>
+                <div class="card"><h4>API</h4>
+                    <input type="number" id="rlApiWindow" placeholder="Window (ms)" value="${config.api?.windowMs||60000}" style="width:100%;margin-bottom:8px;">
+                    <input type="number" id="rlApiMax" placeholder="Max requests" value="${config.api?.max||100}" style="width:100%;">
+                </div>
+                <div class="card"><h4>Mod Actions</h4>
+                    <input type="number" id="rlModWindow" placeholder="Window (ms)" value="${config.modActions?.windowMs||60000}" style="width:100%;margin-bottom:8px;">
+                    <input type="number" id="rlModMax" placeholder="Max requests" value="${config.modActions?.max||30}" style="width:100%;">
+                </div>
+            </div>
+            <button class="btn" onclick="saveRateLimits()" style="margin-top:16px;">Save Rate Limits</button>
+        `;
+    } catch { cont.innerHTML = '<div class="empty"><p>Failed to load rate limit config</p></div>'; }
+}
+
+async function saveRateLimits() {
+    const config = {
+        global: { windowMs: parseInt(document.getElementById('rlGlobalWindow')?.value) || 60000, max: parseInt(document.getElementById('rlGlobalMax')?.value) || 120 },
+        login: { windowMs: parseInt(document.getElementById('rlLoginWindow')?.value) || 60000, max: parseInt(document.getElementById('rlLoginMax')?.value) || 10 },
+        api: { windowMs: parseInt(document.getElementById('rlApiWindow')?.value) || 60000, max: parseInt(document.getElementById('rlApiMax')?.value) || 100 },
+        modActions: { windowMs: parseInt(document.getElementById('rlModWindow')?.value) || 60000, max: parseInt(document.getElementById('rlModMax')?.value) || 30 },
+    };
+    try {
+        const r = await fetch('/api/ratelimit/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+        const d = await r.json();
+        if (d.success) showToast('Rate limits saved!'); else showToast('Failed', true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ BOT ACTIVITY ═══
+async function loadBotActivity() {
+    const cont = document.getElementById('botActivityFeed');
+    if (!cont) return;
+    const days = document.getElementById('activityDays')?.value || '7';
+    const type = document.getElementById('activityType')?.value || '';
+    cont.innerHTML = '<div class="sk"><div class="sk-line w40"></div></div>';
+    try {
+        const r = await fetch('/api/activity/timeline?days=' + days + '&type=' + type);
+        const events = await r.json();
+        if (!events.length) {
+            cont.innerHTML = '<div class="empty"><p>No activity found</p></div>';
+            return;
+        }
+        cont.innerHTML = events.map(e => `
+            <div class="audit-item" style="margin-bottom:8px;">
+                <div class="audit-ico">${esc(e.icon || '📌')}</div>
+                <div class="audit-body">
+                    <div class="audit-h">
+                        <span class="audit-type">${esc(e.type)}</span>
+                        <span class="audit-ts">${timeSince(e.timestamp)}</span>
+                    </div>
+                    <div class="audit-meta">${esc(e.server || '')} ${esc(e.user ? '• ' + e.user : '')} ${esc(e.details ? '• ' + e.details : '')}</div>
+                </div>
+            </div>
+        `).join('');
+    } catch { cont.innerHTML = '<div class="empty"><p>Failed to load activity</p></div>'; }
+}
+
+// ═══ SERVER COMPARISON ═══
+async function loadServerCompare() {
+    const cont = document.getElementById('compareCards');
+    if (!cont) return;
+    const metric = document.getElementById('compareMetric')?.value || 'members';
+    const limit = document.getElementById('compareLimit')?.value || '10';
+    cont.innerHTML = '<div class="sk"><div class="sk-line w40"></div></div>';
+    try {
+        const r = await fetch('/api/analytics/servers/compare?metric=' + metric + '&limit=' + limit);
+        const { servers } = await r.json();
+        if (!servers.length) {
+            cont.innerHTML = '<div class="empty"><p>No servers to compare</p></div>';
+            return;
+        }
+        cont.innerHTML = servers.map(s => `
+            <div class="card sr">
+                <img src="${esc(s.icon)}" alt="" style="width:32px;height:32px;border-radius:8px;margin-bottom:8px;">
+                <div class="lbl">${esc(s.name)}</div>
+                <div class="val">${s.value.toLocaleString()}</div>
+                <div class="sub">${esc(metric)}</div>
+            </div>
+        `).join('');
+    } catch { cont.innerHTML = '<div class="empty"><p>Failed to load comparison</p></div>'; }
+}
+
+// ═══ COMMAND HEATMAP ═══
+async function loadCmdHeatmap() {
+    const cont = document.getElementById('heatmapGrid');
+    if (!cont) return;
+    const days = document.getElementById('heatmapDays')?.value || '7';
+    cont.innerHTML = '<div class="sk"><div class="sk-line w40"></div></div>';
+    try {
+        const r = await fetch('/api/stats/commands/heatmap?days=' + days);
+        const heatmap = await r.json();
+        if (!Object.keys(heatmap).length) {
+            cont.innerHTML = '<div class="empty"><p>No command data</p></div>';
+            return;
+        }
+        const commands = Object.keys(heatmap).sort((a,b) => {
+            const ta = Object.values(heatmap[a]).reduce((x,y)=>x+y,0);
+            const tb = Object.values(heatmap[b]).reduce((x,y)=>x+y,0);
+            return tb - ta;
+        });
+        const servers = new Set();
+        commands.forEach(c => Object.keys(heatmap[c]).forEach(s => servers.add(s)));
+        const serverList = Array.from(servers).sort();
+        
+        cont.innerHTML = `
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                <thead>
+                    <tr style="background:var(--surface-2);"><th style="padding:8px;text-align:left;">Command</th>${serverList.map(s => '<th style="padding:8px;text-align:center;">' + esc(s.slice(0,12)) + '</th>').join('')}<th style="padding:8px;text-align:right;">Total</th></tr>
+                </thead>
+                <tbody>
+                    ${commands.map(c => {
+                        const row = heatmap[c];
+                        const total = Object.values(row).reduce((x,y)=>x+y,0);
+                        return '<tr style="border-bottom:1px solid var(--border);"><td style="padding:8px;font-family:monospace;">' + esc(c) + '</td>' +
+                            serverList.map(s => {
+                                const v = row[s] || 0;
+                                return '<td style="padding:8px;text-align:center;background:' + (v ? 'rgba(var(--accent-rgb),' + Math.min(0.5, v/100) + ')' : 'transparent') + ';">' + (v ? v.toLocaleString() : '—') + '</td>';
+                            }).join('') +
+                            '<td style="padding:8px;text-align:right;font-weight:600;">' + total.toLocaleString() + '</td></tr>';
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch { cont.innerHTML = '<div class="empty"><p>Failed to load heatmap</p></div>'; }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => showToast('Failed', true));
+}
+
+// ═══ BAN APPEALS ═══
+async function loadBanAppeals() {
+    const sel = document.getElementById('baSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('banAppealsContent');
+    const statsCont = document.getElementById('baStats');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to manage ban appeals</p></div>';
+        updateRefreshTimestamp('ban-appeals');
+        return;
+    }
+
+    // Load stats
+    if (statsCont) {
+        try {
+            const r = await fetch('/api/server/' + serverId + '/ban-appeals/stats');
+            const stats = await r.json();
+            statsCont.innerHTML = `
+                <div class="card sr"><div class="lbl">Pending</div><div class="val">${stats.pending || 0}</div></div>
+                <div class="card sr"><div class="lbl">Approved</div><div class="val">${stats.approved || 0}</div></div>
+                <div class="card sr"><div class="lbl">Denied</div><div class="val">${stats.denied || 0}</div></div>
+                <div class="card sr"><div class="lbl">Total</div><div class="val">${stats.total || 0}</div></div>
+            `;
+        } catch { statsCont.innerHTML = ''; }
+    }
+
+    const statusFilter = document.getElementById('baStatusFilter')?.value || '';
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const r = await fetch('/api/server/' + serverId + '/ban-appeals' + (statusFilter ? '?status=' + statusFilter : ''));
+        const d = await r.json();
+        const appeals = d.appeals || [];
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Submit New Appeal</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<input type="text" id="baUserId" placeholder="User ID" style="flex:0 0 150px;">' +
+            '<input type="text" id="baUserTag" placeholder="User Tag (e.g. User#1234)" style="flex:1;min-width:200px;">' +
+            '<input type="text" id="baReason" placeholder="Ban reason" style="flex:1;min-width:200px;">' +
+            '<textarea id="baMessage" placeholder="Appeal message" style="flex:1;min-width:200px;min-height:60px;"></textarea>' +
+            '<button class="btn btn-s" onclick="submitBanAppealUI(\'' + serverId + '\')">Submit Appeal</button>' +
+            '</div></div>';
+
+        if (!appeals.length) {
+            html += '<div class="empty"><p>No ban appeals found</p><p class="empty-act">Submit a new appeal above or wait for users to appeal.</p></div>';
+        } else {
+            html += appeals.map(function (a) {
+                var statusClass = a.status === 'pending' ? '' : (a.status === 'approved' ? 'style="color:#3ba55c"' : 'style="color:#ed4245"');
+                return '<div class="card" style="margin-bottom:8px;">' +
+                    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+                    '<div style="flex:1;min-width:250px;">' +
+                    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+                    '<strong>' + esc(a.user_tag) + '</strong>' +
+                    '<span ' + statusClass + '><strong>' + a.status.toUpperCase() + '</strong></span>' +
+                    '<span class="sub">ID: ' + esc(a.id) + ' · ' + timeSince(a.created_at) + ' ago</span>' +
+                    '</div>' +
+                    '<div class="sub">Reason: ' + esc(a.reason || 'None') + '</div>' +
+                    '<div class="sub">Message: ' + esc(a.message || 'None') + '</div>' +
+                    (a.reviewed_by ? '<div class="sub">Reviewed by: ' + esc(a.reviewed_by) + (a.reviewed_at ? ' · ' + timeSince(a.reviewed_at) : '') + '</div>' : '') +
+                    (a.review_note ? '<div class="sub">Review note: ' + esc(a.review_note) + '</div>' : '') +
+                    '</div>' +
+                    (a.status === 'pending' ? '<div style="display:flex;gap:8px;">' +
+                    '<button class="btn btn-s" onclick="updateBanAppealStatusUI(\'' + serverId + '\',\'' + a.id + '\',\'approved\')">Approve</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" onclick="updateBanAppealStatusUI(\'' + serverId + '\',\'' + a.id + '\',\'denied\')">Deny</button>' +
+                    '</div>' : '') +
+                    '</div>';
+            }).join('');
+        }
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load ban appeals</p></div>';
+    }
+    updateRefreshTimestamp('ban-appeals');
+}
+
+async function submitBanAppealUI(serverId) {
+    const userId = document.getElementById('baUserId')?.value;
+    const userTag = document.getElementById('baUserTag')?.value;
+    const reason = document.getElementById('baReason')?.value;
+    const message = document.getElementById('baMessage')?.value;
+    if (!userId || !userTag || !reason || !message) return showToast('Fill all fields', true);
+    try {
+        const r = await fetch('/api/server/' + serverId + '/ban-appeals', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, userTag, reason, message })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Appeal submitted!'); loadBanAppeals(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function updateBanAppealStatusUI(serverId, appealId, status) {
+    const reviewNote = prompt('Enter review note (optional):') || null;
+    try {
+        const r = await fetch('/api/server/' + serverId + '/ban-appeals/' + appealId, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status, reviewedBy: 'Dashboard', reviewNote })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Appeal ' + status + '!'); loadBanAppeals(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ REMINDERS ═══
+async function loadReminders() {
+    const cont = document.getElementById('remindersContent');
+    if (!cont) return;
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const r = await fetch('/api/reminders');
+        const reminders = await r.json();
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Create Reminder</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<input type="text" id="remUserId" placeholder="User ID" style="flex:0 0 150px;">' +
+            '<input type="text" id="remChannelId" placeholder="Channel ID (optional)" style="flex:1;min-width:200px;">' +
+            '<input type="text" id="remText" placeholder="Reminder text" style="flex:1;min-width:200px;">' +
+            '<input type="number" id="remDuration" placeholder="Duration (ms)" min="1000" style="flex:0 0 150px;">' +
+            '<button class="btn btn-s" onclick="createReminderUI()">Create</button>' +
+            '</div></div>';
+
+        if (!reminders.length) {
+            html += '<div class="empty"><p>No pending reminders</p></div>';
+        } else {
+            html += reminders.map(function (rem) {
+                return '<div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:8px;">' +
+                    '<div style="flex:1;min-width:250px;">' +
+                    '<strong>' + esc(rem.text.slice(0, 100)) + '</strong>' +
+                    '<span class="sub">User: ' + rem.userId + ' · ' + timeSince(rem.createdAt) + ' ago</span>' +
+                    '<span class="sub">Due: ' + new Date(rem.remindAt).toLocaleString() + '</span>' +
+                    '</div>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteReminderUI(\'' + rem.id + '\',\'' + rem.userId + '\')">Delete</button>' +
+                    '</div>';
+            }).join('');
+        }
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load reminders</p></div>';
+    }
+    updateRefreshTimestamp('reminders');
+}
+
+async function createReminderUI() {
+    const userId = document.getElementById('remUserId')?.value;
+    const channelId = document.getElementById('remChannelId')?.value;
+    const text = document.getElementById('remText')?.value;
+    const durationMs = parseInt(document.getElementById('remDuration')?.value);
+    if (!userId || !text || !durationMs) return showToast('Fill all fields', true);
+    try {
+        const r = await fetch('/api/reminders', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, channelId: channelId || null, text, durationMs })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Reminder created!'); loadReminders(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function deleteReminderUI(id, userId) {
+    if (!confirm('Delete this reminder?')) return;
+    try {
+        const r = await fetch('/api/reminders/' + id, {
+            method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Reminder deleted!'); loadReminders(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ POLLS & ANNOUNCEMENTS ═══
+async function loadPollsAnnouncements() {
+    const sel = document.getElementById('paSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('pollsAnnouncementsContent');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to manage polls & announcements</p></div>';
+        updateRefreshTimestamp('polls-announcements');
+        return;
+    }
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const channelsRes = await fetch('/api/server/' + serverId + '/channels');
+        const channelsData = await channelsRes.json();
+        const textChannels = channelsData.filter(function(c) { return c.type === 0 || c.type === 5 || c.type === 15; });
+
+        var html = '<div class="stg" style="margin-bottom:16px;"><label>Create Poll</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<input type="text" id="paPollQuestion" placeholder="Poll question" style="flex:1;min-width:200px;">' +
+            '<input type="text" id="paPollOpt1" placeholder="Option 1" style="flex:1;min-width:150px;">' +
+            '<input type="text" id="paPollOpt2" placeholder="Option 2" style="flex:1;min-width:150px;">' +
+            '<input type="text" id="paPollOpt3" placeholder="Option 3 (optional)" style="flex:1;min-width:150px;">' +
+            '<input type="text" id="paPollOpt4" placeholder="Option 4 (optional)" style="flex:1;min-width:150px;">' +
+            '<select id="paPollType" style="flex:0 0 150px;"><option value="single">Single Vote</option><option value="multi">Multi Vote</option><option value="anonymous">Anonymous</option></select>' +
+            '<input type="number" id="paPollDuration" placeholder="Duration (hours)" value="24" min="0.25" max="720" step="0.25" style="flex:0 0 120px;">' +
+            '<select id="paPollChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + textChannels.map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
+            '<button class="btn btn-s" onclick="createPollUI(\'' + serverId + '\')">Create Poll</button>' +
+            '</div></div>';
+
+        html += '<div class="stg" style="margin-top:16px;margin-bottom:16px;"><label>Create Announcement</label>' +
+            '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
+            '<input type="text" id="paAnnounceTitle" placeholder="Title" style="flex:1;min-width:200px;">' +
+            '<textarea id="paAnnounceMessage" placeholder="Message" style="flex:1;min-width:300px;min-height:80px;"></textarea>' +
+            '<input type="color" id="paAnnounceColor" value="#5865F2" style="flex:0 0 80px;">' +
+            '<select id="paAnnounceChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + textChannels.map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
+            '<button class="btn btn-s" onclick="createAnnouncementUI(\'' + serverId + '\')">Send Announcement</button>' +
+            '</div></div>';
+
+        cont.innerHTML = html;
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load polls & announcements</p></div>';
+    }
+    updateRefreshTimestamp('polls-announcements');
+}
+
+async function createPollUI(serverId) {
+    const question = document.getElementById('paPollQuestion')?.value;
+    const opt1 = document.getElementById('paPollOpt1')?.value;
+    const opt2 = document.getElementById('paPollOpt2')?.value;
+    const opt3 = document.getElementById('paPollOpt3')?.value;
+    const opt4 = document.getElementById('paPollOpt4')?.value;
+    const type = document.getElementById('paPollType')?.value;
+    const durationHours = parseFloat(document.getElementById('paPollDuration')?.value) || 24;
+    const channelId = document.getElementById('paPollChannel')?.value;
+    const options = [opt1, opt2, opt3, opt4].filter(function(o) { return o && o.trim(); });
+    if (!question || options.length < 2 || !channelId) return showToast('Fill all required fields', true);
+    try {
+        const r = await fetch('/api/polls/create', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guildId: serverId, channelId, question, options, multi: type === 'multi', anonymous: type === 'anonymous', durationHours })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Poll created!'); loadPollsAnnouncements(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+async function createAnnouncementUI(serverId) {
+    const title = document.getElementById('paAnnounceTitle')?.value;
+    const message = document.getElementById('paAnnounceMessage')?.value;
+    const color = document.getElementById('paAnnounceColor')?.value;
+    const channelId = document.getElementById('paAnnounceChannel')?.value;
+    if (!title || !message || !channelId) return showToast('Fill all fields', true);
+    try {
+        const r = await fetch('/api/announcements/create', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ guildId: serverId, channelId, title, message, color })
+        });
+        const d = await r.json();
+        if (d.success) { showToast('Announcement sent!'); loadPollsAnnouncements(); } else showToast('Failed: ' + d.error, true);
+    } catch { showToast('Failed', true); }
+}
+
+// ═══ KEYBOARD SHORTCUTS & ACCESSIBILITY ═══
+(function() {
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ignore if typing in input/textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+        
+        const shortcuts = {
+            'KeyR': () => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); location.reload(); } }, // Ctrl+R: Reload
+            'KeyS': () => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); const btn = document.querySelector('.btn[onclick*="Save"], .btn[onclick*="save"]'); if (btn) btn.click(); } }, // Ctrl+S: Save
+            'KeyF': () => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); const search = document.querySelector('input[placeholder*="Search"], input[id*="Search"]'); if (search) search.focus(); } }, // Ctrl+F: Focus search
+            'KeyK': () => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); const search = document.querySelector('input[placeholder*="Search"], input[id*="Search"]'); if (search) search.focus(); } }, // Ctrl+K: Focus search
+            'Slash': () => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); const search = document.querySelector('input[placeholder*="Search"], input[id*="Search"]'); if (search) search.focus(); } }, // Ctrl+/: Focus search
+            'Escape': () => { const modals = document.querySelectorAll('.modal, [role="dialog"]'); modals.forEach(m => m.style.display = 'none'); document.querySelectorAll('.toast.show').forEach(t => t.classList.remove('show')); }, // Escape: Close modals/toasts
+            'KeyG': () => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); const select = document.getElementById('geSrvSelect') || document.getElementById('paSrvSelect') || document.getElementById('rrSrvSelect') || document.getElementById('rmSrvSelect') || document.getElementById('vpSrvSelect') || document.getElementById('tvSrvSelect') || document.getElementById('wtSrvSelect') || document.getElementById('baSrvSelect') || document.getElementById('pcSrvSelect') || document.getElementById('geSrvSelect'); if (select) select.focus(); } }, // Ctrl+G: Focus server select
+            'ArrowLeft': () => { if (e.altKey) { e.preventDefault(); const active = document.querySelector('.notch-link.active, .notch-mobile-link.active'); const prev = active?.previousElementSibling; if (prev && (prev.classList.contains('notch-link') || prev.classList.contains('notch-mobile-link'))) prev.click(); } }, // Alt+Left: Previous section
+            'ArrowRight': () => { if (e.altKey) { e.preventDefault(); const active = document.querySelector('.notch-link.active, .notch-mobile-link.active'); const next = active?.nextElementSibling; if (next && (next.classList.contains('notch-link') || next.classList.contains('notch-mobile-link'))) next.click(); } }, // Alt+Right: Next section
+        };
+        
+        const key = e.key === '/' ? 'Slash' : e.code;
+        if (shortcuts[key]) shortcuts[key]();
+    });
+    
+    // Announce keyboard shortcuts on load
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            console.log('%c Dashboard Keyboard Shortcuts:', 'font-size:12px;color:#5865F2;font-weight:bold;',
+                '\nCtrl+R: Reload',
+                '\nCtrl+S: Save',
+                '\nCtrl+F/K: Focus search',
+                '\nEsc: Close modals/toasts',
+                '\nCtrl+G: Focus server select',
+                '\nAlt+←/→: Prev/Next section');
+        }, 1000);
+    });
+})();
+
+// ═══ MOBILE RESPONSIVENESS ═══
+(function() {
+    // Touch-friendly improvements
+    document.addEventListener('touchstart', function() {}, { passive: true });
+    
+    // Improve scroll on mobile
+    var style = document.createElement('style');
+    style.textContent = 
+        '@media (max-width: 768px) {' +
+        '  .card { margin: 8px 0; border-radius: 12px; }' +
+        '  .stg-inl { flex-direction: column; align-items: stretch; }' +
+        '  .stg-inl > * { width: 100% !important; margin-bottom: 8px; }' +
+        '  .btn { padding: 12px 16px; font-size: 14px; min-height: 44px; }' +
+        '  .btn-s { padding: 10px 14px; font-size: 13px; min-height: 40px; }' +
+        '  input, select, textarea { font-size: 16px !important; }' + // Prevent zoom on iOS
+        '  .notch-nav { padding: 8px 12px; }' +
+        '  .notch-body { gap: 8px; }' +
+        '  .notch-link { padding: 10px 12px; min-height: 44px; }' +
+        '  .card { padding: 16px; }' +
+        '  .stg { margin-bottom: 16px; }' +
+        '  .grid { grid-template-columns: 1fr !important; }' +
+        '  .tw { padding: 12px; }' +
+        '  .srv-search { flex-direction: column; }' +
+        '}';
+    document.head.appendChild(style);
+    
+    // Prevent zoom on input focus (iOS)
+    var viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+    }
+    
+    // Auto-hide mobile menu on link click
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.notch-mobile-link')) {
+            var menu = document.getElementById('notchMobileMenu');
+            if (menu) menu.classList.remove('open');
+        }
+    });
+    
+    // Swipe gestures for section navigation
+    var touchStartX = 0;
+    document.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].clientX;
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function(e) {
+        var touchEndX = e.changedTouches[0].clientX;
+        var diff = touchEndX - touchStartX;
+        if (Math.abs(diff) > 50) {
+            var active = document.querySelector('.notch-link.active, .notch-mobile-link.active');
+            if (diff > 0) {
+                var prev = active?.previousElementSibling;
+                if (prev && (prev.classList.contains('notch-link') || prev.classList.contains('notch-mobile-link'))) prev.click();
+            } else {
+                var next = active?.nextElementSibling;
+                if (next && (next.classList.contains('notch-link') || next.classList.contains('notch-mobile-link'))) next.click();
+            }
+        }
+    }, { passive: true });
+    
+    // Improve form validation UX
+    document.addEventListener('invalid', function(e) {
+        e.target.style.borderColor = 'var(--danger)';
+        e.target.style.boxShadow = '0 0 0 2px rgba(237,66,69,0.2)';
+        showToast('Please fill in this field correctly', true);
+    }, true);
+    
+    document.addEventListener('input', function(e) {
+        if (e.target.style.borderColor === 'var(--danger)') {
+            e.target.style.borderColor = '';
+            e.target.style.boxShadow = '';
+        }
+    });
+    
+    // Lazy load images
+    if ('IntersectionObserver' in window) {
+        var imgObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var img = entry.target;
+                    if (img.dataset.src) {
+                        img.src = img.dataset.src;
+                        img.removeAttribute('data-src');
+                        imgObserver.unobserve(img);
+                    }
+                }
+            });
+        }, { rootMargin: '50px' });
+        document.querySelectorAll('img[data-src]').forEach(function(img) {
+            imgObserver.observe(img);
+        });
+    }
+    
+    // Reduce motion preference
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (reduceMotion.matches) {
+        document.documentElement.style.setProperty('--anim-speed', '0.01');
+    }
+})();
+
+// ═══ AUDIT TRAIL UI ═══
+async function loadAuditTrail() {
+    const cont = document.getElementById('auditTrailContent');
+    if (!cont) return;
+    const serverId = document.getElementById('atSrvSelect')?.value;
+    const typeFilter = document.getElementById('atTypeFilter')?.value;
+    if (!cont) return;
+    
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+    
+    try {
+        var url = '/api/audit-trail?limit=100';
+        if (serverId) url += '&guildId=' + serverId;
+        if (typeFilter) url += '&type=' + typeFilter;
+        
+        const r = await fetch(url);
+        const d = await r.json();
+        const trails = d.trails || [];
+        
+        if (!trails.length) {
+            cont.innerHTML = '<div class="empty"><p>No audit trail entries found</p></div>';
+            return;
+        }
+        
+        cont.innerHTML = trails.map(function(t) {
+            var details = t.details ? JSON.parse(t.details) : {};
+            return '<div class="audit-item" style="margin-bottom:8px;">' +
+                '<div class="audit-ico" style="color:' + (t.type === 'config' ? '#3ba55c' : t.type === 'mod' ? '#ed4245' : '#5865F2') + ';">' +
+                    (t.type === 'config' ? '⚙️' : t.type === 'mod' ? '🛡️' : '⚙️') +
+                '</div>' +
+                '<div class="audit-body">' +
+                    '<div class="audit-h">' +
+                        '<span class="audit-type">' + esc(t.action) + '</span>' +
+                        '<span class="audit-ts">' + timeSince(t.created_at) + '</span>' +
+                        '<span class="audit-source" style="color:#5865F2;">' + esc(t.type) + '</span>' +
+                    '</div>' +
+                    '<div class="audit-meta">' +
+                        (t.user_tag ? '<span class="audit-exec">' + esc(t.user_tag) + '</span>' : '') +
+                        (t.guild_id ? '<span class="audit-target">Server: ' + esc(t.guild_id) + '</span>' : '') +
+                    '</div>' +
+                    (Object.keys(details).length ? '<div class="audit-changes">' + Object.entries(details).map(function([k,v]) {
+                        return '<span class="audit-change"><span class="audit-change-k">' + esc(k) + '</span><span class="audit-change-v">' + esc(JSON.stringify(v)) + '</span></span>';
+                    }).join('') + '</div>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load audit trail</p></div>';
+    }
+    updateRefreshTimestamp('audit-trail');
+}
+
+// ═══ MOBILE INIT ═══
+document.addEventListener('DOMContentLoaded', function() {
+    // Add mobile class for CSS targeting
+    if (window.innerWidth <= 768) document.body.classList.add('mobile');
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth <= 768) document.body.classList.add('mobile');
+        else document.body.classList.remove('mobile');
+    });
+    
+    // Initialize tooltips
+    document.querySelectorAll('[title]').forEach(function(el) {
+        el.addEventListener('mouseenter', function() {
+            var tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = this.getAttribute('title');
+            tooltip.style.cssText = 'position:absolute;background:var(--surface-3);color:var(--text);padding:6px 10px;border-radius:6px;font-size:11px;z-index:1000;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.3);pointer-events:none;';
+            document.body.appendChild(tooltip);
+            var rect = this.getBoundingClientRect();
+            tooltip.style.left = rect.left + (rect.width/2) - (tooltip.offsetWidth/2) + 'px';
+            tooltip.style.top = rect.top - tooltip.offsetHeight - 8 + 'px';
+            this._tooltip = tooltip;
+        });
+        el.addEventListener('mouseleave', function() {
+            if (this._tooltip) { this._tooltip.remove(); this._tooltip = null; }
+        });
+    });
+});
+async function loadGreetingsEditor() {
+    const sel = document.getElementById('geSrvSelect');
+    if (!sel) return;
+    if (sel.options.length <= 1 && allServers.length) {
+        sel.innerHTML = '<option value="">Select a server...</option>' + allServers.map(function (s) {
+            return '<option value="' + s.id + '"' + (curSrv === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('');
+    }
+    const serverId = sel.value;
+    const cont = document.getElementById('greetingsEditorContent');
+    if (!cont) return;
+
+    if (!serverId) {
+        cont.innerHTML = '<div class="empty"><p>Select a server to configure welcome/goodbye messages</p></div>';
+        updateRefreshTimestamp('greetings-editor');
+        return;
+    }
+
+    cont.innerHTML = '<div class="loading" style="padding:30px;text-align:center;"><div class="spin"></div></div>';
+
+    try {
+        const [gr, ch] = await Promise.all([
+            fetch('/api/server/' + serverId + '/greetings').then(function(r){return r.json()}),
+            fetch('/api/server/' + serverId + '/channels').then(function(r){return r.json()}).catch(function(){return []})
+        ]);
+        const welcome = gr.welcome || {};
+        const goodbye = gr.goodbye || {};
+        const channels = ch.filter(function(c) { return c.type === 0 || c.type === 5 || c.type === 15; });
+
+        function renderEditor(type, config, channels) {
+            var typeLabel = type === 'welcome' ? '👋 Welcome' : '👋 Goodbye';
+            var typeColor = type === 'welcome' ? '#3ba55c' : '#ed4245';
+            var defaults = type === 'welcome'
+                ? {enabled:false,channelId:null,content:null,embedTitle:'👋 Welcome!',embedDescription:'Welcome {user} to **{server}**!',embedColor:'#5865F2',embedFooter:'Member #{membercount}',embedFooterIcon:null,embedThumbnail:null,embedImage:null,embedAuthor:null,embedAuthorIcon:null}
+                : {enabled:false,channelId:null,content:null,embedTitle:'👋 Goodbye!',embedDescription:'{user} has left **{server}**.',embedColor:'#E74C3C',embedFooter:'Member #{membercount}',embedFooterIcon:null,embedThumbnail:null,embedImage:null,embedAuthor:null,embedAuthorIcon:null};
+            var cfg = {...defaults, ...config};
+
+            var html = '<div class="card" style="margin-bottom:24px;border-left:4px solid '+typeColor+';">';
+            html += '<div style="padding:16px 16px 0;">';
+            html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
+            html += '<div class="tg-wr" onclick="toggleGreeting(\''+serverId+'\',\''+type+'\')"><div class="tg '+(cfg.enabled?'on':'')+'" id="tg_'+type+'_'+serverId+'"></div><div class="tg-lbl"><b style="font-size:16px;">'+typeLabel+' Messages</b><small>When enabled, this message will be sent automatically when someone '+(type==='welcome'?'joins':'leaves')+' the server.</small></div></div>';
+            html += '<h3 style="margin:0;color:'+typeColor+';">'+typeLabel+' Editor</h3>';
+            html += '</div>';
+
+            html += '<div style="display:grid;grid-template-columns:1fr 380px;gap:24px;">';
+            // Left panel - Form
+            html += '<div style="display:flex;flex-direction:column;gap:16px;">';
+            html += '<div class="stg"><label>Channel</label><select id="grCh_'+type+'_'+serverId+'" style="width:100%;"><option value="">Select channel...</option>'+channels.filter(function(c){return c.type===0||c.type===5||c.type===15}).map(function(c){return '<option value="'+c.id+'"'+(cfg.channelId===c.id?' selected':'')+'>#'+esc(c.name)+'</option>';}).join('')+'</select></div>';
+            html += '<div class="stg"><label>Plain Text Content (optional)</label><textarea id="grMsg_'+type+'_'+serverId+'" placeholder="Plain text message (supports placeholders like {user}, {server}, etc.)" rows="3" style="width:100%;font-family:inherit;">'+esc(cfg.content||'')+'</textarea></div>';
+            html += '<div class="stg"><label>Embed Title</label><input type="text" id="grT_'+type+'_'+serverId+'" value="'+esc(cfg.embedTitle||'')+'" placeholder="e.g. 👋 Welcome!" oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
+            html += '<div class="stg"><label>Embed Description</label><textarea id="grD_'+type+'_'+serverId+'" placeholder="Embed description (supports placeholders like {user}, {server}, {membercount}, etc.)" rows="4" style="width:100%;font-family:inherit;">'+esc(cfg.embedDescription||'')+'</textarea></div>';
+            html += '<div class="stg"><label>Embed Color</label><div class="stg-inl"><input type="color" id="grCoT_'+type+'_'+serverId+'" value="'+cfg.embedColor+'" style="flex:0 0 60px;height:36px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"><span style="font-size:12px;color:var(--text-dim);font-family:monospace;">'+cfg.embedColor+'</span></div></div>';
+            html += '<div class="stg"><label>Embed Footer</label><input type="text" id="grF_'+type+'_'+serverId+'" value="'+esc(cfg.embedFooter||'')+'" placeholder="e.g. Member #{membercount}" oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
+            html += '<div class="stg"><label>Footer Icon URL</label><input type="url" id="grFI_'+type+'_'+serverId+'" value="'+esc(cfg.embedFooterIcon||'')+'" placeholder="https://..." oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
+            html += '<div class="stg"><label>Thumbnail URL</label><input type="url" id="grTh_'+type+'_'+serverId+'" value="'+esc(cfg.embedThumbnail||'')+'" placeholder="https://..." oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
+            html += '<div class="stg"><label>Image URL</label><input type="url" id="grIm_'+type+'_'+serverId+'" value="'+esc(cfg.embedImage||'')+'" placeholder="https://..." oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
+            html += '<div class="stg"><label>Author Name</label><input type="text" id="grA_'+type+'_'+serverId+'" value="'+esc(cfg.embedAuthor||'')+'" placeholder="e.g. Welcome Bot" oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
+            html += '<div class="stg"><label>Author Icon URL</label><input type="url" id="grAI_'+type+'_'+serverId+'" value="'+esc(cfg.embedAuthorIcon||'')+'" placeholder="https://..." oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
+            html += '<div class="stg-inl" style="margin-top:16px;"><button class="btn" onclick="saveGreetingConfig(\''+serverId+'\',\''+type+'\')">Save '+type.charAt(0).toUpperCase()+type.slice(1)+' Config</button><button class="btn btn-s" onclick="resetGreetingConfig(\''+serverId+'\',\''+type+'\')">Reset to Defaults</button></div>';
+            html += '</div>';
+
+            // Right panel - Live Preview
+            html += '<div style="background:var(--surface-2);border-radius:12px;padding:16px;min-height:400px;">';
+            html += '<h4 style="margin:0 0 12px;color:'+typeColor+';">Live Preview</h4>';
+            html += '<div id="pv_'+type+'_'+serverId+'" style="min-height:350px;"></div>';
+            html += '</div>';
+            html += '</div></div>';
+            return html;
+        }
+
+        var welcomeHtml = renderEditor('welcome', welcome, channels);
+        var goodbyeHtml = renderEditor('goodbye', goodbye, channels);
+
+        cont.innerHTML = '<div style="display:flex;flex-direction:column;gap:24px;">'+
+            welcomeHtml +
+            goodbyeHtml +
+            '<div class="card"><h3>📝 Available Placeholders</h3><div style="display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:12px;color:var(--text-dim);padding:12px;">'+
+                '<div style="grid-column:1/-1;font-weight:700;color:var(--accent);margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">👤 User</div>'+
+                '<code style="font-size:12px;">{user}</code><span>@Mentions the user</span>'+
+                '<code style="font-size:12px;">{username}</code><span>Username#0000</span>'+
+                '<code style="font-size:12px;">{name}</code><span>Just the username (no discriminator)</span>'+
+                '<code style="font-size:12px;">{displayname}</code><span>Server nickname (or username)</span>'+
+                '<code style="font-size:12px;">{mention}</code><span>Same as {user} — @mention</span>'+
+                '<code style="font-size:12px;">{userid}</code><span>User\'s Discord ID</span>'+
+                '<code style="font-size:12px;">{discriminator}</code><span>#0000 discriminator</span>'+
+                '<code style="font-size:12px;">{avatar}</code><span>User\'s avatar URL</span>'+
+                '<code style="font-size:12px;">{created}</code><span>Account creation date (relative)</span>'+
+                '<code style="font-size:12px;">{age}</code><span>How old the account is (e.g. 2y 3m)</span>'+
+                '<div style="grid-column:1/-1;font-weight:700;color:var(--accent);margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">🏠 Server</div>'+
+                '<code style="font-size:12px;">{server}</code><span>Server name</span>'+
+                '<code style="font-size:12px;">{serverid}</code><span>Server ID</span>'+
+                '<code style="font-size:12px;">{servericon}</code><span>Server icon URL</span>'+
+                '<code style="font-size:12px;">{owner}</code><span>@Mentions the server owner</span>'+
+                '<code style="font-size:12px;">{ownerid}</code><span>Server owner\'s ID</span>'+
+                '<code style="font-size:12px;">{membercount}</code><span>Total members (bots + humans)</span>'+
+                '<code style="font-size:12px;">{members}</code><span>Same as {membercount}</span>'+
+                '<code style="font-size:12px;">{humancount}</code><span>Human members only</span>'+
+                '<code style="font-size:12px;">{botcount}</code><span>Bots only</span>'+
+                '<code style="font-size:12px;">{channelcount}</code><span>Total channels</span>'+
+                '<code style="font-size:12px;">{textchannelcount}</code><span>Text channels only</span>'+
+                '<code style="font-size:12px;">{voicechannelcount}</code><span>Voice channels only</span>'+
+                '<code style="font-size:12px;">{rolecount}</code><span>Total roles</span>'+
+                '<code style="font-size:12px;">{boosts}</code><span>Server boost count</span>'+
+                '<code style="font-size:12px;">{boosttier}</code><span>Boost tier (0-3)</span>'+
+                '<div style="grid-column:1/-1;font-weight:700;color:var(--accent);margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">📅 Date / Time</div>'+
+                '<code style="font-size:12px;">{date}</code><span>Today\'s date (e.g. 7/21/2026)</span>'+
+                '<code style="font-size:12px;">{time}</code><span>Current time (e.g. 3:45 PM)</span>'+
+                '<code style="font-size:12px;">{year}</code><span>Current year (e.g. 2026)</span>'+
+                '<div style="grid-column:1/-1;font-weight:700;color:#3ba55c;margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">👋 Welcome-only</div>'+
+                '<code style="font-size:12px;">{joined}</code><span>When they joined (relative time)</span>'+
+                '<code style="font-size:12px;">{created_relative}</code><span>Account creation (relative)</span>'+
+                '<div style="grid-column:1/-1;font-weight:700;color:#ed4245;margin-top:12px;padding-bottom:6px;border-bottom:1px solid var(--border);font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">👋 Goodbye-only</div>'+
+                '<code style="font-size:12px;">{joined}</code><span>When they originally joined</span>'+
+                '<code style="font-size:12px;">{duration}</code><span>How long they were in the server</span>'+
+                '<code style="font-size:12px;">{left}</code><span>When they left (relative time)</span>'+
+            '</div></div>';
+
+    } catch (e) {
+        cont.innerHTML = '<div class="empty"><p>Failed to load greetings editor</p></div>';
+    }
+    updateRefreshTimestamp('greetings-editor');
+}
+
+// ═══ RATE LIMITS ═══

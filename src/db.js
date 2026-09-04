@@ -136,6 +136,7 @@ function initSchema() {
             created_at INTEGER NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_temp_vc_channels_guild ON temp_vc_channels(guild_id);
+        CREATE INDEX IF NOT EXISTS idx_temp_vc_channels_owner ON temp_vc_channels(owner_id);
 
         CREATE TABLE IF NOT EXISTS temp_vc_panels (
             guild_id TEXT NOT NULL,
@@ -172,6 +173,26 @@ function initSchema() {
             access_token TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS api_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            token_hash TEXT NOT NULL,
+            scopes TEXT NOT NULL DEFAULT '[]',
+            created_at INTEGER NOT NULL,
+            last_used_at INTEGER,
+            expires_at INTEGER,
+            UNIQUE(token_hash)
+        );
+
+        CREATE TABLE IF NOT EXISTS bot_activity (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL,
+            data TEXT,
+            timestamp INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_bot_activity_time ON bot_activity(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_bot_activity_type ON bot_activity(type);
+
         CREATE TABLE IF NOT EXISTS poll_votes (
             message_id TEXT NOT NULL,
             user_id TEXT NOT NULL,
@@ -196,6 +217,7 @@ function initSchema() {
 
         CREATE INDEX IF NOT EXISTS idx_msg_log_guild ON message_log(guild_id, action);
         CREATE INDEX IF NOT EXISTS idx_msg_log_time ON message_log(guild_id, logged_at);
+        CREATE INDEX IF NOT EXISTS idx_msg_log_guild_action_time ON message_log(guild_id, action, logged_at);
 
         CREATE TABLE IF NOT EXISTS activity_counts (
             guild_id TEXT NOT NULL,
@@ -220,6 +242,8 @@ function initSchema() {
 
         CREATE INDEX IF NOT EXISTS idx_mod_cases_guild ON mod_cases(guild_id, case_number);
         CREATE INDEX IF NOT EXISTS idx_mod_cases_user ON mod_cases(guild_id, user_id);
+        CREATE INDEX IF NOT EXISTS idx_mod_cases_guild_type ON mod_cases(guild_id, action_type);
+        CREATE INDEX IF NOT EXISTS idx_mod_cases_guild_active ON mod_cases(guild_id, active);
 
         CREATE TABLE IF NOT EXISTS mod_case_counters (
             guild_id TEXT PRIMARY KEY,
@@ -280,6 +304,16 @@ function initSchema() {
 
         CREATE INDEX IF NOT EXISTS idx_cmd_usage_guild ON command_usage(guild_id, command);
         CREATE INDEX IF NOT EXISTS idx_cmd_usage_time ON command_usage(used_at);
+        CREATE INDEX IF NOT EXISTS idx_cmd_usage_guild_time ON command_usage(guild_id, command, used_at);
+
+        CREATE TABLE IF NOT EXISTS command_cooldowns (
+            guild_id TEXT NOT NULL,
+            command TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            PRIMARY KEY (guild_id, command, user_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_cmd_cooldowns_expires ON command_cooldowns(expires_at);
 
         CREATE INDEX IF NOT EXISTS idx_activity_guild ON activity_counts(guild_id, message_count DESC);
 
@@ -342,7 +376,10 @@ function initSchema() {
             reason TEXT NOT NULL,
             message TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending',
-            created_at INTEGER NOT NULL
+            created_at INTEGER NOT NULL,
+            reviewed_by TEXT,
+            reviewed_at INTEGER,
+            review_note TEXT
         );
 
         CREATE TABLE IF NOT EXISTS ticket_config (
@@ -401,11 +438,13 @@ function initSchema() {
             closed_by_tag TEXT,
             closed_at INTEGER,
             claimer_id TEXT,
-            closed_reason TEXT
+            closed_reason TEXT,
+            last_activity_at INTEGER
         );
 
         CREATE INDEX IF NOT EXISTS idx_tickets_guild ON tickets(guild_id, status);
         CREATE INDEX IF NOT EXISTS idx_tickets_creator ON tickets(creator_id);
+        CREATE INDEX IF NOT EXISTS idx_tickets_inactivity ON tickets(guild_id, status, last_activity_at);
 
         CREATE TABLE IF NOT EXISTS ticket_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -558,6 +597,17 @@ function initSchema() {
         db.exec('ALTER TABLE ticket_panels ADD COLUMN ticket_counter INTEGER');
     } catch {}
 
+    // Add review columns to ban_appeals if not exists (approve/deny audit trail)
+    try {
+        db.exec('ALTER TABLE ban_appeals ADD COLUMN reviewed_by TEXT');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE ban_appeals ADD COLUMN reviewed_at INTEGER');
+    } catch {}
+    try {
+        db.exec('ALTER TABLE ban_appeals ADD COLUMN review_note TEXT');
+    } catch {}
+
     // Error log for the dashboard Errors section
     db.exec(`CREATE TABLE IF NOT EXISTS error_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -570,6 +620,22 @@ function initSchema() {
     )`);
     db.exec('CREATE INDEX IF NOT EXISTS idx_error_logs_time ON error_logs(timestamp DESC)');
     db.exec('CREATE INDEX IF NOT EXISTS idx_error_logs_tag ON error_logs(tag)');
+
+    // Audit trail for dashboard changes
+    db.exec(`CREATE TABLE IF NOT EXISTS audit_trail (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        user_tag TEXT,
+        guild_id TEXT,
+        action TEXT NOT NULL,
+        details TEXT,
+        created_at INTEGER NOT NULL
+    )`);
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_trail_time ON audit_trail(created_at DESC)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_trail_type ON audit_trail(type)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_trail_user ON audit_trail(user_id)');
+    db.exec('CREATE INDEX IF NOT EXISTS idx_audit_trail_guild ON audit_trail(guild_id)');
 }
 
 // ──────────────────── Migration from JSON Files ────────────────────
@@ -894,21 +960,88 @@ function backupDatabase() {
         for (const old of listBackups().slice(MAX_BACKUPS)) {
             try { fs.unlinkSync(path.join(BACKUP_DIR, old.name)); } catch {}
         }
-        return { name, size: fs.statSync(dest).size, createdAt: Date.now() };
+        const backup = { name, size: fs.statSync(dest).size, createdAt: Date.now() };
+        
+        // Verify backup integrity asynchronously
+        setImmediate(() => verifyBackup(dest).catch(err => {
+            logError(err, 'db', 'backup_verification');
+        }));
+        
+        return backup;
     } catch (err) {
         console.error('[DB] Backup failed:', err.message);
         return null;
     }
 }
 
-function deleteBackup(name) {
-    if (typeof name !== 'string' || !BACKUP_NAME_RE.test(name)) return false;
-    try {
-        fs.unlinkSync(path.join(BACKUP_DIR, name));
-        return true;
-    } catch {
-        return false;
+// Verify backup integrity by opening it and running integrity_check
+function verifyBackup(backupPath) {
+    return new Promise((resolve, reject) => {
+        const Database = require('better-sqlite3');
+        let verifyDb;
+        try {
+            if (!fs.existsSync(backupPath)) {
+                return resolve({ verified: false, path: backupPath, reason: 'file not found' });
+            }
+            verifyDb = new Database(backupPath, { readonly: true });
+            // Quick integrity check
+            const result = verifyDb.pragma('quick_check');
+            if (result !== 'ok') {
+                throw new Error(`Backup integrity check failed: ${result}`);
+            }
+            // Verify key tables exist
+            const tables = verifyDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('guild_config', 'mod_cases', 'tickets', 'command_usage')").all();
+            const expectedTables = ['guild_config', 'mod_cases', 'tickets', 'command_usage'];
+            const foundTables = tables.map(t => t.name);
+            for (const expected of expectedTables) {
+                if (!foundTables.includes(expected)) {
+                    throw new Error(`Missing critical table in backup: ${expected}`);
+                }
+            }
+            verifyDb.close();
+            console.log('[DB] Backup verified: ' + path.basename(backupPath));
+            resolve({ verified: true, path: backupPath });
+        } catch (err) {
+            if (verifyDb) verifyDb.close();
+            console.error('[DB] Backup verification failed:', err.message);
+            reject(err);
+        }
+    });
+}
+
+// Scheduled backup verification (runs daily, verifies last 3 backups)
+function scheduleBackupVerification() {
+    setTimeout(() => {
+        runBackupVerification().catch(err => logError(err, 'db', 'scheduled_verification'));
+    }, 60 * 60 * 1000); // 1 hour after startup
+    
+    setInterval(() => {
+        runBackupVerification().catch(err => logError(err, 'db', 'scheduled_verification'));
+    }, 24 * 60 * 60 * 1000); // Daily
+}
+
+async function runBackupVerification() {
+    const backups = listBackups().slice(0, 3); // Verify newest 3
+    for (const backup of backups) {
+        const fullPath = path.join(BACKUP_DIR, backup.name);
+        if (fs.existsSync(fullPath)) {
+            try {
+                await verifyBackup(fullPath);
+            } catch (err) {
+                logError(err, 'db', 'backup_verification');
+            }
+        }
     }
 }
 
-module.exports = { getDb, initDb, closeDb, migrateFromJson, recordErrorLog, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup };
+module.exports = { getDb, initDb, closeDb, migrateFromJson, recordErrorLog, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup, verifyBackup, scheduleBackupVerification, recordAuditTrail };
+
+function recordAuditTrail({ type, userId, userTag, guildId, action, details }) {
+    try {
+        const db = getDb();
+        db.prepare('INSERT INTO audit_trail (type, user_id, user_tag, guild_id, action, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            .run(type, userId, userTag || null, guildId || null, action, details ? JSON.stringify(details) : null, Date.now());
+    } catch (err) {
+        console.error('[DB] Audit trail record failed:', err.message);
+    }
+}

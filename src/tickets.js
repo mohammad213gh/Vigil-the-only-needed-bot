@@ -519,11 +519,33 @@ async function handleQuestionsSubmit(interaction) {
 
 // ──────────────────── Close / Claim / Add/Remove (unchanged logic) ────────────────────
 
+// Ticket visibility is not ticket-management authority. A user must have a
+// configured support role, Manage Channels/Administrator, or own the server.
+async function isTicketStaff(guild, ticket, actor) {
+    if (!guild || !ticket || !actor?.id) return false;
+
+    let member = actor.roles?.cache ? actor : guild.members?.cache?.get(actor.id);
+    if (!member && guild.members?.fetch) {
+        member = await guild.members.fetch(actor.id).catch(() => null);
+    }
+    if (!member) return false;
+
+    if (member.id === guild.ownerId) return true;
+    if (member.permissions?.has(PermissionFlagsBits.Administrator) || member.permissions?.has(PermissionFlagsBits.ManageChannels)) return true;
+
+    const type = ticket.panel_type_id ? getPanelType(ticket.panel_type_id) : null;
+    const supportRoleIds = parseSupportRoles(type?.support_roles);
+    return supportRoleIds.some(roleId => member.roles?.cache?.has(roleId));
+}
+
 async function closeTicket(guild, channel, closer, reason) {
     const db = getDb();
     const ticket = db.prepare('SELECT * FROM tickets WHERE channel_id = ? AND guild_id = ? AND status IN (?, ?)')
         .get(channel.id, guild.id, 'open', 'claimed');
     if (!ticket) return { error: 'No open ticket found for this channel.' };
+    if (closer.id !== ticket.creator_id && !(await isTicketStaff(guild, ticket, closer))) {
+        return { error: 'Only the ticket creator or support staff can close this ticket.' };
+    }
     return closeTicketById(guild, channel, closer, reason, ticket);
 }
 
@@ -589,6 +611,9 @@ async function claimTicket(guild, channel, claimer) {
     const db = getDb();
     const ticket = db.prepare('SELECT * FROM tickets WHERE channel_id = ? AND guild_id = ? AND status = ?').get(channel.id, guild.id, 'open');
     if (!ticket) return { error: 'No open ticket found for this channel.' };
+    if (!(await isTicketStaff(guild, ticket, claimer))) {
+        return { error: 'Only support staff can claim tickets.' };
+    }
 
     db.prepare('UPDATE tickets SET status = ?, claimer_id = ? WHERE id = ?').run('claimed', claimer.id, ticket.id);
 
@@ -630,6 +655,9 @@ async function addUserToTicket(guild, channel, adder, targetUser) {
     const db = getDb();
     const ticket = db.prepare('SELECT * FROM tickets WHERE channel_id = ? AND guild_id = ?').get(channel.id, guild.id);
     if (!ticket) return { error: 'No ticket found for this channel.' };
+    if (!(await isTicketStaff(guild, ticket, adder))) {
+        return { error: 'Only support staff can add users to a ticket.' };
+    }
     try {
         await channel.permissionOverwrites.create(targetUser, {
             ViewChannel: true, SendMessages: true, ReadMessageHistory: true, AttachFiles: true, AddReactions: true,
@@ -854,6 +882,12 @@ async function transferTicket(guild, channel, transferer, targetMember) {
     const db = getDb();
     const ticket = db.prepare('SELECT * FROM tickets WHERE channel_id = ? AND guild_id = ? AND status = ?').get(channel.id, guild.id, 'claimed');
     if (!ticket) return { error: 'No claimed ticket found for this channel.' };
+    if (!(await isTicketStaff(guild, ticket, transferer))) {
+        return { error: 'Only support staff can transfer tickets.' };
+    }
+    if (!(await isTicketStaff(guild, ticket, targetMember))) {
+        return { error: 'Tickets can only be transferred to support staff.' };
+    }
 
     const previousClaimer = ticket.claimer_id;
     db.prepare('UPDATE tickets SET claimer_id = ? WHERE id = ?').run(targetMember.id, ticket.id);
@@ -1050,7 +1084,7 @@ module.exports = {
     getPanelTicketCounter, setPanelTicketCounter,
     parseQuestions, parseSupportRoles,
     // Ticket actions
-    createTicket, closeTicket, claimTicket,
+    createTicket, closeTicket, claimTicket, isTicketStaff,
     addUserToTicket, removeUserFromTicket, renameTicket,
     closeTicketById,
     // Panel flow
