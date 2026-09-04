@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { getThresholds, addThreshold, removeThreshold, DEFAULT_ACTIONS } = require('../warningThresholds');
+const { getThresholds, addThreshold, removeThreshold } = require('../warningThresholds');
 
 async function executeThresholds(interaction) {
     const sub = interaction.options.getSubcommand();
@@ -10,8 +10,7 @@ async function executeThresholds(interaction) {
         const action = interaction.options.getString('action');
         const duration = interaction.options.getInteger('duration');
 
-        const result = addThreshold(guild.id, warnCount, action, duration);
-        const match = result.find(t => t.warnCount === warnCount);
+        addThreshold(guild.id, warnCount, action, duration);
 
         const embed = new EmbedBuilder()
             .setColor('Green')

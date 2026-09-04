@@ -28,7 +28,7 @@ export default [
             'no-constant-condition': ['warn', { checkLoops: false }],
 
             // ── Cleanliness (advisory only) ──
-            'no-unused-vars': ['warn', { varsIgnorePattern: '^_', caughtErrors: 'none' }],
+            'no-unused-vars': ['warn', { varsIgnorePattern: '^_', argsIgnorePattern: '^_', args: 'after-used', caughtErrors: 'none' }],
             'prefer-const': 'warn',
             'no-var': 'warn',
             eqeqeq: 'warn',

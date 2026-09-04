@@ -50,7 +50,7 @@ function removeThreshold(guildId, warnCount) {
 
 // ──────────────────── Auto-Punish Check ────────────────────
 
-async function checkThresholds(guild, userId, interaction) {
+async function checkThresholds(guild, userId, _interaction) {
     const thresholds = getThresholds(guild.id);
     if (thresholds.length === 0) return null;
 

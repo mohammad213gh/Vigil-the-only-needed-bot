@@ -1,18 +1,17 @@
 // ──────────────────── Ticket Command Handlers v2 ────────────────────
 // Panel CRUD, type management, question editing
 
-const { EmbedBuilder, PermissionFlagsBits, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
+const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const {
     getTicketConfig, updateTicketConfig,
-    getPanels, getPanel, createPanel, updatePanel, deletePanel,
-    getPanelTypes, getPanelType, createPanelType, updatePanelType, deletePanelType,
+    getPanels, createPanel, deletePanel,
+    getPanelTypes, createPanelType, updatePanelType, deletePanelType,
     parseQuestions, parseSupportRoles,
     closeTicket, claimTicket, addUserToTicket, removeUserFromTicket, renameTicket,
-    sendTicketPanel, createTicket,
+    sendTicketPanel,
     // Feature 2 & 3
     getBlacklist, addBlacklist, removeBlacklist,
 } = require('../tickets');
-const { logError } = require('../logError');
 const { getDb } = require('../db');
 
 async function executeTicket(interaction) {
@@ -424,9 +423,6 @@ async function handleTypeInactivity(interaction) {
 
     if (!panelType) return interaction.reply({ content: '❌ Please specify a type name.', ephemeral: true });
 
-    // Find the type by name
-    const types = getPanelTypes('__all__'); // We need to search differently
-    // Actually, let's search all panels for this type name
     const panels = getPanels(interaction.guild.id);
     let foundType = null;
     for (const p of panels) {

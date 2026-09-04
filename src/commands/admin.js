@@ -6,7 +6,6 @@ const { deployCommands } = require('../deploy');
 async function executeRole(interaction) {
     const sub = interaction.options.getSubcommand();
     const guild = interaction.guild;
-    const client = interaction.client;
 
     if (sub === 'add') {
         const target = interaction.options.getUser('user');

@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { RULE_TYPES, ACTIONS, getAutoModRules, updateAutoModRule, getAutoModFilters, addAutoModFilter, removeAutoModFilter } = require('../automod');
+const { RULE_TYPES, getAutoModRules, updateAutoModRule, getAutoModFilters, addAutoModFilter, removeAutoModFilter } = require('../automod');
 
 async function executeAutoMod(interaction) {
     const sub = interaction.options.getSubcommand();
@@ -28,7 +28,6 @@ async function executeAutoMod(interaction) {
 
         updateAutoModRule(guild.id, rule, updated);
 
-        const status = updated.enabled ? '✅ Enabled' : '❌ Disabled';
         const embed = new EmbedBuilder()
             .setColor(updated.enabled ? 'Green' : 'Red')
             .setTitle('🤖 Auto-Mod: ' + rule)

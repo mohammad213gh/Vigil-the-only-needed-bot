@@ -1,4 +1,3 @@
-const { EmbedBuilder } = require('discord.js');
 const { addReminder, removeReminder, getUserReminders } = require('../reminders');
 const { formatDuration, parseDuration } = require('../helpers');
 const { makeEmbed } = require('../embeds');

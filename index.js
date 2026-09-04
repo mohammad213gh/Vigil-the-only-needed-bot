@@ -12,7 +12,7 @@ const { logError } = require('./src/logError');
 const { deployCommands } = require('./src/deploy');
 const { setLoggerClient, sendLog } = require('./src/logging');
 const { findReactionRole } = require('./src/reactionRoles');
-const { setInviteClient, cacheAllInvites, handleInviteCreate, handleInviteDelete } = require('./src/invites');
+const { setInviteClient, handleInviteCreate, handleInviteDelete } = require('./src/invites');
 const { setTicketClient, startInactivityCheck, stopInactivityCheck } = require('./src/tickets');
 const { setGiveawayClient, startGiveawayCheck, stopGiveawayCheck } = require('./src/giveaways');
 const { startServerStats, stopServerStats, refreshGuildStats } = require('./src/serverStats');
@@ -163,7 +163,6 @@ const COOLDOWN_OVERRIDES = {
 
 // In-memory cache for hot cooldowns (falls back to DB)
 const cooldownCache = new Map();
-const COOLDOWN_CACHE_TTL = 5000; // 5 seconds
 
 async function checkCooldown(interaction) {
     const cmd = interaction.commandName;

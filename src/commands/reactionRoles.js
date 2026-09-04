@@ -1,5 +1,5 @@
 const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const { getReactionRoles, addReactionRole, removeReactionRole, removeAllForMessage } = require('../reactionRoles');
+const { getReactionRoles, addReactionRole, removeAllForMessage } = require('../reactionRoles');
 // Normalize emoji string: convert Discord's <:name:id> or <a:name:id> to name:id
 function normalizeEmoji(str) {
     const m = str.match(/<a?:(\w+):(\d+)>/);

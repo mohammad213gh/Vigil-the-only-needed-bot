@@ -4,8 +4,8 @@ const os = require('os');
 const fs = require('fs');
 const crypto = require('crypto');
 const { formatUptime, formatNumber, sanitizeForEmbed, sanitizeForDB, sanitizeName } = require('./helpers');
-const { getBotConfig, getGuildConfig, updateGuildConfig, getWelcomeConfig, getGoodbyeConfig, updateWelcomeConfig } = require('./config');
-const { getDb, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup, recordAuditTrail } = require('./db');
+const { getGuildConfig, updateGuildConfig, getWelcomeConfig, getGoodbyeConfig, updateWelcomeConfig } = require('./config');
+const { getDb, getErrorLogs, getErrorTagCounts, clearErrorLogs, backupDatabase, listBackups, deleteBackup } = require('./db');
 const { getDataDir } = require('./data');
 const { getGuildStats } = require('./stats');
 const { getWarnings } = require('./warnings');
@@ -14,13 +14,13 @@ const { getCases } = require('./modCases');
 const { getInviterStats } = require('./invites');
 const { getReactionRoles, addReactionRole, removeReactionRole } = require('./reactionRoles');
 const { createRoleMenu, getRoleMenus, removeRoleMenu, addRoleMenuOption, getRoleMenuOptions, removeRoleMenuOption } = require('./roleMenus');
-const { getPresence, savePresence, clearPresence, joinChannel, moveChannel, leaveChannel, setStatusText, restoreAllPresences } = require('./voicePresence');
-const { getConfig: getTempVoiceConfig, setConfig: setTempVoiceConfig, getTriggers, getTriggerForChannel, setTrigger, removeTrigger, getSpawned, getSpawnedChannel, getSpawnedByOwner, addSpawned, removeSpawned, registerPanel, getPanels, unregisterPanel, updatePanels, spawnChannel, cancelDeletion, scheduleDeletionIfEmpty, getMemberChannelFor, setChannelLocked, createForMember, deleteOwnedChannel, buildPanelMessage, buildPanelComponents, cleanupOrphans, DEFAULT_TEMPLATE } = require('./tempVoice');
-const { getThresholds, setThresholds, addThreshold, removeThreshold, DEFAULT_ACTIONS } = require('./warningThresholds');
-const { createBanAppeal, getBanAppeal, getBanAppeals, updateBanAppealStatus, deleteBanAppeal, getBanAppealCount } = require('./banAppeals');
+const { getPresence, joinChannel, moveChannel, leaveChannel, setStatusText, restoreAllPresences } = require('./voicePresence');
+const { getConfig: getTempVoiceConfig, setConfig: setTempVoiceConfig, getTriggers, setTrigger, removeTrigger, getSpawned, registerPanel, unregisterPanel, updatePanels, cleanupOrphans, DEFAULT_TEMPLATE } = require('./tempVoice');
+const { getThresholds, addThreshold, removeThreshold, DEFAULT_ACTIONS } = require('./warningThresholds');
+const { createBanAppeal, getBanAppeals, updateBanAppealStatus, deleteBanAppeal, getBanAppealCount } = require('./banAppeals');
 const { getAllPermissions } = require('./permissions');
 const { LOG_CATEGORIES, WS_STATUS } = require('./constants');
-const { logError, logInfo, logWarn } = require('./logError');
+const { logError, logInfo } = require('./logError');
 const { discordApiBreaker } = require('./helpers');
 const multer = require('multer');
 const { EmbedBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder } = require('discord.js');
@@ -780,7 +780,7 @@ function createDashboard() {
     });
 
     // ── Mod Actions API ──
-    function checkOwner(req, res) {
+    function checkOwner(req, _res) {
         // For password-authenticated sessions, allow mod actions
         // For Discord-authenticated sessions, check if the user is the bot owner
         const token = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
@@ -1364,7 +1364,7 @@ function createDashboard() {
             const channel = guild.channels.cache.get(channelId);
             if (!channel || channel.type !== 2) return res.status(400).json({ error: 'Invalid voice channel' });
             if (!guild.members.me) return res.status(503).json({ error: 'Bot member not loaded' });
-            const result = await joinChannel(guild, channel, status || null);
+            await joinChannel(guild, channel, status || null);
             res.json({ success: true, presence: getPresence(guild.id) });
         } catch (err) {
             logError(err, 'dashboard', 'voice_presence_join');
@@ -1673,7 +1673,7 @@ function createDashboard() {
         if (!client) return res.status(503).json({ error: 'Bot not ready' });
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
-        const { getGuildInviteStats, getTopInviters } = require('./invites');
+        const { getTopInviters } = require('./invites');
         const top = getTopInviters(guild.id, 10);
         res.json(top.map(r => ({
             inviterId: r.inviter_id,
@@ -2267,7 +2267,7 @@ function createDashboard() {
     // ── Auto-Mod API ──
     const {
         RULE_TYPES: AM_RULES,
-        ACTIONS: AM_ACTIONS,
+
         getAutoModRules,
         updateAutoModRule,
         getAutoModFilters,
@@ -2439,8 +2439,8 @@ function createDashboard() {
     // ── Ticket System API ──
     const {
         getTicketConfig, updateTicketConfig,
-        getPanels, getPanel, createPanel, updatePanel, deletePanel,
-        getPanelTypes, getPanelType, createPanelType, updatePanelType, deletePanelType,
+        getPanels, createPanel, updatePanel, deletePanel,
+        getPanelTypes, createPanelType, updatePanelType, deletePanelType,
         sendTicketPanel,
     } = require('./tickets');
 
@@ -2685,7 +2685,7 @@ function createDashboard() {
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         try {
-            const { clonePanel, getPanel, getPanelTypes } = require('./tickets');
+            const { clonePanel, getPanelTypes } = require('./tickets');
             const newPanel = clonePanel(req.params.panelId);
             if (!newPanel) return res.status(404).json({ error: 'Panel not found' });
             const types = getPanelTypes(newPanel.id);
@@ -2717,7 +2717,7 @@ function createDashboard() {
         const guild = client.guilds.cache.get(req.params.id);
         if (!guild) return res.status(404).json({ error: 'Server not found' });
         try {
-            const { updatePanel, getPanel } = require('./tickets');
+            const { updatePanel } = require('./tickets');
             const allowed = ['name', 'color', 'description', 'image_url'];
             const updates = {};
             for (const key of allowed) {
@@ -2772,7 +2772,6 @@ function createDashboard() {
         const type = req.query.type || 'all';
 
         const entries = [];
-        const now = Date.now();
 
         // 1. Discord's native audit log
         if (type === 'all' || type === 'discord') {
@@ -3322,7 +3321,7 @@ function createDashboard() {
     // ── Centralized Error Middleware ──
     // Catches any error thrown by the routes above so the API always returns a
     // clean JSON envelope instead of a stack-trace HTML page or a hung request.
-    app.use((err, req, res, next) => {
+    app.use((err, req, res, _next) => {
         // Malformed JSON body (e.g. truncated fetch) — client error, not a 500.
         // body-parser sets type='entity.parse.failed' specifically for this case.
         if (err && err.type === 'entity.parse.failed') {

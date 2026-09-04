@@ -1,4 +1,3 @@
-const { EmbedBuilder } = require('discord.js');
 const { getFlag, randomItem, randomInt, reverseText, mockText } = require('../helpers');
 const { makeEmbed } = require('../embeds');
 const {

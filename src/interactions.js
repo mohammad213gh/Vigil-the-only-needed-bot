@@ -4,7 +4,7 @@
 
 const { EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, PermissionFlagsBits } = require('discord.js');
 const { addWarning } = require('./warnings');
-const { createCase, closeCase } = require('./modCases');
+const { createCase } = require('./modCases');
 const { getDb } = require('./db');
 const { getLeadingOption, isOwner } = require('./helpers');
 const { logError } = require('./logError');
@@ -171,7 +171,6 @@ async function handleConfirmKick(interaction, parts) {
 
 async function handleConfirmTempBan(interaction, parts) {
     // ctb_{initiatorId}_{targetId}_{duration}_{deleteSeconds}
-    const initiatorId = parts[1];
     const targetId = parts[2];
     const duration = parts[3] || '7d';
     const deleteSeconds = parseInt(parts[4]) || 0;
@@ -618,7 +617,6 @@ async function handlePollVoters(interaction) {
 // ──────────────────── Select Menu Handler ────────────────────
 
 const { handleRoleMenuSelect } = require('./commands/roleMenu');
-const { getPanel, getPanelTypes } = require('./tickets');
 
 async function handleSelectMenu(interaction) {
     const parts = interaction.customId.split('_');
@@ -632,9 +630,8 @@ async function handleSelectMenu(interaction) {
     await interaction.reply({ content: 'Select menu received.', ephemeral: true });
 }
 
-async function handleTicketTypeSelect(interaction, parts) {
+async function handleTicketTypeSelect(interaction, _parts) {
     // tk_select_{panelId}
-    const panelId = parts.slice(2).join('_');
     const typeId = interaction.values[0];
 
     const guild = interaction.guild;
@@ -654,7 +651,6 @@ async function handleTicketTypeSelect(interaction, parts) {
     }
 
     // Check for existing open ticket (auto-closes stale tickets whose channel was deleted)
-    const db = getDb();
     const existing = require('./tickets').getBlockingOpenTicket(guild, interaction.user.id);
     if (existing) {
         return interaction.reply({ content: '❌ You already have an open ticket! <#' + existing.channel_id + '>', ephemeral: true });
@@ -716,7 +712,7 @@ async function handleTicketRating(interaction, parts) {
 
 // ──────────────────── Rating Skip Handler (Feature 1) ────────────────────
 
-async function handleTicketRateSkip(interaction, parts) {
+async function handleTicketRateSkip(interaction, _parts) {
     // tk_rateskip_{ticketId} — dismiss the rating prompt and disable the buttons
     try {
         const disabledComponents = interaction.message.components.map(row =>
@@ -823,9 +819,8 @@ async function handleTicketTransfer(interaction, parts) {
     await interaction.showModal(modal);
 }
 
-async function handleTransferModal(interaction, parts) {
+async function handleTransferModal(interaction, _parts) {
     // tk_transfer_modal_{ticketId}
-    const ticketId = parts.slice(3).join('_');
     const targetId = interaction.fields.getTextInputValue('tk_transfer_user').trim();
 
     if (!targetId) {
@@ -872,9 +867,8 @@ async function handleTicketAddUser(interaction, parts) {
     await interaction.showModal(modal);
 }
 
-async function handleAddUserModal(interaction, parts) {
+async function handleAddUserModal(interaction, _parts) {
     // tk_adduser_modal_{ticketId}
-    const ticketId = parts.slice(3).join('_');
     const targetId = interaction.fields.getTextInputValue('tk_adduser_id').trim();
 
     if (!targetId) {
@@ -955,8 +949,7 @@ async function handleTicketCreate(interaction, parts) {
     await showTicketTypeModal(interaction, panel);
 }
 
-async function handleTicketClose(interaction, parts) {
-    const ticketId = parts.slice(2).join('_');
+async function handleTicketClose(interaction, _parts) {
     const guild = interaction.guild;
     const channel = interaction.channel;
 
@@ -975,8 +968,7 @@ async function handleTicketClose(interaction, parts) {
     }
 }
 
-async function handleTicketClaim(interaction, parts) {
-    const ticketId = parts.slice(2).join('_');
+async function handleTicketClaim(interaction, _parts) {
     const guild = interaction.guild;
     const channel = interaction.channel;
 

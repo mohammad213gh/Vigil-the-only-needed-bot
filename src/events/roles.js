@@ -108,7 +108,6 @@ module.exports = [
         execute: (deps) => async (role) => {
             if (!role.guild) return;
 
-            const permCount = role.permissions.toArray().length;
             const colorHex = role.hexColor === '#000000' ? 'None' : role.hexColor;
             // Fetch who created the role
             const executor = await deps.fetchAuditLogExecutor(role.guild, 30, role.id).catch(() => null);

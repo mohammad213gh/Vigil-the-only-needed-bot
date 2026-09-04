@@ -1,5 +1,5 @@
-const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const { getGuildConfig, getWelcomeConfig, getGoodbyeConfig, updateWelcomeConfig } = require('../config');
+const { EmbedBuilder } = require('discord.js');
+const { getWelcomeConfig, getGoodbyeConfig, updateWelcomeConfig } = require('../config');
 const { replacePlaceholders } = require('../helpers');
 
 // ─── Shared helpers ───
@@ -55,7 +55,7 @@ function buildGreetingEmbed(cfg, member, type) {
 
 // ─── Build a config summary embed ───
 
-function buildConfigEmbed(cfg, type, guild) {
+function buildConfigEmbed(cfg, type, _guild) {
     const typeLabel = type === 'welcome' ? 'Welcome' : 'Goodbye';
     const lines = [
         '**Status:** ' + (cfg.enabled ? '✅ Enabled' : '❌ Disabled'),
@@ -250,11 +250,6 @@ async function handleGreeting(interaction, type) {
 
         // Use the bot itself as a proxy member for testing
         const testMember = guild.members.me;
-        const placeholderContext = {
-            user: interaction.user,
-            guild: guild,
-            memberCount: guild.memberCount,
-        };
 
         try {
             const messageContent = cfg.content ? replacePlaceholders(cfg.content, testMember, type) : '';

@@ -57,7 +57,7 @@ module.exports = [
     {
         name: 'messageCreate',
         once: false,
-        execute: (deps) => async (message) => {
+        execute: (_deps) => async (message) => {
             if (message.author?.bot) return;
             if (!message.guild) return;
 

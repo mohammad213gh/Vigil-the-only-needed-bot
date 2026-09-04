@@ -9,7 +9,6 @@ async function executeInvites(interaction) {
         const targetUser = interaction.options.getUser('user');
         const userId = targetUser ? targetUser.id : interaction.user.id;
         const stats = getInviterStats(guild.id, userId);
-        const isSelf = userId === interaction.user.id;
 
         const embed = new EmbedBuilder()
             .setColor(0x5865F2)

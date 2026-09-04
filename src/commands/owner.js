@@ -1,4 +1,3 @@
-const { EmbedBuilder } = require('discord.js');
 const { makeEmbed } = require('../embeds');
 const { logError } = require('../logError');
 

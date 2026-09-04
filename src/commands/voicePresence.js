@@ -4,7 +4,6 @@
 const { PermissionFlagsBits } = require('discord.js');
 const {
     isVoiceChannel,
-    getPresence,
     joinChannel,
     moveChannel,
     leaveChannel,

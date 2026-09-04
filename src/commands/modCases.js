@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { getCase, getCases, updateCaseReason, getUserCaseCount, getTotalCases } = require('../modCases');
+const { getCase, getCases, updateCaseReason, getUserCaseCount } = require('../modCases');
 
 // ──────────────────── /history <user> ────────────────────
 

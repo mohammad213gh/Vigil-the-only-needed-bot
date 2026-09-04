@@ -1,5 +1,4 @@
 const { getDb } = require('./db');
-const { logError } = require('./logError');
 
 // ─── Ban Appeals Module ───
 

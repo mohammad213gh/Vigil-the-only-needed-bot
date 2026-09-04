@@ -3,10 +3,8 @@ const os = require('os');
 const { version: djsVersion } = require('discord.js');
 const { formatUptime, formatNumber, truncate } = require('../helpers');
 const { WS_STATUS } = require('../constants');
-const { getGuildConfig } = require('../config');
 const { getGuildStats } = require('../stats');
 const { getDb } = require('../db');
-const { CATEGORY_EMOJIS } = require('../constants');
 
 async function executePing(interaction) {
     const sent = await interaction.reply({ content: 'Pinging...', ephemeral: true, fetchReply: true });
@@ -23,29 +21,10 @@ async function executePing(interaction) {
 async function executeStatus(interaction) {
     const client = interaction.client;
     const guild = interaction.guild;
-    const guildConfig = getGuildConfig(guild.id);
     const mem = process.memoryUsage();
     const uptime = formatUptime(client.uptime);
     const guildCount = client.guilds.cache.size;
     const userCount = client.guilds.cache.reduce((a, g) => a + g.memberCount, 0);
-
-    let configInfo = 'No log channel set';
-    if (guildConfig.logChannelId) {
-        configInfo = 'Default log: <#' + guildConfig.logChannelId + '>';
-    }
-    const hasPerChannel = Object.values(guildConfig.logChannels).some(v => v);
-    if (hasPerChannel) {
-        const lines = Object.entries(guildConfig.logChannels)
-            .filter(([, v]) => v)
-            .map(([k, v]) => (CATEGORY_EMOJIS[k] || '\uD83D\uDD35') + ' ' + k + ': <#' + v + '>');
-        configInfo = lines.join('\n');
-    }
-    const enabled = Object.entries(guildConfig.logCategories)
-        .filter(([, v]) => v).map(([k]) => k).join(', ');
-    if (enabled) configInfo += '\n\u2705 Enabled: ' + enabled;
-    if (guildConfig.trackedChannels.length > 0) {
-        configInfo += '\n\uD83D\uDCE1 Tracking: ' + guildConfig.trackedChannels.length + ' channel(s)';
-    }
 
     const embed = new EmbedBuilder()
         .setColor(0x5865F2)

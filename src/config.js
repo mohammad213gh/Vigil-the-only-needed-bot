@@ -94,7 +94,6 @@ function getGuildConfig(guildId) {
         const g = parseGuildRow(row);
         // Auto-migrate missing fields
         let migrated = false;
-        const defaults = createDefaultConfig();
         for (const cat of LOG_CATEGORIES) {
             if (g.logCategories[cat] === undefined) {
                 g.logCategories[cat] = true;

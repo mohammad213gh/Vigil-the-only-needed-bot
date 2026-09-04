@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { grantPermission, revokePermission, getAllPermissions, getGrantedUsers } = require('../permissions');
+const { grantPermission, revokePermission, getAllPermissions } = require('../permissions');
 const { isOwner } = require('../helpers');
 
 async function executePerm(interaction) {
