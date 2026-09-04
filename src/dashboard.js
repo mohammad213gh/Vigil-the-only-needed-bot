@@ -12,17 +12,18 @@ const { getWarnings } = require('./warnings');
 const { getNotesForUser } = require('./staffNotes');
 const { getCases } = require('./modCases');
 const { getInviterStats } = require('./invites');
-const { getReactionRoles } = require('./reactionRoles');
+const { getReactionRoles, addReactionRole, removeReactionRole } = require('./reactionRoles');
 const { createRoleMenu, getRoleMenus, removeRoleMenu, addRoleMenuOption, getRoleMenuOptions, removeRoleMenuOption } = require('./roleMenus');
 const { getPresence, savePresence, clearPresence, joinChannel, moveChannel, leaveChannel, setStatusText, restoreAllPresences } = require('./voicePresence');
-const { getConfig: getTempVoiceConfig, setConfig: setTempVoiceConfig, getTriggers, getTriggerForChannel, setTrigger, removeTrigger, getSpawned, getSpawnedChannel, getSpawnedByOwner, addSpawned, removeSpawned, registerPanel, getPanels, unregisterPanel, updatePanels, spawnChannel, cancelDeletion, scheduleDeletionIfEmpty, getMemberChannelFor, setChannelLocked, createForMember, deleteOwnedChannel, buildPanelMessage, buildPanelComponents, cleanupOrphans } = require('./tempVoice');
-const { getThresholds, setThresholds, addThreshold, removeThreshold } = require('./warningThresholds');
+const { getConfig: getTempVoiceConfig, setConfig: setTempVoiceConfig, getTriggers, getTriggerForChannel, setTrigger, removeTrigger, getSpawned, getSpawnedChannel, getSpawnedByOwner, addSpawned, removeSpawned, registerPanel, getPanels, unregisterPanel, updatePanels, spawnChannel, cancelDeletion, scheduleDeletionIfEmpty, getMemberChannelFor, setChannelLocked, createForMember, deleteOwnedChannel, buildPanelMessage, buildPanelComponents, cleanupOrphans, DEFAULT_TEMPLATE } = require('./tempVoice');
+const { getThresholds, setThresholds, addThreshold, removeThreshold, DEFAULT_ACTIONS } = require('./warningThresholds');
 const { createBanAppeal, getBanAppeal, getBanAppeals, updateBanAppealStatus, deleteBanAppeal, getBanAppealCount } = require('./banAppeals');
 const { getAllPermissions } = require('./permissions');
 const { LOG_CATEGORIES, WS_STATUS } = require('./constants');
 const { logError, logInfo, logWarn } = require('./logError');
 const { discordApiBreaker } = require('./helpers');
 const multer = require('multer');
+const { EmbedBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ActionRowBuilder } = require('discord.js');
 
 // ──── Rate Limiter ────
 const loginAttempts = new Map();

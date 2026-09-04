@@ -2,9 +2,13 @@
   "name": "discord-log-bot",
   "version": "1.0.0",
   "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node index.js",
-    "test": "node --test \"test/*.test.js\""
+    "test": "node --test \"test/*.test.js\"",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@discordjs/voice": "^0.19.2",
@@ -16,5 +20,9 @@
   },
   "allowScripts": {
     "better-sqlite3@12.11.1": true
+  },
+  "devDependencies": {
+    "eslint": "^10.10.0",
+    "globals": "^17.12.0"
   }
 }

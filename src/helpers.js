@@ -1,5 +1,5 @@
 const { COUNTRY_FLAGS } = require('./constants');
-const { logError } = require('./logError');
+const { logError, logWarn } = require('./logError');
 const { escapeMarkdown } = require('discord.js');
 
 // ──────────────────── Input Sanitization ────────────────────

@@ -600,7 +600,7 @@ async function handlePollVoters(interaction) {
             lines.push('**' + name + '** (' + voters.length + ' vote' + (voters.length !== 1 ? 's' : '') + '):');
 
             const showVoters = voters.slice(0, 15);
-            const mentions = showVoters.map(uid => '<@' + uid + '>').join(', ');
+            let mentions = showVoters.map(uid => '<@' + uid + '>').join(', ');
             if (voters.length > 15) mentions += ' +' + (voters.length - 15) + ' more';
             lines.push(mentions);
             lines.push('');
