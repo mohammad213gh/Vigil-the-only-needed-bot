@@ -193,3 +193,94 @@ window.createAnnouncementUI = createAnnouncementUI;
 window.createPollUI = createPollUI;
 window.loadGreetingsEditor = loadGreetingsEditor;
 window.loadPollsAnnouncements = loadPollsAnnouncements;
+
+import { copyToken, toggleCollapsed } from './01-foundation.mjs';
+window.copyToken = copyToken;
+window.toggleCollapsed = toggleCollapsed;
+
+// ──────────────────── Delegated event dispatch ────────────────────
+// CSP forbids inline event handlers (no script-src 'unsafe-inline'), so every
+// interactive element declares data-fn="windowFn" plus an optional JSON list
+// data-args. Placeholders inside data-args are resolved at event time:
+//   "@el"      → the element itself
+//   "@value"   → el.value
+//   "@checked" → el.checked
+// data-fn values starting with "_" are sequencers: each array element of
+// data-args is [fnName, ...args] and runs in order (multi-action buttons).
+// data-fn="_hideSelf" hides the element (replaces onerror on broken images).
+function resolveArg(v, el) {
+    if (v === '@el') return el;
+    if (v === '@value') return el.value;
+    if (v === '@checked') return el.checked;
+    if (Array.isArray(v)) return v.map((x) => resolveArg(x, el));
+    return v;
+}
+
+function runNamed(fn, args, ev) {
+    const f = window[fn];
+    if (typeof f !== 'function') {
+        console.warn('[dispatch] no window handler for data-fn="' + fn + '"');
+        return;
+    }
+    try { f.apply(null, args); } catch (err) { console.error('[dispatch] ' + fn + ' failed:', err); }
+    void ev;
+}
+
+function handleAction(el, ev) {
+    const fn = el.getAttribute('data-fn');
+    if (!fn) return;
+    let args = [];
+    const raw = el.getAttribute('data-args');
+    if (raw) {
+        try { args = JSON.parse(raw).map((v) => resolveArg(v, el)); }
+        catch { args = []; }
+    }
+    if (fn === '_hideSelf') { el.style.display = 'none'; return; }
+    if (fn.charAt(0) === '_') {
+        for (const step of args) {
+            if (Array.isArray(step) && step.length > 0) runNamed(String(step[0]), step.slice(1), ev);
+        }
+        return;
+    }
+    runNamed(fn, args, ev);
+}
+
+function findAction(target) {
+    return target && target.closest ? target.closest('[data-fn]') : null;
+}
+
+document.addEventListener('click', (ev) => {
+    const el = findAction(ev.target);
+    if (el) handleAction(el, ev);
+});
+document.addEventListener('change', (ev) => {
+    const el = findAction(ev.target);
+    if (el) handleAction(el, ev);
+});
+document.addEventListener('input', (ev) => {
+    const el = findAction(ev.target);
+    if (el) handleAction(el, ev);
+});
+document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter') return;
+    const el = findAction(ev.target);
+    if (el) handleAction(el, ev);
+});
+// 'error' does not bubble — capture phase still sees it on descendants.
+document.addEventListener('error', (ev) => {
+    const el = findAction(ev.target);
+    if (el && el.getAttribute('data-fn') === '_hideSelf') el.style.display = 'none';
+}, true);
+
+// ──────────────────── data-fn helper registrations ────────────────────
+// Small handlers referenced by data-fn attributes in generated markup but not
+// exported as top-level section functions (they must exist on window for the
+// delegated dispatcher).
+import { amTxtUploadClick, srvEmbedSync } from './01-foundation.mjs';
+import { grCoPick, grCoSet } from './02-ui-shell.mjs';
+import { tkRemoveQuestion } from './04-tickets.mjs';
+window.amTxtUploadClick = amTxtUploadClick;
+window.srvEmbedSync = srvEmbedSync;
+window.grCoPick = grCoPick;
+window.grCoSet = grCoSet;
+window.tkRemoveQuestion = tkRemoveQuestion;

@@ -189,11 +189,15 @@ const commandRegistry = {
 
 // Commands that anyone can use (no owner guard)
 const publicCommands = [
-    'help', 'ping', 'worldcup', '8ball', 'coinflip', 'dice', 'rps',
+    'help', 'ping', 'status', 'botinfo', 'userinfo', 'avatar', 'stats',
+    'worldcup', '8ball', 'coinflip', 'dice', 'rps',
     'joke', 'fact', 'advice', 'quote', 'reverse', 'mock', 'random',
     'remindme', 'reminders',
     // tempvc enforces owner/owner-of-channel permissions inside its handler
     'tempvc',
+    // /prefix with no args only VIEWS the prefix; the change path is
+    // re-checked with ownerGuard inside the handler.
+    'prefix',
 ];
 
 module.exports = { commandRegistry, publicCommands };

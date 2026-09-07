@@ -11,7 +11,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'prefix-test-'));
 process.env.DATA_DIR = tmp;
 process.env.OWNER_ID = 'owner1';
 
-const { getDb, closeDb } = require('../src/db');
+const { closeDb } = require('../src/db');
 const { handlePrefixMessage } = require('../src/prefixCommands');
 const { grantPermission } = require('../src/permissions');
 

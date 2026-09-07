@@ -481,141 +481,112 @@ function initSchema() {
         CREATE INDEX IF NOT EXISTS idx_ticket_blacklist_guild ON ticket_blacklist(guild_id);
     `);
 
-    // Add prefix column if not exists (safe on every boot)
-    try {
-        db.exec('ALTER TABLE guild_config ADD COLUMN prefix TEXT NOT NULL DEFAULT \';\'');
-    } catch {}
+    // ──────────────────── Versioned schema migrations ────────────────────
+    // Column/table additions live in ordered, named migrations recorded in
+    // schema_migrations. This replaces the old boot-time try/catch ALTER
+    // sprawl, which silently swallowed every failure — a real ALTER error
+    // (locked DB, disk full, corrupted page) used to surface later as a
+    // baffling "no such column" somewhere else. Now: migrations run in a
+    // transaction each, are recorded by name, and a genuine failure is
+    // logged and THROWN so the process fails fast instead of limping on.
+    //
+    // Every migration is also self-healing via addColumnIfMissing
+    // (PRAGMA table_info check), so databases upgraded by the old silent
+    // path — which already have the columns but no schema_migrations rows —
+    // skip cleanly instead of crashing on a duplicate-column error.
 
-    // Add welcome_config column if not exists
-    try {
-        db.exec('ALTER TABLE guild_config ADD COLUMN welcome_config TEXT NOT NULL DEFAULT \'{}\'');
-    } catch {}
+    db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+        name TEXT PRIMARY KEY,
+        applied_at INTEGER NOT NULL
+    )`);
 
-    // Add embed_color column if not exists
-    try {
-        db.exec('ALTER TABLE guild_config ADD COLUMN embed_color TEXT');
-    } catch {}
+    const appliedMigrations = new Set(
+        db.prepare('SELECT name FROM schema_migrations').all().map(r => r.name)
+    );
 
-    // Add attempts column to reminders if not exists (delivery retry tracking)
-    try {
-        db.exec('ALTER TABLE reminders ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0');
-    } catch {}
+    function addColumnIfMissing(table, column, definition) {
+        const cols = db.prepare('PRAGMA table_info(' + table + ')').all().map(c => c.name);
+        if (cols.includes(column)) return;
+        db.exec('ALTER TABLE ' + table + ' ADD COLUMN ' + column + ' ' + definition);
+    }
 
-    // Per-guild access scopes for non-owner dashboard users.
-    // A discord-session user with zero rows here has access to NO servers.
-    try {
-        db.exec(`CREATE TABLE IF NOT EXISTS dash_user_guilds (
-            user_id TEXT NOT NULL,
-            guild_id TEXT NOT NULL,
-            granted_at INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY (user_id, guild_id)
-        )`);
-        db.exec('CREATE INDEX IF NOT EXISTS idx_dash_scopes_user ON dash_user_guilds(user_id)');
-    } catch {}
+    const MIGRATIONS = [
+        // guild_config additions
+        { name: '0001_guild_config_prefix', run: () => addColumnIfMissing('guild_config', 'prefix', "TEXT NOT NULL DEFAULT ';'") },
+        { name: '0002_guild_config_welcome', run: () => addColumnIfMissing('guild_config', 'welcome_config', "TEXT NOT NULL DEFAULT '{}'" ) },
+        { name: '0003_guild_config_embed_color', run: () => addColumnIfMissing('guild_config', 'embed_color', 'TEXT') },
+        // reminders: delivery retry tracking
+        { name: '0004_reminders_attempts', run: () => addColumnIfMissing('reminders', 'attempts', 'INTEGER NOT NULL DEFAULT 0') },
+        // Per-guild access scopes for non-owner dashboard users.
+        // A discord-session user with zero rows here has access to NO servers.
+        { name: '0005_create_dash_user_guilds', run: () => {
+            db.exec(`CREATE TABLE IF NOT EXISTS dash_user_guilds (
+                user_id TEXT NOT NULL,
+                guild_id TEXT NOT NULL,
+                granted_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, guild_id)
+            )`);
+            db.exec('CREATE INDEX IF NOT EXISTS idx_dash_scopes_user ON dash_user_guilds(user_id)');
+        } },
+        // tickets: transcript, activity tracking, panel linkage, close/claim columns.
+        // CREATE TABLE IF NOT EXISTS won't add columns to an existing table, so
+        // existing databases need these explicit migrations or ticket creation
+        // fails with "table tickets has no column named panel_type_id".
+        { name: '0006_tickets_transcript', run: () => addColumnIfMissing('tickets', 'transcript', 'TEXT') },
+        { name: '0007_tickets_last_activity_at', run: () => addColumnIfMissing('tickets', 'last_activity_at', 'INTEGER') },
+        { name: '0008_tickets_panel_type_id', run: () => addColumnIfMissing('tickets', 'panel_type_id', 'TEXT') },
+        { name: '0009_tickets_panel_type_name', run: () => addColumnIfMissing('tickets', 'panel_type_name', 'TEXT') },
+        // Close/claim columns (used by closeTicket, claimTicket, transferTicket).
+        { name: '0010_tickets_closed_by_id', run: () => addColumnIfMissing('tickets', 'closed_by_id', 'TEXT') },
+        { name: '0011_tickets_closed_by_tag', run: () => addColumnIfMissing('tickets', 'closed_by_tag', 'TEXT') },
+        { name: '0012_tickets_closed_at', run: () => addColumnIfMissing('tickets', 'closed_at', 'INTEGER') },
+        { name: '0013_tickets_closed_reason', run: () => addColumnIfMissing('tickets', 'closed_reason', 'TEXT') },
+        { name: '0014_tickets_claimer_id', run: () => addColumnIfMissing('tickets', 'claimer_id', 'TEXT') },
+        // ticket_panels display columns (used by updateTicketPanel /
+        // createTicketPanelWithTypes).
+        { name: '0015_ticket_panels_panel_message_id', run: () => addColumnIfMissing('ticket_panels', 'panel_message_id', 'TEXT') },
+        { name: '0016_ticket_panels_color', run: () => addColumnIfMissing('ticket_panels', 'color', "TEXT NOT NULL DEFAULT '#5865F2'") },
+        { name: '0017_ticket_panels_image_url', run: () => addColumnIfMissing('ticket_panels', 'image_url', 'TEXT') },
+        { name: '0018_ticket_panels_description', run: () => addColumnIfMissing('ticket_panels', 'description', "TEXT NOT NULL DEFAULT 'Click the button below to create a ticket and a staff member will assist you.'") },
+        // Giveaway v2 columns (description, role requirements, color, image)
+        { name: '0019_giveaways_description', run: () => addColumnIfMissing('giveaways', 'description', 'TEXT') },
+        { name: '0020_giveaways_required_role_ids', run: () => addColumnIfMissing('giveaways', 'required_role_ids', 'TEXT') },
+        { name: '0021_giveaways_banned_role_ids', run: () => addColumnIfMissing('giveaways', 'banned_role_ids', 'TEXT') },
+        { name: '0022_giveaways_color', run: () => addColumnIfMissing('giveaways', 'color', 'INTEGER') },
+        { name: '0023_giveaways_image_url', run: () => addColumnIfMissing('giveaways', 'image_url', 'TEXT') },
+        // ticket_panel_types inactivity auto-close
+        { name: '0024_ticket_panel_types_inactivity_timeout', run: () => addColumnIfMissing('ticket_panel_types', 'inactivity_timeout', 'INTEGER') },
+        { name: '0025_ticket_panel_types_inactivity_grace', run: () => addColumnIfMissing('ticket_panel_types', 'inactivity_grace', 'INTEGER DEFAULT 6') },
+        // ticket_panels counter for ticket numbering per panel
+        { name: '0026_ticket_panels_ticket_counter', run: () => addColumnIfMissing('ticket_panels', 'ticket_counter', 'INTEGER') },
+        // ban_appeals review columns (approve/deny audit trail)
+        { name: '0027_ban_appeals_reviewed_by', run: () => addColumnIfMissing('ban_appeals', 'reviewed_by', 'TEXT') },
+        { name: '0028_ban_appeals_reviewed_at', run: () => addColumnIfMissing('ban_appeals', 'reviewed_at', 'INTEGER') },
+        { name: '0029_ban_appeals_review_note', run: () => addColumnIfMissing('ban_appeals', 'review_note', 'TEXT') },
+        // activity_counts.last_seen (used by the retention sweeper to prune
+        // long-inactive user/channel rows). Legacy rows are backfilled to
+        // "now" so they age out on the normal schedule instead of living
+        // forever.
+        { name: '0030_activity_counts_last_seen', run: () => {
+            addColumnIfMissing('activity_counts', 'last_seen', 'INTEGER');
+            db.prepare('UPDATE activity_counts SET last_seen = ? WHERE last_seen IS NULL').run(Date.now());
+        } },
+    ];
 
-    // Add transcript column to tickets if not exists
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN transcript TEXT');
-    } catch {}
-
-    // Add last_activity_at column to tickets if not exists
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN last_activity_at INTEGER');
-    } catch {}
-
-    // Add panel_type_id / panel_type_name columns to tickets if not exists.
-    // CREATE TABLE IF NOT EXISTS won't add columns to an existing table, so
-    // existing databases need these explicit migrations or ticket creation
-    // fails with "table tickets has no column named panel_type_id".
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN panel_type_id TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN panel_type_name TEXT');
-    } catch {}
-
-    // Add close/claim columns to tickets if not exists (used by closeTicket,
-    // claimTicket, transferTicket — same old-DB risk as panel_type_id).
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN closed_by_id TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN closed_by_tag TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN closed_at INTEGER');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN closed_reason TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE tickets ADD COLUMN claimer_id TEXT');
-    } catch {}
-
-    // Add display columns to ticket_panels if not exists (used by
-    // updateTicketPanel / createTicketPanelWithTypes).
-    try {
-        db.exec('ALTER TABLE ticket_panels ADD COLUMN panel_message_id TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE ticket_panels ADD COLUMN color TEXT NOT NULL DEFAULT \'#5865F2\'');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE ticket_panels ADD COLUMN image_url TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE ticket_panels ADD COLUMN description TEXT NOT NULL DEFAULT \'Click the button below to create a ticket and a staff member will assist you.\'');
-    } catch {}
-
-    // Giveaway v2 columns (description, role requirements, color, image)
-    try {
-        db.exec('ALTER TABLE giveaways ADD COLUMN description TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE giveaways ADD COLUMN required_role_ids TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE giveaways ADD COLUMN banned_role_ids TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE giveaways ADD COLUMN color INTEGER');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE giveaways ADD COLUMN image_url TEXT');
-    } catch {}
-
-    // Add inactivity columns to ticket_panel_types if not exists
-    try {
-        db.exec('ALTER TABLE ticket_panel_types ADD COLUMN inactivity_timeout INTEGER');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE ticket_panel_types ADD COLUMN inactivity_grace INTEGER DEFAULT 6');
-    } catch {}
-
-    // Add ticket_counter column to ticket_panels if not exists
-    try {
-        db.exec('ALTER TABLE ticket_panels ADD COLUMN ticket_counter INTEGER');
-    } catch {}
-
-    // Add review columns to ban_appeals if not exists (approve/deny audit trail)
-    try {
-        db.exec('ALTER TABLE ban_appeals ADD COLUMN reviewed_by TEXT');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE ban_appeals ADD COLUMN reviewed_at INTEGER');
-    } catch {}
-    try {
-        db.exec('ALTER TABLE ban_appeals ADD COLUMN review_note TEXT');
-    } catch {}
-
-    // Add last_seen column to activity_counts if not exists (used by the
-    // retention sweeper to prune long-inactive user/channel rows). Legacy
-    // rows are backfilled to "now" so they age out on the normal schedule
-    // instead of living forever.
-    try {
-        db.exec('ALTER TABLE activity_counts ADD COLUMN last_seen INTEGER');
-        db.prepare('UPDATE activity_counts SET last_seen = ? WHERE last_seen IS NULL').run(Date.now());
-    } catch {}
+    for (const migration of MIGRATIONS) {
+        if (appliedMigrations.has(migration.name)) continue;
+        try {
+            db.transaction(() => migration.run(db))();
+            db.prepare('INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)').run(migration.name, Date.now());
+            console.log('[DB] Applied migration ' + migration.name);
+        } catch (err) {
+            console.error('[DB] FATAL: migration ' + migration.name + ' failed: ' + err.message);
+            try { logError(err, 'db', 'migration:' + migration.name); } catch { /* error_logs may not exist yet during boot */ }
+            // Fail fast — booting on a half-migrated schema produces cryptic
+            // downstream errors; a hard stop makes the problem obvious now.
+            throw err;
+        }
+    }
 
     // Error log for the dashboard Errors section
     db.exec(`CREATE TABLE IF NOT EXISTS error_logs (

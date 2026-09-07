@@ -550,8 +550,10 @@ The bot and the dashboard run in the same Node.js process and share one SQLite f
 ```
 index.js                  Boot: client, intents, event wiring, graceful shutdown
 src/
-├── db.js                 SQLite schema, migrations, retention sweeper, backups
+├── db.js                 SQLite schema, versioned migrations, retention sweeper, backups
 ├── deploy.js             All 70 slash command definitions + registration
+├── commandPipeline.js    Shared command execution: cooldown → guard → handler → tracking
+├── prefixAdapter.js      Message→interaction shim so prefix reuses slash handlers
 ├── config.js             Per-guild config (defaults, load/cache)
 ├── permissions.js        /perm grants, cached per-guild
 ├── automod.js            Spam/mentions/words/links/caps engine
@@ -577,8 +579,22 @@ src/
 │   └── registry.js       Maps command names → handlers (the wiring hub)
 ├── events/               ready, messages, reactions, members, roles,
 │                         server, voice, extras
-└── dashboard.js          Express server: auth, ~138 API routes, static files
-    dashboard/
+├── dashboard.js          Thin entry → re-exports dashboard-backend (public API unchanged)
+├── dashboard-backend/    The dashboard server, split like the frontend parts:
+│   ├── index.js          Assembles the app; parts register in original route order
+│   ├── core.js           Shared state: client, sessions, rate limiters, stores, uploads
+│   └── parts/
+│       ├── 02-auth.js       Sessions, rate limits, login, guards, tenant scoping
+│       ├── 03-dash-admin.js Dash users, uploads, dash config, bot customization
+│       ├── 04-servers.js    Servers, settings, roles/channels, webhooks, members
+│       ├── 05-moderation.js Mod actions, notes, thresholds, appeals, audit log
+│       ├── 06-engagement.js Reaction roles, role menus, reminders, giveaways, polls
+│       ├── 07-voice.js      Voice presence, temp voice
+│       ├── 08-automod.js    Auto-moderation
+│       ├── 09-tickets.js    Ticket panels & types
+│       ├── 10-insights.js   SSE events, analytics, stats, commands explorer
+│       └── 11-ops.js        Tokens, backups, export/import, health, frontend shell
+└── dashboard/            Frontend (served at /static — backend code must NOT live here)
     ├── index.html        The single page
     └── parts/            Frontend as real ES modules:
         00-entry.mjs      Imports all parts + window bridge
@@ -598,6 +614,8 @@ src/
 
 - **The frontend used to be one ~4,100-line file.** It's now 10 ES modules under `src/dashboard/parts/` with explicit `import`/`export` boundaries, loaded as `<script type="module">`. Because module scope isn't global scope, the entry module attaches the ~166 functions that inline HTML handlers (`onclick="…"`) call to `window` — an explicit bridge instead of an accident. The conversion was mechanical and verified (acyclic graph, no unresolved names, strict-mode parse of every module).
 - **`scripts/analyze-modules.mjs`** re-verifies the module graph: every part parses in strict mode, no unresolved names, no cycles, no implicit-global writes. Run it after touching the dashboard.
+- **One command pipeline, two surfaces.** Slash and prefix commands share the same execution path (`src/commandPipeline.js`): cooldown → permission guard → handler → usage tracking → friendly errors. Prefix arguments are parsed against the *same* `deploy.js` schema Discord uses (`src/prefixAdapter.js`), so the two surfaces can't drift — a fix to a slash handler automatically applies to its prefix twin. Only four prefix commands (`giveaway`, `serverstats`, `vc`, `tempvc`) keep bespoke argument parsing, because their prefix CLI (flags like `--desc`, member-VC fallbacks) is intentionally different.
+- **Database schema changes are versioned migrations.** Column/table additions live in named migrations recorded in `schema_migrations`, run once each, in order, inside a transaction. A real migration failure now fails loudly at boot instead of being silently swallowed by a try/catch and surfacing later as "no such column" somewhere else. Migrations are also self-healing: they check `PRAGMA table_info` first, so databases upgraded by the older boot-time ALTERs skip cleanly.
 - **Every event handler is wrapped** so a rejected promise logs to the error DB instead of killing the process.
 - **A circuit breaker** guards Discord API calls so a rate limit doesn't cascade into a crash loop.
 - **Graceful shutdown** is real: it stops loops (giveaways, temp bans, retention, server stats, voice), closes the database, and exits cleanly.
@@ -610,16 +628,19 @@ Early on, one unremoved event listener made memory climb from 60 MB to 400+ MB w
 
 ## Testing
 
-**130 tests**, run with `node --test`, on every push via GitHub Actions (Node 20 **and** 22) alongside ESLint:
+**160 tests**, run with `node --test`, on every push via GitHub Actions (Node 20 **and** 22) alongside ESLint:
 
 | Area | What's covered |
 |---|---|
-| `db.test.js` | Schema creation, migrations, retention pruning, backups |
+| `db.test.js` | Schema creation, error logs, retention pruning, backups |
+| `migrations.test.js` | The versioned migrations: fresh-DB application, idempotent re-open, self-healing upgrades of legacy databases |
 | `deploy.test.js` | Command definitions are well-formed |
 | `permissions` / `automod` | Permission grants & the rule engine |
 | `tickets` / `banAppeals` | Ticket lifecycle, transcripts, appeals |
-| `prefixCommands` | The prefix dispatcher |
-| `dashboard.test.js` | Auth and API routes |
+| `prefixCommands` / `prefixAdapter` | The prefix dispatcher and the message→interaction shim (parsing, aliases, shared pipeline routing, cooldowns, gating) |
+| `dashboard.test.js` | Dashboard boots and `/health` responds correctly |
+| `dashboard-auth.test.js` | Dashboard security: cookie flags (HttpOnly/Strict/Secure), owner gating, fail-closed tenant scoping, idle-TTL expiry, absolute session cap, access revocation, logout |
+| `dashboard-ratelimit.test.js` | Login rate limiting: 10 attempts per minute per IP, then 429 |
 | `dashboard-frontend.test.js` | **The real frontend boots**: jsdom installs browser globals, dynamically imports the actual module graph, and asserts the whole boot chain — auth → config → every data loader → background engine → refresh loop — completes with zero uncaught errors |
 | `giveaways` / `tempVoice` / `voicePresence` / `serverStats` | The background systems |
 
@@ -712,7 +733,7 @@ No music. No leveling/XP. No economy. No dashboard-as-a-service, no SaaS, no "pr
 Since the internet is full of READMEs that overpromise, here's the part nobody writes:
 
 - **It works — and it's actually running.** This bot has been live in real servers, deployed continuously, with CI gating every push.
-- **It's a solo project that grew fast.** Some server files are huge (the dashboard server alone is 3,300+ lines), and parts of the frontend are still legacy-style (`var`, one-letter names, HTML built by string concatenation). It's navigable and it works; it is not a showcase of perfect architecture. The frontend was split into modules but the code *inside* them is still old — that's honest, it's on the list, and every change is protected by the boot test.
+- **It's a solo project that grew fast.** The two biggest monoliths are gone — the dashboard server is split into 11 focused modules (like the frontend before it) and both command surfaces run through one shared pipeline — but parts of the frontend are still legacy-style (`var`, one-letter names, HTML built by string concatenation). It's navigable and it works; it is not a showcase of perfect architecture. The code *inside* the split modules is still the old code, honestly moved — that's on the list, and every change is protected by the boot test.
 - **1.0.0 means "it runs," not "it's done."** Version numbers here track *working*, not *polish*.
 - **You are the SLA.** When it goes down, it's your host that went down. Backups, uptime, and security are yours to own — which is the whole point of self-hosting, but don't pretend otherwise.
 - **Tests are a safety net, not a proof.** The suite is real and it has caught genuine bugs, but the highest-value verification is a human clicking through the dashboard in a browser — the thing no automated test here does yet.

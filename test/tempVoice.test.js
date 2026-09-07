@@ -26,7 +26,7 @@ function makeVoiceChannel(id, name) {
         type: 2,
         members,
         deleted: false,
-        async delete(reason) { this.deleted = true; },
+        async delete(_reason) { this.deleted = true; },
         async setName(n) { this.name = n; },
         async setUserLimit() {},
         permissionOverwrites: { cache: new Map(), async edit() {}, async delete() {} },

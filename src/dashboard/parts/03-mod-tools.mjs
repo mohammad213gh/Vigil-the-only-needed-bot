@@ -1,10 +1,10 @@
-import { allServers, curSrv, esc, showToast, tkTimeAgo, updateRefreshTimestamp } from './01-foundation.mjs';
+import { allServers, curSrv, esc, fnData, showToast, tkTimeAgo, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ MOD TOOLS ═══
 export async function loadSrvModTools(id){
   const el=document.getElementById('mgmtModTools');
   if(!el)return;
   el.innerHTML='<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Staff Notes</div><div style="padding:14px;">'
-  +'<div style="display:flex;gap:8px;margin-bottom:12px;"><input type="text" id="noteUserSearch" placeholder="Enter User ID..." style="flex:1;padding:9px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"><button class="btn btn-s" onclick="loadSrvNotes('+id+')" style="padding:9px 14px;font-size:11px;">Search</button></div>'
+  +'<div style="display:flex;gap:8px;margin-bottom:12px;"><input type="text" id="noteUserSearch" placeholder="Enter User ID..." style="flex:1;padding:9px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"><button class="btn btn-s" data-fn="loadSrvNotes" data-args=\'['+fnData(id)+']\' style="padding:9px 14px;font-size:11px;">Search</button></div>'
   +'<div id="srvNotesList"><div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>Search a user ID above to view or add notes.</p></div></div>'
   +'</div></div>'
   +'<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Invite Tracking</div><div style="padding:14px;"><div id="srvInviteStats">'
@@ -12,10 +12,10 @@ export async function loadSrvModTools(id){
   +'<div class="tw"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Quick Mod Actions</div><div style="padding:14px;">'
   +'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;"><input type="text" id="modUserSearch" placeholder="Enter User ID..." style="flex:1;min-width:200px;padding:9px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"><input type="text" id="modReason" placeholder="Reason (optional)..." style="flex:1;min-width:200px;padding:9px 14px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;outline:none;font-family:inherit;"></div>'
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-  +'<button class="btn btn-s" onclick="warnSrvMember('+id+')" style="background:rgba(241,196,15,0.12);color:#f1c40f;border-color:rgba(241,196,15,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Warn</button>'
-  +'<button class="btn btn-s" onclick="kickSrvMember('+id+')" style="background:rgba(237,66,69,0.12);color:#ed4245;border-color:rgba(237,66,69,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M16 17l5-5-5-5M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>Kick</button>'
-  +'<button class="btn btn-s" onclick="banSrvMember('+id+')" style="background:rgba(237,66,69,0.12);color:#ed4245;border-color:rgba(237,66,69,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Ban</button>'
-  +'<button class="btn btn-s" onclick="timeoutSrvMember('+id+')" style="background:rgba(88,101,242,0.12);color:#5865F2;border-color:rgba(88,101,242,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timeout</button>'
+  +'<button class="btn btn-s" data-fn="warnSrvMember" data-args=\'['+fnData(id)+']\' style="background:rgba(241,196,15,0.12);color:#f1c40f;border-color:rgba(241,196,15,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Warn</button>'
+  +'<button class="btn btn-s" data-fn="kickSrvMember" data-args=\'['+fnData(id)+']\' style="background:rgba(237,66,69,0.12);color:#ed4245;border-color:rgba(237,66,69,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M16 17l5-5-5-5M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>Kick</button>'
+  +'<button class="btn btn-s" data-fn="banSrvMember" data-args=\'['+fnData(id)+']\' style="background:rgba(237,66,69,0.12);color:#ed4245;border-color:rgba(237,66,69,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Ban</button>'
+  +'<button class="btn btn-s" data-fn="timeoutSrvMember" data-args=\'['+fnData(id)+']\' style="background:rgba(88,101,242,0.12);color:#5865F2;border-color:rgba(88,101,242,0.2);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timeout</button>'
   +'</div></div></div>'
   +'<div id="modActionResult"></div>';
   try{
@@ -56,7 +56,7 @@ export async function loadSrvNotes(id){
     }else{
       notesHtml='<div class="empty"><p>No notes for this user.</p></div>';
     }
-    notesHtml+='<div style="display:flex;gap:6px;margin-top:8px;"><input type="text" id="newNoteText" placeholder="Add a note..." style="flex:1;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;"><button class="btn btn-s" onclick="addSrvNote('+id+',\''+userId+'\')" style="padding:8px 14px;font-size:11px;">Add Note</button></div>';
+    notesHtml+='<div style="display:flex;gap:6px;margin-top:8px;"><input type="text" id="newNoteText" placeholder="Add a note..." style="flex:1;padding:8px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;outline:none;font-family:inherit;"><button class="btn btn-s" data-fn="addSrvNote" data-args=\'['+fnData(id)+','+fnData(userId)+']\' style="padding:8px 14px;font-size:11px;">Add Note</button></div>';
     el.innerHTML=notesHtml;
   }catch(e){
     el.innerHTML='<div class="empty"><p>Could not load notes.</p></div>';
@@ -196,7 +196,7 @@ export async function searchMembers(){
     var mems=d.members||[];
     if(!mems.length){el.innerHTML='<div class="tk-chip-none">No members found.</div>';return}
     el.innerHTML='<div class="mp-results">'+mems.map(function(m){
-      return '<div class="mp-result" onclick="loadMemberProfile(\''+srv+'\',\''+m.id+'\')"><img class="mp-avatar-s" src="'+esc(m.avatar||'')+'" onerror="this.style.display=\'none\'"><span class="mp-tag-s">'+esc(m.tag)+'</span><span class="mp-sub-s">'+(m.isBot?'BOT':'@'+esc(m.displayName||m.tag.split('#')[0]))+'</span></div>';
+      return '<div class="mp-result" data-fn="loadMemberProfile" data-args=\'['+fnData(srv)+','+fnData(m.id)+']\'><img class="mp-avatar-s" src="'+esc(m.avatar||'')+'" data-fn="_hideSelf"><span class="mp-tag-s">'+esc(m.tag)+'</span><span class="mp-sub-s">'+(m.isBot?'BOT':'@'+esc(m.displayName||m.tag.split('#')[0]))+'</span></div>';
     }).join('')+'</div>';
   }catch{el.innerHTML='<div class="empty"><p>Search failed.</p></div>'}
 }
@@ -216,7 +216,7 @@ function renderMemberProfile(el,d){
   var header;
   if(m){
     var rolesHtml=(m.roles&&m.roles.length)?'<div class="mp-roles">'+m.roles.slice(0,8).map(function(r){return '<span class="mp-role" style="border-color:'+(r.color&&r.color!=='#000000'?r.color:'var(--border)')+';">'+esc(r.name)+'</span>'}).join('')+(m.roles.length>8?'<span class="mp-role">+'+(m.roles.length-8)+'</span>':'')+'</div>':'';
-    header='<div class="mp-head"><img class="mp-avatar" src="'+esc(m.avatar||'')+'" onerror="this.style.display=\'none\'"><div class="mp-head-info"><div class="mp-tag">'+esc(m.tag)+(m.isBot?' <span class="err-badge">BOT</span>':'')+'</div><div class="mp-sub">'+(m.displayName&&m.displayName!==m.tag?'@'+esc(m.displayName)+' · ':'')+'joined '+mpDate(m.joinedAt)+'</div>'+rolesHtml+'</div></div>';
+    header='<div class="mp-head"><img class="mp-avatar" src="'+esc(m.avatar||'')+'" data-fn="_hideSelf"><div class="mp-head-info"><div class="mp-tag">'+esc(m.tag)+(m.isBot?' <span class="err-badge">BOT</span>':'')+'</div><div class="mp-sub">'+(m.displayName&&m.displayName!==m.tag?'@'+esc(m.displayName)+' · ':'')+'joined '+mpDate(m.joinedAt)+'</div>'+rolesHtml+'</div></div>';
   }else{
     header='<div class="mp-head"><div class="mp-head-info"><div class="mp-sub">Member no longer in the server — showing stored data.</div></div></div>';
   }

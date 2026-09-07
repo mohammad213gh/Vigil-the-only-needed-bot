@@ -1,4 +1,4 @@
-import { allServers, curSrv, esc, showToast, timeSince, updateRefreshTimestamp } from './01-foundation.mjs';
+import { allServers, curSrv, esc, fnData, showToast, timeSince, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ BOT ACTIVITY ═══
 export async function loadBotActivity() {
     const cont = document.getElementById('botActivityFeed');
@@ -149,7 +149,7 @@ export async function loadBanAppeals() {
             '<input type="text" id="baUserTag" placeholder="User Tag (e.g. User#1234)" style="flex:1;min-width:200px;">' +
             '<input type="text" id="baReason" placeholder="Ban reason" style="flex:1;min-width:200px;">' +
             '<textarea id="baMessage" placeholder="Appeal message" style="flex:1;min-width:200px;min-height:60px;"></textarea>' +
-            '<button class="btn btn-s" onclick="submitBanAppealUI(\'' + serverId + '\')">Submit Appeal</button>' +
+            '<button class="btn btn-s" data-fn="submitBanAppealUI" data-args=\'['+fnData(serverId)+']\'>Submit Appeal</button>' +
             '</div></div>';
 
         if (!appeals.length) {
@@ -171,8 +171,8 @@ export async function loadBanAppeals() {
                     (a.review_note ? '<div class="sub">Review note: ' + esc(a.review_note) + '</div>' : '') +
                     '</div>' +
                     (a.status === 'pending' ? '<div style="display:flex;gap:8px;">' +
-                    '<button class="btn btn-s" onclick="updateBanAppealStatusUI(\'' + serverId + '\',\'' + a.id + '\',\'approved\')">Approve</button>' +
-                    '<button class="btn btn-s" style="background:var(--danger)" onclick="updateBanAppealStatusUI(\'' + serverId + '\',\'' + a.id + '\',\'denied\')">Deny</button>' +
+                    '<button class="btn btn-s" data-fn="updateBanAppealStatusUI" data-args=\'['+fnData(serverId)+','+fnData(a.id)+',\"approved\"]\'>Approve</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" data-fn="updateBanAppealStatusUI" data-args=\'['+fnData(serverId)+','+fnData(a.id)+',\"denied\"]\'>Deny</button>' +
                     '</div>' : '') +
                     '</div>';
             }).join('');
@@ -229,7 +229,7 @@ async function loadReminders() {
             '<input type="text" id="remChannelId" placeholder="Channel ID (optional)" style="flex:1;min-width:200px;">' +
             '<input type="text" id="remText" placeholder="Reminder text" style="flex:1;min-width:200px;">' +
             '<input type="number" id="remDuration" placeholder="Duration (ms)" min="1000" style="flex:0 0 150px;">' +
-            '<button class="btn btn-s" onclick="createReminderUI()">Create</button>' +
+            '<button class="btn btn-s" data-fn="createReminderUI">Create</button>' +
             '</div></div>';
 
         if (!reminders.length) {
@@ -242,7 +242,7 @@ async function loadReminders() {
                     '<span class="sub">User: ' + rem.userId + ' · ' + timeSince(rem.createdAt) + ' ago</span>' +
                     '<span class="sub">Due: ' + new Date(rem.remindAt).toLocaleString() + '</span>' +
                     '</div>' +
-                    '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteReminderUI(\'' + rem.id + '\',\'' + rem.userId + '\')">Delete</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" data-fn="deleteReminderUI" data-args=\'['+fnData(rem.id)+','+fnData(rem.userId)+']\'>Delete</button>' +
                     '</div>';
             }).join('');
         }

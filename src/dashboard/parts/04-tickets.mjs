@@ -1,4 +1,4 @@
-import { allServers, curSrv, esc, showToast, srObs, tkTimeAgo, updateRefreshTimestamp } from './01-foundation.mjs';
+import { allServers, curSrv, esc, fnData, showToast, srObs, tkTimeAgo, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ TICKETS ═══
 // Drag-drop state
 
@@ -34,8 +34,8 @@ export async function loadTickets(){
       '<div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><path d="M9 21V9"/></svg>General Ticket Options</div>'+
       '<div class="tk-glass-b">'+
         '<div class="tk-opt-row"><div><div class="tk-opt-t">Ticket System</div><div class="tk-opt-d">Enable or disable tickets on this server</div></div>'+
-          '<div class="tg-wr" onclick="ticketToggle(\''+serverId+'\','+(!d.config.enabled)+')"><div class="tg '+(d.config.enabled?'on':'')+'"></div><div class="tg-lbl">'+(d.config.enabled?'Enabled':'Disabled')+'</div></div></div>'+
-        '<div class="stg" style="margin-bottom:10px;"><label>Transcript Log Channel</label><select id="tkLogCh" class="tk-select" onchange="ticketSetLog(\''+serverId+'\')"><option value="">None</option>'+logChOpts+'</select></div>'+
+          '<div class="tg-wr" data-fn="ticketToggle" data-args=\'['+fnData(serverId)+','+fnData((!d.config.enabled))+']\'><div class="tg '+(d.config.enabled?'on':'')+'"></div><div class="tg-lbl">'+(d.config.enabled?'Enabled':'Disabled')+'</div></div></div>'+
+        '<div class="stg" style="margin-bottom:10px;"><label>Transcript Log Channel</label><select id="tkLogCh" class="tk-select" data-fn="ticketSetLog" data-args=\'['+fnData(serverId)+']\'><option value="">None</option>'+logChOpts+'</select></div>'+
         '<div class="tk-stat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><div><div class="tk-stat-v">'+d.config.ticketCount+'</div><div class="tk-stat-l">tickets created</div></div></div>'+
       '</div></div>';
 
@@ -59,11 +59,11 @@ export async function loadTickets(){
       '<div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Advanced Settings</div>'+
       '<div class="tk-glass-b">'+
         '<div class="tk-opt-row"><div><div class="tk-opt-t">Auto-Close on Leave</div><div class="tk-opt-d">Close tickets when the creator leaves the server</div></div>'+
-          '<div class="tg-wr" onclick="ticketToggleLeave(\''+serverId+'\','+(!d.config.closeOnLeave)+')"><div class="tg '+(d.config.closeOnLeave?'on':'')+'"></div><div class="tg-lbl">'+(d.config.closeOnLeave?'On':'Off')+'</div></div></div>'+
+          '<div class="tg-wr" data-fn="ticketToggleLeave" data-args=\'['+fnData(serverId)+','+fnData((!d.config.closeOnLeave))+']\'><div class="tg '+(d.config.closeOnLeave?'on':'')+'"></div><div class="tg-lbl">'+(d.config.closeOnLeave?'On':'Off')+'</div></div></div>'+
         '<div class="tk-pill-group">'+
-          tkPill('Add Ticket Type','Create a new type on the selected panel',(noPanel?'showToast(\'Select a panel first\',true)':'addTicketType(\''+serverId+'\',\''+panelId+'\')'))+
-          tkPill('Transcript & Logging','Where transcripts are posted','tkCardClick(\'transcript\',\''+serverId+'\',\''+panelId+'\')')+
-          tkPill('Claim System','How staff claim tickets','tkCardClick(\'claiming\',\''+serverId+'\',\''+panelId+'\')')+
+          tkPill('Add Ticket Type','Create a new type on the selected panel',noPanel?'showToast':'addTicketType',noPanel?'["Select a panel first",true]':'["'+serverId+'","'+panelId+'"]')+
+          tkPill('Transcript & Logging','Where transcripts are posted','tkCardClick','["transcript","'+serverId+'","'+panelId+'"]')+
+          tkPill('Claim System','How staff claim tickets','tkCardClick','["claiming","'+serverId+'","'+panelId+'"]')+
         '</div>'+
       '</div></div>';
 
@@ -73,31 +73,31 @@ export async function loadTickets(){
       '<div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Panel Settings <span class="tk-h-count">'+panels.length+'</span></div>'+
       '<div class="tk-glass-b">'+
         '<div class="tk-sel-row">'+
-          '<select id="tkSelPanel" class="tk-select" onchange="loadTickets()"><option value="">Select a panel...</option>'+panelSelOpts+'</select>'+
-          '<button class="btn" onclick="createTicketPanel(\''+serverId+'\')" style="padding:9px 14px;font-size:12px;flex-shrink:0;" title="Create new panel">+</button></div>';
+          '<select id="tkSelPanel" class="tk-select" data-fn="loadTickets"><option value="">Select a panel...</option>'+panelSelOpts+'</select>'+
+          '<button class="btn" data-fn="createTicketPanel" data-args=\'['+fnData(serverId)+']\' style="padding:9px 14px;font-size:12px;flex-shrink:0;" title="Create new panel">+</button></div>';
     
     if(!selPanel){
       panelsHtml+='<div class="tk-empty"><p>No panel selected.</p><p class="empty-act">Select a panel above, or click + to create a new one.</p></div>';
     }else{
       // Action row — Clone, Rename, Send, Set Count, Update, Delete
       panelsHtml+='<div class="tk-act-row">'+
-        '<button type="button" class="tk-act-btn tk-act-blue" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDC40 Preview</button>'+
-        '<button type="button" class="tk-act-btn tk-act-green" onclick="previewTicketPanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDCE8 Send</button>'+
-        '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkClonePanel(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD04 Clone</button>'+
-        '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkRenamePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u270F\uFE0F Rename</button>'+
-        '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkSetCount(\''+serverId+'\',\''+selPanel.id+'\')">\uD83D\uDD22 Set Count</button>'+
-        '<button type="button" class="tk-act-btn tk-act-blue" onclick="tkEditPanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2B06\uFE0F Update</button>'+
-        '<button type="button" class="tk-act-btn tk-act-red" onclick="tkDeletePanel(\''+serverId+'\',\''+selPanel.id+'\')">\u2716 Delete</button></div>';
+        '<button type="button" class="tk-act-btn tk-act-blue" data-fn="previewTicketPanel" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+']\'>\uD83D\uDC40 Preview</button>'+
+        '<button type="button" class="tk-act-btn tk-act-green" data-fn="previewTicketPanel" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+']\'>\uD83D\uDCE8 Send</button>'+
+        '<button type="button" class="tk-act-btn tk-act-blue" data-fn="tkClonePanel" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+']\'>\uD83D\uDD04 Clone</button>'+
+        '<button type="button" class="tk-act-btn tk-act-blue" data-fn="tkRenamePanel" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+']\'>\u270F\uFE0F Rename</button>'+
+        '<button type="button" class="tk-act-btn tk-act-blue" data-fn="tkSetCount" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+']\'>\uD83D\uDD22 Set Count</button>'+
+        '<button type="button" class="tk-act-btn tk-act-blue" data-fn="tkEditPanel" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+']\'>\u2B06\uFE0F Update</button>'+
+        '<button type="button" class="tk-act-btn tk-act-red" data-fn="tkDeletePanel" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+']\'>\u2716 Delete</button></div>';
 
       // Ticket Type dropdown — Ticket Tool style: the panel is the "main ticket" and
       // each type is a sub-ticket (e.g. Support / Application / Reporting). Pick the
       // type you want to configure from the dropdown below.
       panelsHtml+='<div class="tk-type-sel-row">'+
         '<span class="tk-type-sel-label">Ticket Type</span>'+
-        '<select id="tkTypeSel" class="tk-select" onchange="loadTickets()">'+
+        '<select id="tkTypeSel" class="tk-select" data-fn="loadTickets">'+
           (pTypes.length?pTypes.map(function(t){return '<option value="'+t.id+'"'+(selType&&t.id===selType.id?' selected':'')+'>'+esc(t.emoji||'\uD83C\uDFAB')+' '+esc(t.name)+'</option>'}).join(''):'<option value="">No types yet</option>')+
         '</select>'+
-        '<button class="btn" onclick="addTicketType(\''+serverId+'\',\''+selPanel.id+'\')" style="padding:9px 12px;font-size:11px;flex-shrink:0;" title="Add a new ticket type">+</button></div>';
+        '<button class="btn" data-fn="addTicketType" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+']\' style="padding:9px 12px;font-size:11px;flex-shrink:0;" title="Add a new ticket type">+</button></div>';
       if(selType){
         var tQCount=parseTkArray(selType.questions).length;
         var tRoleCount=parseTkArray(selType.support_roles).length;
@@ -112,32 +112,32 @@ export async function loadTickets(){
             '<div class="tk-type-sum-item"><span>Name format</span><b>'+esc(selType.ticket_name_format||'ticket-{username}-{number}')+'</b></div>'+
           '</div>'+
           '<div class="tk-type-sum-actions">'+
-            '<button type="button" class="tk-act-btn tk-act-blue" onclick="editTicketTypeSettings(\''+serverId+'\',\''+selPanel.id+'\',\''+selType.id+'\')">\u2699\uFE0F Edit</button>'+
-            '<button type="button" class="tk-act-btn tk-act-blue" onclick="editQuestions(\''+serverId+'\',\''+selPanel.id+'\',\''+selType.id+'\')">\uD83D\uDCDD Questions</button>'+
-            '<button type="button" class="tk-act-btn tk-act-red" onclick="deleteTicketType(\''+serverId+'\',\''+selPanel.id+'\',\''+selType.id+'\')">\uD83D\uDDD1\uFE0F Delete</button>'+
+            '<button type="button" class="tk-act-btn tk-act-blue" data-fn="editTicketTypeSettings" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+','+fnData(selType.id)+']\'>\u2699\uFE0F Edit</button>'+
+            '<button type="button" class="tk-act-btn tk-act-blue" data-fn="editQuestions" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+','+fnData(selType.id)+']\'>\uD83D\uDCDD Questions</button>'+
+            '<button type="button" class="tk-act-btn tk-act-red" data-fn="deleteTicketType" data-args=\'['+fnData(serverId)+','+fnData(selPanel.id)+','+fnData(selType.id)+']\'>\uD83D\uDDD1\uFE0F Delete</button>'+
           '</div></div>';
       }
 
       // Pill navigation
       panelsHtml+='<div class="tk-pill-group">'+
-        tkPill('Ticket Types',(pTypes.length?pTypes.length+' type'+(pTypes.length>1?'s':''):'No types yet'),'tkCardClick(\'types\',\''+serverId+'\',\''+selPanel.id+'\')')+
-        tkPill('Custom Questions','Up to 5 per type','tkCardClick(\'forms\',\''+serverId+'\',\''+selPanel.id+'\')')+
-        tkPill('Panel Message','Embed title & description','tkEditMessage(\''+serverId+'\',\'panel\')')+
-        tkPill('Ticket Message','Welcome message for new tickets','tkEditMessage(\''+serverId+'\',\'ticket\')')+
+        tkPill('Ticket Types',(pTypes.length?pTypes.length+' type'+(pTypes.length>1?'s':''):'No types yet'),'tkCardClick','["types","'+serverId+'","'+selPanel.id+'"]')+
+        tkPill('Custom Questions','Up to 5 per type','tkCardClick','["forms","'+serverId+'","'+selPanel.id+'"]')+
+        tkPill('Panel Message','Embed title & description','tkEditMessage','["'+serverId+'","panel"]')+
+        tkPill('Ticket Message','Welcome message for new tickets','tkEditMessage','["'+serverId+'","ticket"]')+
       '</div>';
 
       // Frequently Used Configs
       panelsHtml+='<div id="tk-freq-wr" class="tk-freq-wr">'+
-        '<div class="tk-freq-h" onclick="tkToggleFreq()"><span id="tk-freq-caret" class="tk-freq-caret">\u25BC</span>Frequently Used Configs</div>'+
+        '<div class="tk-freq-h" data-fn="tkToggleFreq"><span id="tk-freq-caret" class="tk-freq-caret">\u25BC</span>Frequently Used Configs</div>'+
         '<div id="tk-freq-body" class="tk-freq-grid">'+
           // Left: Support Team Roles + Panel Message
           '<div><div class="stg" style="margin-bottom:10px;"><label>Support Team Roles <span title="Roles that can view and manage tickets" style="cursor:help;color:var(--text-dim);font-size:11px;">\u24D8</span></label>'+
             '<div id="tk-freq-roles" class="tk-role-chips"></div><div class="tk-hint">Click roles to toggle them on/off</div></div>'+
-            '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'panel\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDCAC Edit Panel Message</button></div>'+
+            '<button class="btn btn-s" data-fn="tkEditMessage" data-args=\'['+fnData(serverId)+',\"panel\"]\' style="padding:6px 12px;font-size:10px;">\uD83D\uDCAC Edit Panel Message</button></div>'+
           // Right: Category + Ticket Message
           '<div><div class="stg" style="margin-bottom:10px;"><label>Category Created/Opened <span title="Categories where tickets can be created" style="cursor:help;color:var(--text-dim);font-size:11px;">\u24D8</span></label>'+
-            '<select id="tk-freq-cats" class="tk-select" onchange="tkMarkUnsaved()"></select><div class="tk-hint">Category for the selected type (per-type settings override)</div></div>'+
-            '<button class="btn btn-s" onclick="tkEditMessage(\''+serverId+'\',\'ticket\')" style="padding:6px 12px;font-size:10px;">\uD83D\uDCAC Edit Ticket Message</button></div>'+
+            '<select id="tk-freq-cats" class="tk-select" data-fn="tkMarkUnsaved"></select><div class="tk-hint">Category for the selected type (per-type settings override)</div></div>'+
+            '<button class="btn btn-s" data-fn="tkEditMessage" data-args=\'['+fnData(serverId)+',\"ticket\"]\' style="padding:6px 12px;font-size:10px;">\uD83D\uDCAC Edit Ticket Message</button></div>'+
         '</div></div>';
 
       // Populate roles + category pickers after rendering
@@ -147,7 +147,7 @@ export async function loadTickets(){
       var roleChipsHtml='';
       for(var ri=0;ri<allRoles.length;ri++){
         var roleData=allRoles[ri];
-        roleChipsHtml+='<button type="button" class="tk-role-chip'+(curRoleIds.indexOf(roleData.id)>-1?' on':'')+'" data-role-id="'+roleData.id+'" onclick="tkToggleRoleChip(this)">'+esc(roleData.name)+'</button>';
+        roleChipsHtml+='<button type="button" class="tk-role-chip'+(curRoleIds.indexOf(roleData.id)>-1?' on':'')+'" data-role-id="'+roleData.id+'" data-fn="tkToggleRoleChip" data-args=\'[\"@el\"]\'>'+esc(roleData.name)+'</button>';
       }
       var curCatId=selType?selType.category_id||'':'';
       // Include an explicit "None" option so the select reflects the type's actual
@@ -165,7 +165,7 @@ export async function loadTickets(){
     // ── Recent Tickets (filter tabs + status pills + relative time) ──
     tkRecData=d.tickets||[];
     var recTabs=[['','All'],['open','Open'],['claimed','Claimed'],['closed','Closed']].map(function(f){
-      return '<button class="tk-rec-tab'+(tkRecFilter===f[0]?' on':'')+'" onclick="tkRecFilterSet(\''+f[0]+'\')">'+f[1]+'</button>';
+      return '<button class="tk-rec-tab'+(tkRecFilter===f[0]?' on':'')+'" data-fn="tkRecFilterSet" data-args=\'['+fnData(f[0])+']\'>'+f[1]+'</button>';
     }).join('');
     var recentHtml='<div class="tk-glass"><div class="tk-glass-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Recent Tickets <span class="tk-h-count">'+tkRecData.length+'</span></div>'+
       '<div class="tk-rec-tabs">'+recTabs+'</div><div style="padding:8px 12px 12px;" id="tk-rec-body"></div></div>';
@@ -176,8 +176,8 @@ export async function loadTickets(){
       '<!-- Floating unsaved-changes bar --><div id="tk-unsaved-bar" class="tk-unsaved-bar">'+
         '<span class="tk-unsaved-ic">\u26A0\uFE0F</span><span class="tk-unsaved-tx">You have unsaved changes!</span>'+
         '<div style="display:flex;gap:6px;">'+
-          '<button class="btn btn-s" onclick="tkResetChanges()" style="padding:6px 14px;font-size:11px;">Reset</button>'+
-          '<button class="btn" onclick="tkSaveChanges()" style="padding:6px 14px;font-size:11px;">Save</button></div></div>';
+          '<button class="btn btn-s" data-fn="tkResetChanges" style="padding:6px 14px;font-size:11px;">Reset</button>'+
+          '<button class="btn" data-fn="tkSaveChanges" style="padding:6px 14px;font-size:11px;">Save</button></div></div>';
     tkRecRender();
     updateRefreshTimestamp('tickets');
     setTimeout(function(){document.querySelectorAll('#sec-tickets .sr').forEach(function(el2){srObs.observe(el2)})},50);
@@ -259,12 +259,20 @@ export function editQuestions(serverId,panelId,typeId){
   document.body.appendChild(overlay);
 }
 // Called by inline editor to re-render the question list
+// ── Dispatcher targets for former inline handlers ──
+// Remove question row at index i in the custom-questions editor.
+export function tkRemoveQuestion(i){
+  var qs2=JSON.parse(document.getElementById('tk-q-data').value||'[]');
+  qs2.splice(Number(i),1);
+  renderQuestions(qs2);
+}
+
 function renderQuestions(qs){document.getElementById('tk-q-data').value=JSON.stringify(qs);var list=document.getElementById('tk-q-list');if(!list)return;var qHtml=qs.map(function(q,i){
   return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;background:rgba(255,255,255,0.05);" data-idx="'+i+'">'+
     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">'+
       '<span style="font-size:10px;color:var(--text-dim);width:20px;">'+(i+1)+'.</span>'+
       '<input class="tk-q-label" value="'+esc(q.label||q.question||'')+'" placeholder="Question label..." style="flex:1;padding:5px 8px;font-size:12px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">'+
-      '<button class="btn btn-s" onclick="(function(){var qs2=JSON.parse(document.getElementById(\'tk-q-data\').value||\'[]\');qs2.splice('+i+',1);renderQuestions(qs2)})()" style="padding:3px 7px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
+      '<button class="btn btn-s" data-fn="tkRemoveQuestion" data-args=\'['+fnData(i)+']\' style="padding:3px 7px;font-size:9px;color:#ed4245;">\u2716</button></div>'+
     '<div style="display:flex;gap:8px;align-items:center;">'+
       '<input class="tk-q-placeholder" value="'+esc(q.placeholder||'')+'" placeholder="Placeholder text" style="flex:1;padding:4px 8px;font-size:10px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;">'+
       '<label style="font-size:10px;display:flex;align-items:center;gap:4px;white-space:nowrap;"><input type="checkbox" class="tk-q-req" '+(q.required!==false?'checked':'')+'> Required</label></div></div>';
@@ -311,14 +319,14 @@ export function previewTicketPanel(serverId,panelId){
       // Multiple types — the dropdown is the create action, so no button
       compsHtml+='<div class="tk-prev-comp">'+
         '<div class="tk-prev-select-wrap">'+
-          '<select id="tk-prev-type" class="tk-prev-select" onchange="tkPrevPick(this.value)">'+
+          '<select id="tk-prev-type" class="tk-prev-select" data-fn="tkPrevPick" data-args=\'[\"@value\"]\'>'+
             '<option value="">Choose a ticket type...</option>'+
             types.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.emoji||'🎫')+' '+esc(t.name)+'</option>'}).join('')+
           '</select><span class="tk-prev-select-arrow">▾</span>'+
         '</div></div>';
     }else{
       // Single type (or none) — Create button only
-      compsHtml+='<div class="tk-prev-comp"><button type="button" class="tk-prev-btn tk-prev-btn-create" onclick="tkPrevCreate()">🎫 Create Ticket</button></div>';
+      compsHtml+='<div class="tk-prev-comp"><button type="button" class="tk-prev-btn tk-prev-btn-create" data-fn="tkPrevCreate">🎫 Create Ticket</button></div>';
     }
 
     var overlay=document.createElement('div');
@@ -561,8 +569,8 @@ export function editTicketTypeSettings(serverId,panelId,typeId){
       (roles.length?'<div class="stg" style="margin-bottom:12px;"><label>Support Roles</label>'+tkRoleChipsHtml(roles,curRoles,'tk-typ-roles')+'<div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Click roles to toggle them on/off</div></div>':'')+
       '<div class="stg" style="margin-bottom:12px;"><label>Welcome Message</label><textarea id="tk-typ-welcome" rows="2" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;resize:vertical;">'+esc(currentType.welcome_message||'')+'</textarea></div>'+
       '<div class="stg" style="margin-bottom:16px;"><label>Channel Name Format</label><input id="tk-typ-format" value="'+esc(currentType.ticket_name_format||'ticket-{username}-{number}')+'" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"><div style="font-size:9px;color:var(--text-dim);margin-top:4px;">Variables: {username}, {number}, {name}</div></div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn" onclick="editQuestions(\''+serverId+'\',\''+panelId+'\',\''+typeId+'\');tkCloseModal(this)" style="flex:1;padding:8px;font-size:11px;">\uD83D\uDCDD Edit Questions ('+questions.length+')</button></div>'+
-      '<div style="margin-bottom:12px;"><button class="btn btn-s" onclick="deleteTicketType(\''+serverId+'\',\''+panelId+'\',\''+typeId+'\');tkCloseModal(this)" style="width:100%;padding:8px;font-size:11px;color:#ff8a90;background:rgba(237,66,69,0.1);border:1px solid rgba(237,66,69,0.3);">\uD83D\uDDD1\uFE0F Delete Type</button></div>'+
+      '<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn" data-fn="_seq" data-args=\'[["editQuestions",'+fnData(serverId)+','+fnData(panelId)+','+fnData(typeId)+'],["tkCloseModal","@el"]]\' style="flex:1;padding:8px;font-size:11px;">\uD83D\uDCDD Edit Questions ('+questions.length+')</button></div>'+
+      '<div style="margin-bottom:12px;"><button class="btn btn-s" data-fn="_seq" data-args=\'[["deleteTicketType",'+fnData(serverId)+','+fnData(panelId)+','+fnData(typeId)+'],["tkCloseModal","@el"]]\' style="width:100%;padding:8px;font-size:11px;color:#ff8a90;background:rgba(237,66,69,0.1);border:1px solid rgba(237,66,69,0.3);">\uD83D\uDDD1\uFE0F Delete Type</button></div>'+
       '<div style="display:flex;gap:8px;"><button class="tk-modal-close btn btn-s" style="flex:1;padding:10px;font-size:13px;">Cancel</button><button id="tk-typ-save" class="btn" style="flex:2;padding:10px;font-size:13px;">Save Settings</button></div></div>';
     document.body.appendChild(overlay);
     overlay.querySelector('.tk-modal-close').onclick=function(){document.body.removeChild(overlay)};
@@ -623,7 +631,7 @@ function tkRoleChipsHtml(roles,selectedIds,containerId){
   else{
     html+=roles.map(function(r){
       var on=selectedIds.indexOf(r.id)>-1;
-      return '<button type="button" class="tk-role-chip'+(on?' on':'')+'" data-role-id="'+r.id+'" onclick="tkToggleRoleChip(this)">'+esc(r.name)+'</button>';
+      return '<button type="button" class="tk-role-chip'+(on?' on':'')+'" data-role-id="'+r.id+'" data-fn="tkToggleRoleChip" data-args=\'[\"@el\"]\'>'+esc(r.name)+'</button>';
     }).join('');
   }
   html+='</div>';
@@ -636,7 +644,7 @@ function tkGetSelectedRoles(containerId){
   if(box)box.querySelectorAll('.tk-role-chip.on').forEach(function(c){out.push(c.getAttribute('data-role-id'))});
   return out;
 }
-function tkPill(title,sub,fn){return '<button type="button" class="tk-pill" onclick="'+fn+'"><span class="tk-pill-t">'+esc(title)+'</span>'+(sub?'<span class="tk-pill-s">'+esc(sub)+'</span>':'')+'<span class="tk-pill-a">\u203A</span></button>'}
+function tkPill(title,sub,fn,args){return '<button type="button" class="tk-pill" data-fn="'+fn+'"'+(args?' data-args=\''+args+'\'':'')+'<span class="tk-pill-t">'+esc(title)+'</span>'+(sub?'<span class="tk-pill-s">'+esc(sub)+'</span>':'')+'<span class="tk-pill-a">\u203A</span></button>'}
 
 // ── New helpers: Rename, Clone, Set Count, Card Click, Freq Config, Unsaved ──
 export function tkRenamePanel(serverId,panelId){
@@ -650,7 +658,7 @@ export function tkRenamePanel(serverId,panelId){
     overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:380px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
       '<h2 style="font-size:16px;font-weight:700;margin:0 0 14px 0;">\u270F\uFE0F Rename Panel</h2>'+
       '<div class="stg" style="margin-bottom:16px;"><label>New Name</label><input id="tk-rnm-name" value="'+esc(curName)+'" style="width:100%;padding:8px 10px;font-size:13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
-      '<div style="display:flex;gap:8px;"><button class="btn btn-s" onclick="tkCloseModal(this)" style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-rnm-save" style="flex:1;padding:8px 12px;font-size:12px;">Rename</button></div></div>';
+      '<div style="display:flex;gap:8px;"><button class="btn btn-s" data-fn="tkCloseModal" data-args=\'[\"@el\"]\' style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-rnm-save" style="flex:1;padding:8px 12px;font-size:12px;">Rename</button></div></div>';
     document.body.appendChild(overlay);
     overlay.querySelector('#tk-rnm-save').onclick=function(){
       var name=document.getElementById('tk-rnm-name').value.trim();
@@ -703,7 +711,7 @@ export function tkSetCount(serverId,panelId){
       '<h2 style="font-size:16px;font-weight:700;margin:0 0 14px 0;">\uD83D\uDD22 Set Ticket Counter</h2>'+
       '<div class="stg" style="margin-bottom:16px;"><label>Next ticket number</label><input id="tk-cnt-val" type="number" min="0" value="'+nextVal+'" style="width:100%;padding:8px 10px;font-size:13px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;"></div>'+
       '<div style="font-size:10px;color:var(--text-dim);margin-bottom:12px;">Panel: <strong>'+esc(panelName)+'</strong> \u00B7 Current: <strong>'+curCount+'</strong>. Set to 0 to auto-increment.</div>'+
-      '<div style="display:flex;gap:8px;"><button class="btn btn-s" onclick="tkCloseModal(this)" style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-cnt-save" style="flex:1;padding:8px 12px;font-size:12px;">Set</button></div></div>';
+      '<div style="display:flex;gap:8px;"><button class="btn btn-s" data-fn="tkCloseModal" data-args=\'[\"@el\"]\' style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-cnt-save" style="flex:1;padding:8px 12px;font-size:12px;">Set</button></div></div>';
     document.body.appendChild(overlay);
     overlay.querySelector('#tk-cnt-save').onclick=function(){
       var val=parseInt(document.getElementById('tk-cnt-val').value);
@@ -757,7 +765,7 @@ function tkCardClick(cardId,serverId,panelId){
         '<p style="margin:0 0 8px 0;">Staff claim tickets via the <strong>Claim</strong> button in a ticket channel.</p>'+
         '<p style="margin:0 0 8px 0;">Claimed tickets show the claiming staff member. Only the claimer or Support Team role can close/transfer.</p>'+
         '<p style="margin:0;">Set <strong>Support Team Roles</strong> below to allow claiming.</p></div>'+
-      '<button class="btn btn-s" onclick="tkCloseModal(this)" style="padding:8px 20px;font-size:12px;">Close</button></div>';
+      '<button class="btn btn-s" data-fn="tkCloseModal" data-args=\'[\"@el\"]\' style="padding:8px 20px;font-size:12px;">Close</button></div>';
     document.body.appendChild(overlay);
     return;
   }
@@ -801,7 +809,7 @@ export function tkEditMessage(serverId,type){
     overlay.innerHTML='<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:24px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'+
       '<h2 style="font-size:16px;font-weight:700;margin:0 0 14px 0;">\uD83D\uDCAC Edit '+label+'</h2>'+
       '<div class="stg" style="margin-bottom:16px;"><label>Message (supports Discord markdown)</label><textarea id="tk-msg-text" rows="5" style="width:100%;padding:8px 10px;font-size:12px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;resize:vertical;">'+esc(curMsg)+'</textarea></div>'+
-      '<div style="display:flex;gap:8px;"><button class="btn btn-s" onclick="tkCloseModal(this)" style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-msg-save" style="flex:2;padding:8px 12px;font-size:12px;">Save</button></div></div>';
+      '<div style="display:flex;gap:8px;"><button class="btn btn-s" data-fn="tkCloseModal" data-args=\'[\"@el\"]\' style="flex:1;padding:8px 12px;font-size:12px;">Cancel</button><button class="btn" id="tk-msg-save" style="flex:2;padding:8px 12px;font-size:12px;">Save</button></div></div>';
     document.body.appendChild(overlay);
     overlay.querySelector('#tk-msg-save').onclick=function(){
       var msg=document.getElementById('tk-msg-text').value;

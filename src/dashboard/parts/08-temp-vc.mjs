@@ -1,4 +1,4 @@
-import { allServers, curSrv, esc, showToast, updateRefreshTimestamp } from './01-foundation.mjs';
+import { allServers, curSrv, esc, fnData, showToast, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ TEMP VOICE CHANNELS ═══
 // Mirrors DEFAULT_TEMPLATE in src/tempVoice.js — the server falls back to
 // this when a guild has no custom template.
@@ -34,7 +34,7 @@ export async function loadTempVoice() {
         var html = '<div class="stg" style="margin-bottom:16px;"><label>Channel Name Template</label>' +
             '<div class="stg-inl" style="margin-bottom:8px;">' +
             '<input type="text" id="tvNameTemplate" value="' + esc(config.name_template || DEFAULT_TEMPLATE) + '" placeholder="' + esc(DEFAULT_TEMPLATE) + '" style="flex:1;min-width:200px;">' +
-            '<button class="btn btn-s" onclick="saveTempVoiceConfig(\'' + serverId + '\')">Save Template</button>' +
+            '<button class="btn btn-s" data-fn="saveTempVoiceConfig" data-args=\'['+fnData(serverId)+']\'>Save Template</button>' +
             '</div>' +
             '<div class="stg-hint">Use {name} for username and {number} for spawn counter. Max 100 chars.</div>' +
             '</div>';
@@ -44,7 +44,7 @@ export async function loadTempVoice() {
             '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
             '<select id="tvNewTriggerChannel" style="flex:1;min-width:200px;"><option value="">Select voice channel...</option>' + channels.filter(function(c){return c.type===2}).map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
             '<select id="tvNewTriggerCategory" style="flex:1;min-width:200px;"><option value="">Category (optional)</option>' + channels.filter(function(c){return c.type===4}).map(function(c){return '<option value="' + c.id + '">' + esc(c.name) + '</option>';}).join('') + '</select>' +
-            '<button class="btn btn-s" onclick="addTempVoiceTrigger(\'' + serverId + '\')">Add Trigger</button>' +
+            '<button class="btn btn-s" data-fn="addTempVoiceTrigger" data-args=\'['+fnData(serverId)+']\'>Add Trigger</button>' +
             '</div></div>';
 
         if (!triggers.length) {
@@ -58,7 +58,7 @@ export async function loadTempVoice() {
                     '<strong>#' + esc(ch?.name || t.channel_id) + '</strong>' +
                     (cat ? '<span class="sub"> → Category: #' + esc(cat.name) + '</span>' : '') +
                     '</div>' +
-                    '<button class="btn btn-s" style="background:var(--danger)" onclick="removeTempVoiceTrigger(\'' + serverId + '\',\'' + t.channel_id + '\')">Remove</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" data-fn="removeTempVoiceTrigger" data-args=\'['+fnData(serverId)+','+fnData(t.channel_id)+']\'>Remove</button>' +
                     '</div>';
             }).join('');
         }
@@ -75,7 +75,7 @@ export async function loadTempVoice() {
                     '<strong>' + esc(ch?.name || s.channel_id) + '</strong>' +
                     '<span class="sub">Owner: <@' + s.owner_id + '> · Trigger: ' + esc(s.trigger_id || 'N/A') + '</span>' +
                     '</div>' +
-                    '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteTempVoiceChannel(\'' + serverId + '\',\'' + s.channel_id + '\')">Delete</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" data-fn="deleteTempVoiceChannel" data-args=\'['+fnData(serverId)+','+fnData(s.channel_id)+']\'>Delete</button>' +
                     '</div>';
             }).join('') + '</div>';
         }
@@ -170,7 +170,7 @@ export async function loadWarningThresholds() {
             '<input type="number" id="wtWarnCount" placeholder="Warning count (e.g. 3)" min="1" max="100" style="flex:0 0 150px;">' +
             '<select id="wtAction" style="flex:0 0 150px;"><option value="timeout">Timeout</option><option value="kick">Kick</option><option value="ban">Ban</option></select>' +
             '<input type="number" id="wtDuration" placeholder="Duration (min, for timeout)" min="1" max="40320" style="flex:0 0 150px;">' +
-            '<button class="btn btn-s" onclick="addWarningThresholdUI(\'' + serverId + '\')">Add Threshold</button>' +
+            '<button class="btn btn-s" data-fn="addWarningThresholdUI" data-args=\'['+fnData(serverId)+']\'>Add Threshold</button>' +
             '</div></div>';
 
         if (!thresholds.length) {
@@ -182,7 +182,7 @@ export async function loadWarningThresholds() {
                     '<strong>' + t.warnCount + ' warnings</strong> → <strong>' + t.action + '</strong>' +
                     (t.action === 'timeout' && t.duration ? ' for ' + t.duration + ' min' : '') +
                     '</div>' +
-                    '<button class="btn btn-s" style="background:var(--danger)" onclick="removeWarningThresholdUI(\'' + serverId + '\', ' + t.warnCount + ')">Remove</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" data-fn="removeWarningThresholdUI" data-args=\'['+fnData(serverId)+','+fnData(t.warnCount)+']\'>Remove</button>' +
                     '</div>';
             }).join('');
         }
@@ -250,7 +250,7 @@ export async function loadPrefixCommands() {
         var html = '<div class="stg" style="margin-bottom:16px;"><label>Command Prefix</label>' +
             '<div class="stg-inl" style="margin-bottom:8px;">' +
             '<input type="text" id="pcPrefixInput" value="' + esc(prefix) + '" maxlength="5" style="flex:0 0 120px;">' +
-            '<button class="btn btn-s" onclick="savePrefixUI(\'' + serverId + '\')">Save Prefix</button>' +
+            '<button class="btn btn-s" data-fn="savePrefixUI" data-args=\'['+fnData(serverId)+']\'>Save Prefix</button>' +
             '</div>' +
             '<div class="stg-hint">Prefix for text commands (default: ;). Max 5 characters, no spaces.</div>' +
             '</div>';
@@ -318,7 +318,7 @@ async function loadRateLimits() {
                     <input type="number" id="rlModMax" placeholder="Max requests" value="${config.modActions?.max||30}" style="width:100%;">
                 </div>
             </div>
-            <button class="btn" onclick="saveRateLimits()" style="margin-top:16px;">Save Rate Limits</button>
+            <button class="btn" data-fn="saveRateLimits" style="margin-top:16px;">Save Rate Limits</button>
         `;
     } catch { cont.innerHTML = '<div class="empty"><p>Failed to load rate limit config</p></div>'; }
 }

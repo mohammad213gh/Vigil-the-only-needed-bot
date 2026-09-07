@@ -1,4 +1,4 @@
-import { allServers, curSrv, esc, showToast, updateRefreshTimestamp } from './01-foundation.mjs';
+import { allServers, curSrv, esc, fnData, showToast, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ REACTION ROLES ═══
 export async function loadReactionRoles() {
     const sel = document.getElementById('rrSrvSelect');
@@ -35,7 +35,7 @@ export async function loadReactionRoles() {
             '<input type="text" id="rrNewEmoji" placeholder="Emoji (e.g. 🎉 or name:id)" style="flex:0 0 120px;">' +
             '<select id="rrNewRole" style="flex:1;min-width:200px;"><option value="">Select role...</option>' + rolesList.map(function (r) { return '<option value="' + r.id + '" style="color:' + (r.color || '#fff') + '">' + esc(r.name) + '</option>'; }).join('') + '</select>' +
             '<input type="text" id="rrNewLabel" placeholder="Label (optional)" style="flex:1;min-width:150px;">' +
-            '<button class="btn btn-s" onclick="createReactionRoleUI()" style="padding:9px 14px;font-size:11px;">Add Reaction Role</button>' +
+            '<button class="btn btn-s" data-fn="createReactionRoleUI" style="padding:9px 14px;font-size:11px;">Add Reaction Role</button>' +
             '</div></div>';
 
         if (!roles.length) {
@@ -53,7 +53,7 @@ export async function loadReactionRoles() {
                     (rr.label ? '<span class="sub">' + esc(rr.label) + '</span>' : '') +
                     '</div>' +
                     '</div>' +
-                    '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteReactionRole(\'' + serverId + '\',\'' + rr.messageId + '\',\'' + esc(rr.emoji).replace(/'/g, "\\'") + '\')">Delete</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" data-fn="deleteReactionRole" data-args=\'['+fnData(serverId)+','+fnData(rr.messageId)+','+fnData('fnData(rr.emoji)')+']\'>Delete</button>' +
                     '</div>';
             }).join('');
         }
@@ -150,7 +150,7 @@ export async function loadRoleMenus() {
             '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
             '<input type="text" id="rmNewTitle" placeholder="Menu title (e.g. Self-Assignable Roles)" style="flex:1;min-width:200px;">' +
             '<select id="rmNewChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + channels.map(function (c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('') + '</select>' +
-            '<button class="btn btn-s" onclick="createRoleMenuUI()" style="padding:9px 14px;font-size:11px;">Create Menu</button>' +
+            '<button class="btn btn-s" data-fn="createRoleMenuUI" style="padding:9px 14px;font-size:11px;">Create Menu</button>' +
             '</div></div>';
 
         if (!menus.length) {
@@ -166,9 +166,9 @@ export async function loadRoleMenus() {
                     '</div>' +
                     '</div>' +
                     '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-                    '<button class="btn btn-s" onclick="editRoleMenuUI(\'' + serverId + '\',\'' + m.message_id + '\',\'' + esc(m.title || '').replace(/'/g, "\\'") + '\',\'' + m.channel_id + '\')">Edit</button>' +
-                    '<button class="btn btn-s" onclick="publishRoleMenuUI(\'' + serverId + '\',\'' + m.message_id + '\',\'' + m.channel_id + '\')">Publish</button>' +
-                    '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteRoleMenu(\'' + serverId + '\',\'' + m.message_id + '\',\'' + m.channel_id + '\')">Delete</button>' +
+                    '<button class="btn btn-s" data-fn="editRoleMenuUI" data-args=\'['+fnData(fnData(serverId))+','+fnData(fnData(m.message_id))+','+fnData(fnData(m.title||''))+','+fnData(fnData(m.channel_id))+']\'>Edit</button>' +
+                    '<button class="btn btn-s" data-fn="publishRoleMenuUI" data-args=\'['+fnData(serverId)+','+fnData(m.message_id)+','+fnData(m.channel_id)+']\'>Publish</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger)" data-fn="deleteRoleMenu" data-args=\'['+fnData(serverId)+','+fnData(m.message_id)+','+fnData(m.channel_id)+']\'>Delete</button>' +
                     '</div>' +
                     '</div>';
             }).join('');
@@ -212,7 +212,7 @@ export async function editRoleMenuUI(serverId, messageId, title, channelId) {
         var html = '<div class="stg" style="margin-bottom:16px;"><label>Edit Role Menu: ' + esc(title) + '</label>' +
             '<div class="stg-inl" style="margin-bottom:8px;flex-wrap:wrap;">' +
             '<input type="text" id="rmEditTitle" value="' + esc(title) + '" placeholder="Menu title" style="flex:1;min-width:200px;">' +
-            '<button class="btn btn-s" onclick="saveRoleMenuTitle(\'' + serverId + '\',\'' + messageId + '\')">Save Title</button>' +
+            '<button class="btn btn-s" data-fn="saveRoleMenuTitle" data-args=\'['+fnData(serverId)+','+fnData(messageId)+']\'>Save Title</button>' +
             '</div></div>';
 
         html += '<div class="stg" style="margin-bottom:16px;"><label>Add Role Option</label>' +
@@ -221,7 +221,7 @@ export async function editRoleMenuUI(serverId, messageId, title, channelId) {
             '<input type="text" id="rmAddLabel" placeholder="Label (optional)" style="flex:1;min-width:150px;">' +
             '<input type="text" id="rmAddEmoji" placeholder="Emoji (optional)" style="flex:0 0 100px;">' +
             '<input type="text" id="rmAddDesc" placeholder="Description (optional)" style="flex:1;min-width:150px;">' +
-            '<button class="btn btn-s" onclick="addRoleMenuOptionUI(\'' + serverId + '\',\'' + messageId + '\')">Add Role</button>' +
+            '<button class="btn btn-s" data-fn="addRoleMenuOptionUI" data-args=\'['+fnData(serverId)+','+fnData(messageId)+']\'>Add Role</button>' +
             '</div></div>';
 
         if (!options.length) {
@@ -235,15 +235,15 @@ export async function editRoleMenuUI(serverId, messageId, title, channelId) {
                     '<strong>' + esc(o.label || (rl ? rl.name : o.role_id)) + '</strong>' +
                     '<span class="sub">' + esc(o.description || '') + '</span>' +
                     '</div>' +
-                    '<button class="btn btn-s" style="background:var(--danger);padding:3px 8px;font-size:10px;" onclick="removeRoleMenuOptionUI(\'' + serverId + '\',\'' + messageId + '\',\'' + o.role_id + '\')">Remove</button>' +
+                    '<button class="btn btn-s" style="background:var(--danger);padding:3px 8px;font-size:10px;" data-fn="removeRoleMenuOptionUI" data-args=\'['+fnData(serverId)+','+fnData(messageId)+','+fnData(o.role_id)+']\'>Remove</button>' +
                     '</div>';
             }).join('') + '</div>';
         }
 
         html += '<div style="margin-top:16px;display:flex;gap:8px;">' +
-            '<button class="btn btn-s" onclick="publishRoleMenuUI(\'' + serverId + '\',\'' + messageId + '\',\'' + channelId + '\')">Publish Menu</button>' +
-            '<button class="btn btn-s" style="background:var(--danger)" onclick="deleteRoleMenu(\'' + serverId + '\',\'' + messageId + '\',\'' + channelId + '\')">Delete Menu</button>' +
-            '<button class="btn btn-s" onclick="loadRoleMenus()">Back</button>' +
+            '<button class="btn btn-s" data-fn="publishRoleMenuUI" data-args=\'['+fnData(serverId)+','+fnData(messageId)+','+fnData(channelId)+']\'>Publish Menu</button>' +
+            '<button class="btn btn-s" style="background:var(--danger)" data-fn="deleteRoleMenu" data-args=\'['+fnData(serverId)+','+fnData(messageId)+','+fnData(channelId)+']\'>Delete Menu</button>' +
+            '<button class="btn btn-s" data-fn="loadRoleMenus">Back</button>' +
             '</div>';
 
         cont.innerHTML = html;

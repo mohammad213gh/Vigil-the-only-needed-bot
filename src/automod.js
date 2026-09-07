@@ -95,8 +95,13 @@ function getAutoModRules(guildId) {
 
 function updateAutoModRule(guildId, ruleType, config) {
     const db = getDb();
+    // Clamp spam threshold to >= 1: threshold 0 makes `timestamps.length >= 0`
+    // always true, flagging every single message. (Single choke point covers
+    // the slash command, the dashboard route, and the import path.)
+    let threshold = config.threshold || 0;
+    if (ruleType === 'spam') threshold = Math.max(1, threshold);
     db.prepare('INSERT OR REPLACE INTO automod_rules (guild_id, rule_type, enabled, threshold, time_window, action, duration) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(guildId, ruleType, config.enabled ? 1 : 0, config.threshold || 0, config.time_window || 0, config.action || 'warn', config.duration || null);
+        .run(guildId, ruleType, config.enabled ? 1 : 0, threshold, config.time_window || 0, config.action || 'warn', config.duration || null);
 }
 
 // ──────────────────── Word Filters ────────────────────

@@ -1,4 +1,4 @@
-import { allServers, curSrv, esc, showToast, timeSince, updateRefreshTimestamp } from './01-foundation.mjs';
+import { allServers, curSrv, esc, fnData, showToast, timeSince, updateRefreshTimestamp } from './01-foundation.mjs';
 // ═══ POLLS & ANNOUNCEMENTS ═══
 export async function loadPollsAnnouncements() {
     const sel = document.getElementById('paSrvSelect');
@@ -35,7 +35,7 @@ export async function loadPollsAnnouncements() {
             '<select id="paPollType" style="flex:0 0 150px;"><option value="single">Single Vote</option><option value="multi">Multi Vote</option><option value="anonymous">Anonymous</option></select>' +
             '<input type="number" id="paPollDuration" placeholder="Duration (hours)" value="24" min="0.25" max="720" step="0.25" style="flex:0 0 120px;">' +
             '<select id="paPollChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + textChannels.map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
-            '<button class="btn btn-s" onclick="createPollUI(\'' + serverId + '\')">Create Poll</button>' +
+            '<button class="btn btn-s" data-fn="createPollUI" data-args=\'['+fnData(serverId)+']\'>Create Poll</button>' +
             '</div></div>';
 
         html += '<div class="stg" style="margin-top:16px;margin-bottom:16px;"><label>Create Announcement</label>' +
@@ -44,7 +44,7 @@ export async function loadPollsAnnouncements() {
             '<textarea id="paAnnounceMessage" placeholder="Message" style="flex:1;min-width:300px;min-height:80px;"></textarea>' +
             '<input type="color" id="paAnnounceColor" value="#5865F2" style="flex:0 0 80px;">' +
             '<select id="paAnnounceChannel" style="flex:1;min-width:200px;"><option value="">Select channel...</option>' + textChannels.map(function(c){return '<option value="' + c.id + '">#' + esc(c.name) + '</option>';}).join('') + '</select>' +
-            '<button class="btn btn-s" onclick="createAnnouncementUI(\'' + serverId + '\')">Send Announcement</button>' +
+            '<button class="btn btn-s" data-fn="createAnnouncementUI" data-args=\'['+fnData(serverId)+']\'>Send Announcement</button>' +
             '</div></div>';
 
         cont.innerHTML = html;
@@ -350,7 +350,7 @@ export async function loadGreetingsEditor() {
             var html = '<div class="card" style="margin-bottom:24px;border-left:4px solid '+typeColor+';">';
             html += '<div style="padding:16px 16px 0;">';
             html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">';
-            html += '<div class="tg-wr" onclick="toggleGreeting(\''+serverId+'\',\''+type+'\')"><div class="tg '+(cfg.enabled?'on':'')+'" id="tg_'+type+'_'+serverId+'"></div><div class="tg-lbl"><b style="font-size:16px;">'+typeLabel+' Messages</b><small>When enabled, this message will be sent automatically when someone '+(type==='welcome'?'joins':'leaves')+' the server.</small></div></div>';
+            html += '<div class="tg-wr" data-fn="toggleGreeting" data-args=\'['+fnData(serverId)+','+fnData(type)+']\'><div class="tg '+(cfg.enabled?'on':'')+'" id="tg_'+type+'_'+serverId+'"></div><div class="tg-lbl"><b style="font-size:16px;">'+typeLabel+' Messages</b><small>When enabled, this message will be sent automatically when someone '+(type==='welcome'?'joins':'leaves')+' the server.</small></div></div>';
             html += '<h3 style="margin:0;color:'+typeColor+';">'+typeLabel+' Editor</h3>';
             html += '</div>';
 
@@ -359,16 +359,16 @@ export async function loadGreetingsEditor() {
             html += '<div style="display:flex;flex-direction:column;gap:16px;">';
             html += '<div class="stg"><label>Channel</label><select id="grCh_'+type+'_'+serverId+'" style="width:100%;"><option value="">Select channel...</option>'+channels.filter(function(c){return c.type===0||c.type===5||c.type===15}).map(function(c){return '<option value="'+c.id+'"'+(cfg.channelId===c.id?' selected':'')+'>#'+esc(c.name)+'</option>';}).join('')+'</select></div>';
             html += '<div class="stg"><label>Plain Text Content (optional)</label><textarea id="grMsg_'+type+'_'+serverId+'" placeholder="Plain text message (supports placeholders like {user}, {server}, etc.)" rows="3" style="width:100%;font-family:inherit;">'+esc(cfg.content||'')+'</textarea></div>';
-            html += '<div class="stg"><label>Embed Title</label><input type="text" id="grT_'+type+'_'+serverId+'" value="'+esc(cfg.embedTitle||'')+'" placeholder="e.g. 👋 Welcome!" oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
+            html += '<div class="stg"><label>Embed Title</label><input type="text" id="grT_'+type+'_'+serverId+'" value="'+esc(cfg.embedTitle||'')+'" placeholder="e.g. 👋 Welcome!" data-fn="updatePreview" data-args=\'['+fnData(serverId)+','+fnData(type)+']\' style="width:100%;"></div>';
             html += '<div class="stg"><label>Embed Description</label><textarea id="grD_'+type+'_'+serverId+'" placeholder="Embed description (supports placeholders like {user}, {server}, {membercount}, etc.)" rows="4" style="width:100%;font-family:inherit;">'+esc(cfg.embedDescription||'')+'</textarea></div>';
-            html += '<div class="stg"><label>Embed Color</label><div class="stg-inl"><input type="color" id="grCoT_'+type+'_'+serverId+'" value="'+cfg.embedColor+'" style="flex:0 0 60px;height:36px;" oninput="updatePreview(\''+serverId+'\',\''+type+'\')"><span style="font-size:12px;color:var(--text-dim);font-family:monospace;">'+cfg.embedColor+'</span></div></div>';
-            html += '<div class="stg"><label>Embed Footer</label><input type="text" id="grF_'+type+'_'+serverId+'" value="'+esc(cfg.embedFooter||'')+'" placeholder="e.g. Member #{membercount}" oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
-            html += '<div class="stg"><label>Footer Icon URL</label><input type="url" id="grFI_'+type+'_'+serverId+'" value="'+esc(cfg.embedFooterIcon||'')+'" placeholder="https://..." oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
-            html += '<div class="stg"><label>Thumbnail URL</label><input type="url" id="grTh_'+type+'_'+serverId+'" value="'+esc(cfg.embedThumbnail||'')+'" placeholder="https://..." oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
-            html += '<div class="stg"><label>Image URL</label><input type="url" id="grIm_'+type+'_'+serverId+'" value="'+esc(cfg.embedImage||'')+'" placeholder="https://..." oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
-            html += '<div class="stg"><label>Author Name</label><input type="text" id="grA_'+type+'_'+serverId+'" value="'+esc(cfg.embedAuthor||'')+'" placeholder="e.g. Welcome Bot" oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
-            html += '<div class="stg"><label>Author Icon URL</label><input type="url" id="grAI_'+type+'_'+serverId+'" value="'+esc(cfg.embedAuthorIcon||'')+'" placeholder="https://..." oninput="updatePreview(\''+serverId+'\',\''+type+'\')" style="width:100%;"></div>';
-            html += '<div class="stg-inl" style="margin-top:16px;"><button class="btn" onclick="saveGreetingConfig(\''+serverId+'\',\''+type+'\')">Save '+type.charAt(0).toUpperCase()+type.slice(1)+' Config</button><button class="btn btn-s" onclick="resetGreetingConfig(\''+serverId+'\',\''+type+'\')">Reset to Defaults</button></div>';
+            html += '<div class="stg"><label>Embed Color</label><div class="stg-inl"><input type="color" id="grCoT_'+type+'_'+serverId+'" value="'+cfg.embedColor+'" style="flex:0 0 60px;height:36px;" data-fn="updatePreview" data-args=\'['+fnData(serverId)+','+fnData(type)+']\'><span style="font-size:12px;color:var(--text-dim);font-family:monospace;">'+cfg.embedColor+'</span></div></div>';
+            html += '<div class="stg"><label>Embed Footer</label><input type="text" id="grF_'+type+'_'+serverId+'" value="'+esc(cfg.embedFooter||'')+'" placeholder="e.g. Member #{membercount}" data-fn="updatePreview" data-args=\'['+fnData(serverId)+','+fnData(type)+']\' style="width:100%;"></div>';
+            html += '<div class="stg"><label>Footer Icon URL</label><input type="url" id="grFI_'+type+'_'+serverId+'" value="'+esc(cfg.embedFooterIcon||'')+'" placeholder="https://..." data-fn="updatePreview" data-args=\'['+fnData(serverId)+','+fnData(type)+']\' style="width:100%;"></div>';
+            html += '<div class="stg"><label>Thumbnail URL</label><input type="url" id="grTh_'+type+'_'+serverId+'" value="'+esc(cfg.embedThumbnail||'')+'" placeholder="https://..." data-fn="updatePreview" data-args=\'['+fnData(serverId)+','+fnData(type)+']\' style="width:100%;"></div>';
+            html += '<div class="stg"><label>Image URL</label><input type="url" id="grIm_'+type+'_'+serverId+'" value="'+esc(cfg.embedImage||'')+'" placeholder="https://..." data-fn="updatePreview" data-args=\'['+fnData(serverId)+','+fnData(type)+']\' style="width:100%;"></div>';
+            html += '<div class="stg"><label>Author Name</label><input type="text" id="grA_'+type+'_'+serverId+'" value="'+esc(cfg.embedAuthor||'')+'" placeholder="e.g. Welcome Bot" data-fn="updatePreview" data-args=\'['+fnData(serverId)+','+fnData(type)+']\' style="width:100%;"></div>';
+            html += '<div class="stg"><label>Author Icon URL</label><input type="url" id="grAI_'+type+'_'+serverId+'" value="'+esc(cfg.embedAuthorIcon||'')+'" placeholder="https://..." data-fn="updatePreview" data-args=\'['+fnData(serverId)+','+fnData(type)+']\' style="width:100%;"></div>';
+            html += '<div class="stg-inl" style="margin-top:16px;"><button class="btn" data-fn="saveGreetingConfig" data-args=\'['+fnData(serverId)+','+fnData(type)+']\'>Save '+type.charAt(0).toUpperCase()+type.slice(1)+' Config</button><button class="btn btn-s" data-fn="resetGreetingConfig" data-args=\'['+fnData(serverId)+','+fnData(type)+']\'>Reset to Defaults</button></div>';
             html += '</div>';
 
             // Right panel - Live Preview

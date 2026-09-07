@@ -3,6 +3,8 @@ const { getBotConfig, saveBotConfig, getGuildConfig, updateGuildConfig } = requi
 const { makeEmbed } = require('../embeds');
 const { logError } = require('../logError');
 const { CATEGORY_EMOJIS, LOG_CATEGORIES } = require('../constants');
+const { isOwner } = require('../helpers');
+const { hasPermission } = require('../permissions');
 
 async function executeLog(interaction) {
     const sub = interaction.options.getSubcommand();
@@ -259,6 +261,16 @@ async function executePrefix(interaction) {
             timestamp: true,
         });
         return interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    // Viewing is public, but changing the prefix is a config change — enforce
+    // the same owner/perm guard the other config commands get (the command is
+    // listed in publicCommands so /prefix with no args isn't owner-gated).
+    if (!isOwner(interaction.user.id) && !hasPermission(guild.id, 'prefix', interaction.user.id)) {
+        return interaction.reply({
+            content: '\u274C You don\'t have permission to change the prefix. Only the bot owner or users granted access via `/perm` can use it.',
+            ephemeral: true,
+        });
     }
 
     if (newPrefix.length > 5) {

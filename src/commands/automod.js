@@ -21,7 +21,13 @@ async function executeAutoMod(interaction) {
 
         const updated = { ...cfg };
         if (enabled !== null) updated.enabled = enabled;
-        if (threshold !== null) updated.threshold = threshold;
+        if (threshold !== null) {
+            // Spam threshold 0 would flag every message (length >= 0 is always true).
+            if (rule === 'spam' && threshold < 1) {
+                return interaction.reply({ content: '⚠️ Spam threshold must be at least 1.', ephemeral: true });
+            }
+            updated.threshold = threshold;
+        }
         if (timeWindow !== null) updated.time_window = timeWindow;
         if (action !== null) updated.action = action;
         if (duration !== null) updated.duration = duration * 1000; // convert seconds to ms

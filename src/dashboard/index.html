@@ -29,11 +29,11 @@
       <div class="notch-center">
         <!-- Desktop Left Nav -->
         <nav class="notch-nav-left">
-          <button class="notch-link active" data-sec="overview" onclick="showSec('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></button>
-          <button class="notch-link" data-sec="analytics" onclick="showSec('analytics')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span>Analytics</span></button>
-          <button class="notch-link" data-sec="servers" onclick="showSec('servers')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><span>Servers</span></button>
-          <button class="notch-link" data-sec="auditlog" onclick="showSec('auditlog');loadAudit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Audit</span></button>
-          <button class="notch-link" data-sec="moderation" onclick="showSec('moderation');loadMod();loadMpServers()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Mod</span></button>
+          <button class="notch-link active" data-sec="overview" data-fn="showSec" data-args='["overview"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span>Overview</span></button>
+          <button class="notch-link" data-sec="analytics" data-fn="showSec" data-args='["analytics"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg><span>Analytics</span></button>
+          <button class="notch-link" data-sec="servers" data-fn="showSec" data-args='["servers"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><span>Servers</span></button>
+          <button class="notch-link" data-sec="auditlog" data-fn="_seq" data-args='[["showSec","auditlog"],["loadAudit"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Audit</span></button>
+          <button class="notch-link" data-sec="moderation" data-fn="_seq" data-args='[["showSec","moderation"],["loadMod"],["loadMpServers"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Mod</span></button>
         </nav>
 
         <!-- Center Logo -->
@@ -43,31 +43,31 @@
 
         <!-- Desktop Right Nav -->
         <nav class="notch-nav-right">
-          <button class="notch-link" data-sec="activity" onclick="showSec('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Activity</span></button>
-          <button class="notch-link" data-sec="insights" onclick="showSec('insights');loadInsights()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg><span>Insights</span></button>
-          <button class="notch-link" data-sec="invites" onclick="showSec('invites');loadInvites()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg><span>Invites</span></button>
-          <button class="notch-link" data-sec="giveaways" onclick="showSec('giveaways');populateGwServers();loadGiveaways()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M5 12v9h14v-9"/><path d="M12 8c-1.5 0-4-1-4-3s3-2 4 3zM12 8c1.5 0 4-1 4-3s-3-2-4 3z"/></svg><span>Giveaways</span></button>
-          <button class="notch-link" data-sec="automod" onclick="showSec('automod');loadAutomod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Auto-Mod</span></button>
-          <button class="notch-link" data-sec="tickets" onclick="showSec('tickets');loadTickets()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg><span>Tickets</span></button>
-          <button class="notch-link" data-sec="commands" onclick="showSec('commands')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg><span>Commands</span></button>
-          <button class="notch-link" data-sec="reminders" onclick="showSec('reminders')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><span>Reminders</span></button>
-          <button class="notch-link" data-sec="system" onclick="showSec('system');loadBackups();loadErrorAlert()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span>System</span></button>
-          <button class="notch-link" data-sec="errors" onclick="showSec('errors');loadErrors()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Errors</span></button>
-          <button class="notch-link" data-sec="settings" onclick="showSec('settings');loadDashUsers()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Customize</span></button>
+          <button class="notch-link" data-sec="activity" data-fn="showSec" data-args='["activity"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Activity</span></button>
+          <button class="notch-link" data-sec="insights" data-fn="_seq" data-args='[["showSec","insights"],["loadInsights"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg><span>Insights</span></button>
+          <button class="notch-link" data-sec="invites" data-fn="_seq" data-args='[["showSec","invites"],["loadInvites"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg><span>Invites</span></button>
+          <button class="notch-link" data-sec="giveaways" data-fn="_seq" data-args='[["showSec","giveaways"],["populateGwServers"],["loadGiveaways"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M5 12v9h14v-9"/><path d="M12 8c-1.5 0-4-1-4-3s3-2 4 3zM12 8c1.5 0 4-1 4-3s-3-2-4 3z"/></svg><span>Giveaways</span></button>
+          <button class="notch-link" data-sec="automod" data-fn="_seq" data-args='[["showSec","automod"],["loadAutomod"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Auto-Mod</span></button>
+          <button class="notch-link" data-sec="tickets" data-fn="_seq" data-args='[["showSec","tickets"],["loadTickets"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg><span>Tickets</span></button>
+          <button class="notch-link" data-sec="commands" data-fn="showSec" data-args='["commands"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg><span>Commands</span></button>
+          <button class="notch-link" data-sec="reminders" data-fn="showSec" data-args='["reminders"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg><span>Reminders</span></button>
+          <button class="notch-link" data-sec="system" data-fn="_seq" data-args='[["showSec","system"],["loadBackups"],["loadErrorAlert"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span>System</span></button>
+          <button class="notch-link" data-sec="errors" data-fn="_seq" data-args='[["showSec","errors"],["loadErrors"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Errors</span></button>
+          <button class="notch-link" data-sec="settings" data-fn="_seq" data-args='[["showSec","settings"],["loadDashUsers"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Customize</span></button>
         </nav>
 
         <!-- Desktop Actions -->
         <div class="notch-actions">
-          <button class="notch-action-btn" onclick="toggleTheme()" id="ntThemeBtn" title="Toggle theme">
+          <button class="notch-action-btn" data-fn="toggleTheme" id="ntThemeBtn" title="Toggle theme">
             <svg id="ntThemeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
           </button>
-          <button class="notch-action-btn notch-logout" onclick="logout()" title="Sign out">
+          <button class="notch-action-btn notch-logout" data-fn="logout" title="Sign out">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </button>
         </div>
 
         <!-- Mobile Menu Button -->
-        <button class="notch-mobile-btn" id="notchMobileBtn" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+        <button class="notch-mobile-btn" id="notchMobileBtn" data-fn="toggleMobileMenu" aria-label="Toggle menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="notch-hamburger"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="notch-close" style="display:none;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -85,25 +85,25 @@
 
   <!-- Mobile Menu Dropdown -->
   <div class="notch-mobile-menu" id="notchMobileMenu">
-    <button class="notch-mobile-link active" data-sec="overview" onclick="showSec('overview');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview</button>
-    <button class="notch-mobile-link" data-sec="analytics" onclick="showSec('analytics');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</button>
-    <button class="notch-mobile-link" data-sec="servers" onclick="showSec('servers');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Servers</button>
-    <button class="notch-mobile-link" data-sec="auditlog" onclick="showSec('auditlog');toggleMobileMenu();loadAudit()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Audit Log</button>
-    <button class="notch-mobile-link" data-sec="moderation" onclick="showSec('moderation');toggleMobileMenu();loadMod();loadMpServers()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Moderation</button>
-    <button class="notch-mobile-link" data-sec="activity" onclick="showSec('activity');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
-    <button class="notch-mobile-link" data-sec="insights" onclick="showSec('insights');toggleMobileMenu();loadInsights()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg>Insights</button>
-    <button class="notch-mobile-link" data-sec="invites" onclick="showSec('invites');toggleMobileMenu();loadInvites()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>Invites</button>
-    <button class="notch-mobile-link" data-sec="giveaways" onclick="showSec('giveaways');toggleMobileMenu();populateGwServers();loadGiveaways()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M5 12v9h14v-9"/><path d="M12 8c-1.5 0-4-1-4-3s3-2 4 3zM12 8c1.5 0 4-1 4-3s-3-2-4 3z"/></svg>Giveaways</button>
-    <button class="notch-mobile-link" data-sec="automod" onclick="showSec('automod');toggleMobileMenu();loadAutomod()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Auto-Mod</button>
-    <button class="notch-mobile-link" data-sec="tickets" onclick="showSec('tickets');toggleMobileMenu();loadTickets()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg>Tickets</button>
-    <button class="notch-mobile-link" data-sec="commands" onclick="showSec('commands');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg>Commands</button>
-    <button class="notch-mobile-link" data-sec="reminders" onclick="showSec('reminders');toggleMobileMenu()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg>Reminders</button>
-    <button class="notch-mobile-link" data-sec="system" onclick="showSec('system');toggleMobileMenu();loadBackups();loadErrorAlert()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>System</button>
-    <button class="notch-mobile-link" data-sec="errors" onclick="showSec('errors');toggleMobileMenu();loadErrors()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Errors</button>
-    <button class="notch-mobile-link" data-sec="settings" onclick="showSec('settings');toggleMobileMenu();loadDashUsers()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Customize</button>
+    <button class="notch-mobile-link active" data-sec="overview" data-fn="_seq" data-args='[["showSec","overview"],["toggleMobileMenu"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Overview</button>
+    <button class="notch-mobile-link" data-sec="analytics" data-fn="_seq" data-args='[["showSec","analytics"],["toggleMobileMenu"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Analytics</button>
+    <button class="notch-mobile-link" data-sec="servers" data-fn="_seq" data-args='[["showSec","servers"],["toggleMobileMenu"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Servers</button>
+    <button class="notch-mobile-link" data-sec="auditlog" data-fn="_seq" data-args='[["showSec","auditlog"],["toggleMobileMenu"],["loadAudit"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Audit Log</button>
+    <button class="notch-mobile-link" data-sec="moderation" data-fn="_seq" data-args='[["showSec","moderation"],["toggleMobileMenu"],["loadMod"],["loadMpServers"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Moderation</button>
+    <button class="notch-mobile-link" data-sec="activity" data-fn="_seq" data-args='[["showSec","activity"],["toggleMobileMenu"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Activity</button>
+    <button class="notch-mobile-link" data-sec="insights" data-fn="_seq" data-args='[["showSec","insights"],["toggleMobileMenu"],["loadInsights"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg>Insights</button>
+    <button class="notch-mobile-link" data-sec="invites" data-fn="_seq" data-args='[["showSec","invites"],["toggleMobileMenu"],["loadInvites"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>Invites</button>
+    <button class="notch-mobile-link" data-sec="giveaways" data-fn="_seq" data-args='[["showSec","giveaways"],["toggleMobileMenu"],["populateGwServers"],["loadGiveaways"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M5 12v9h14v-9"/><path d="M12 8c-1.5 0-4-1-4-3s3-2 4 3zM12 8c1.5 0 4-1 4-3s-3-2-4 3z"/></svg>Giveaways</button>
+    <button class="notch-mobile-link" data-sec="automod" data-fn="_seq" data-args='[["showSec","automod"],["toggleMobileMenu"],["loadAutomod"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Auto-Mod</button>
+    <button class="notch-mobile-link" data-sec="tickets" data-fn="_seq" data-args='[["showSec","tickets"],["toggleMobileMenu"],["loadTickets"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10v10H7z"/><path d="M3 10h18M3 14h18"/></svg>Tickets</button>
+    <button class="notch-mobile-link" data-sec="commands" data-fn="_seq" data-args='[["showSec","commands"],["toggleMobileMenu"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg>Commands</button>
+    <button class="notch-mobile-link" data-sec="reminders" data-fn="_seq" data-args='[["showSec","reminders"],["toggleMobileMenu"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/></svg>Reminders</button>
+    <button class="notch-mobile-link" data-sec="system" data-fn="_seq" data-args='[["showSec","system"],["toggleMobileMenu"],["loadBackups"],["loadErrorAlert"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>System</button>
+    <button class="notch-mobile-link" data-sec="errors" data-fn="_seq" data-args='[["showSec","errors"],["toggleMobileMenu"],["loadErrors"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Errors</button>
+    <button class="notch-mobile-link" data-sec="settings" data-fn="_seq" data-args='[["showSec","settings"],["toggleMobileMenu"],["loadDashUsers"]]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Customize</button>
     <div class="notch-mobile-divider"></div>
-    <button class="notch-mobile-link" onclick="toggleTheme()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><span id="ntMobileThemeLabel">Light Mode</span></button>
-    <button class="notch-mobile-link" onclick="logout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+    <button class="notch-mobile-link" data-fn="toggleTheme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><span id="ntMobileThemeLabel">Light Mode</span></button>
+    <button class="notch-mobile-link" data-fn="logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
   </div>
 
   <main class="main" id="main">
@@ -132,7 +132,7 @@
             <div class="card-stat"><div class="ico" style="background:rgba(237,66,69,0.12);color:#ed4245;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 9 23 13"/></svg></div><div class="info"><div class="l">Total Leaves</div><div class="v"><span class="cnt" id="anLeaves">0</span></div></div></div>
             <div class="card-stat"><div class="ico" style="background:rgba(var(--accent-rgb),0.12);color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="info"><div class="l">Net Growth</div><div class="v"><span class="cnt" id="anNet">0</span></div></div></div>
           </div>
-          <div class="exp-wrap"><button class="btn btn-s" onclick="exportStats()" style="padding:6px 14px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button></div>
+          <div class="exp-wrap"><button class="btn btn-s" data-fn="exportStats" style="padding:6px 14px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button></div>
         </div>
       </div>
       <div class="tw sr" style="margin-top:16px;"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="21" x2="21" y2="16"/><line x1="10" y1="11" x2="14" y2="15"/></svg>Command Usage (top 10)</div><div style="padding:16px;"><div id="cmdUsageChart" style="width:100%;"></div></div></div>
@@ -142,7 +142,7 @@
     <div class="section" id="sec-servers">
       <h1 class="pg-title">Servers</h1>
       <p class="pg-sub">All servers the bot is connected to. <span class="rfsh-tm" id="rfsh-servers"></span></p>
-      <div class="srv-search"><input type="text" id="srvSearch" placeholder="Search servers..." oninput="filterServers()"><select id="srvSort" onchange="loadServers()"><option value="members">Members</option><option value="name">Name</option><option value="boosts">Boosts</option></select></div>
+      <div class="srv-search"><input type="text" id="srvSearch" placeholder="Search servers..." data-fn="filterServers"><select id="srvSort" data-fn="loadServers"><option value="members">Members</option><option value="name">Name</option><option value="boosts">Boosts</option></select></div>
       <div id="srvList" class="srv-list"></div>
       <div id="srvDetail" style="display:none;"></div>
     </div>
@@ -152,14 +152,14 @@
       <h1 class="pg-title">Audit Log</h1>
       <p class="pg-sub">Unified event feed from Discord, moderation, messages, and members. <span class="rfsh-tm" id="rfsh-auditlog"></span></p>
       <div class="audit-filter">
-        <select id="auditTypeFilter" onchange="loadAudit()">
+        <select id="auditTypeFilter" data-fn="loadAudit">
           <option value="all">All Events</option>
           <option value="discord">Discord Audit</option>
           <option value="moderation">Moderation</option>
           <option value="messages">Messages</option>
           <option value="members">Members</option>
         </select>
-        <select id="auditServerFilter" onchange="loadAudit()">
+        <select id="auditServerFilter" data-fn="loadAudit">
           <option value="">All Servers</option>
         </select>
       </div>
@@ -187,22 +187,22 @@
       <div class="grid grid-2 sr"><div class="card"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><div class="lbl">Host</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;" id="sysHost"></div></div><div class="card"><svg class="ico-bg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><div class="lbl">Memory</div><div style="margin-top:8px;" id="sysMem"></div></div></div>
       <div class="stg" style="margin-top:20px;"><label>Config Export</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-s" onclick="exportConfig()" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export All Settings</button>
-          <button class="btn btn-s" onclick="exportBotConfig()" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Export Bot Config</button>
+          <button class="btn btn-s" data-fn="exportConfig" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export All Settings</button>
+          <button class="btn btn-s" data-fn="exportBotConfig" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Export Bot Config</button>
         </div>
         <div class="stg-hint">Download dashboard settings or bot configuration as JSON files.</div>
       </div>
 
       <div class="stg" style="margin-top:20px;"><label>Database Backup</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-          <button class="btn btn-s" onclick="backupNow()" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg> Backup Now</button>
+          <button class="btn btn-s" data-fn="backupNow" style="padding:7px 16px;font-size:11px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px;"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M21 3v9h-9"/></svg> Backup Now</button>
         </div>
         <div id="backupList"></div>
         <div class="stg-hint">A snapshot of the full database (settings, warnings, tickets, everything). Automatic daily backups keep the newest 7.</div>
       </div>
 
       <div class="stg" style="margin-top:20px;"><label>Error Alert Channel</label>
-        <div class="stg-inl"><select id="alertSrvSel" onchange="alertSrvChanged()" style="flex:1;"><option value="">Select server…</option></select><select id="alertChSel" style="flex:1;"><option value="">Select channel…</option></select><button class="btn btn-s" onclick="saveErrorAlert()" style="padding:9px 14px;font-size:11px;">Save</button></div>
+        <div class="stg-inl"><select id="alertSrvSel" data-fn="alertSrvChanged" style="flex:1;"><option value="">Select server…</option></select><select id="alertChSel" style="flex:1;"><option value="">Select channel…</option></select><button class="btn btn-s" data-fn="saveErrorAlert" style="padding:9px 14px;font-size:11px;">Save</button></div>
         <div class="stg-hint">Ping this channel when a critical error (uncaught exception / unhandled rejection) occurs. Max 1 message per minute. Leave the channel empty to disable.</div>
       </div>
     </div>
@@ -219,8 +219,8 @@
       <h1 class="pg-title">Commands</h1>
       <p class="pg-sub">Browse all available bot commands, usage, and permissions.</p>
       <div class="cmd-filter">
-        <input type="text" id="cmdSearch" placeholder="Search commands..." oninput="filterCommands()">
-        <select id="cmdCatFilter" onchange="filterCommands()">
+        <input type="text" id="cmdSearch" placeholder="Search commands..." data-fn="filterCommands">
+        <select id="cmdCatFilter" data-fn="filterCommands">
           <option value="all">All Categories</option>
         </select>
       </div>
@@ -234,8 +234,8 @@
       <div class="stg" style="margin-bottom:16px;"><label>Member Profile Lookup</label>
         <div class="stg-inl" style="margin-bottom:8px;">
           <select id="mpSrv" style="flex:1;"><option value="">Select server…</option></select>
-          <input type="text" id="mpSearch" placeholder="Search by name or user ID..." style="flex:1.5;" onkeydown="if(event.key==='Enter')searchMembers()">
-          <button class="btn btn-s" onclick="searchMembers()" style="padding:9px 14px;font-size:11px;">Search</button>
+          <input type="text" id="mpSearch" placeholder="Search by name or user ID..." style="flex:1.5;" data-fn="searchMembers">
+          <button class="btn btn-s" data-fn="searchMembers" style="padding:9px 14px;font-size:11px;">Search</button>
         </div>
         <div id="mpResults"></div>
         <div id="mpProfile" style="display:none;"></div>
@@ -252,7 +252,7 @@
     <div class="section" id="sec-insights">
       <h1 class="pg-title">Insights</h1>
       <p class="pg-sub">Message activity and member insights per server. <span class="rfsh-tm" id="rfsh-insights"></span></p>
-      <div class="srv-search"><select id="insSrvSelect" onchange="loadInsights()"><option value="">Select a server...</option></select></div>
+      <div class="srv-search"><select id="insSrvSelect" data-fn="loadInsights"><option value="">Select a server...</option></select></div>
       <div class="grid grid-2" style="margin-top:16px;">
         <div class="tw sr"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Top Chatters</div><div id="insTopUsers" class="mod-list"></div></div>
         <div class="tw sr"><div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg>Top Channels</div><div id="insTopChannels" class="mod-list"></div></div>
@@ -264,7 +264,7 @@
     <div class="section" id="sec-invites">
       <h1 class="pg-title">Invites</h1>
       <p class="pg-sub">Invite tracking leaderboard and stats. <span class="rfsh-tm" id="rfsh-invites"></span></p>
-      <div class="srv-search"><select id="invSrvSelect" onchange="loadInvites()"><option value="">Select a server...</option></select></div>
+      <div class="srv-search"><select id="invSrvSelect" data-fn="loadInvites"><option value="">Select a server...</option></select></div>
       <div id="invLeaderboard" class="tw" style="margin-top:16px;">
         <div class="tw-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 6 9 6 9z"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 18 9 18 9z"/><path d="M4 22h16"/><path d="M10 22V8h4v14"/></svg>Invite Leaderboard</div>
         <div id="invList" class="mod-list"></div>
@@ -293,7 +293,7 @@
         </div>
         <div class="stg-inl">
           <input type="text" id="gwDesc" placeholder="Description (optional)" style="flex:1;">
-          <button class="btn btn-s" onclick="createGwUI()" style="padding:9px 14px;font-size:11px;">🎁 Start Giveaway</button>
+          <button class="btn btn-s" data-fn="createGwUI" style="padding:9px 14px;font-size:11px;">🎁 Start Giveaway</button>
         </div>
         <div class="stg-hint">Posts an interactive giveaway embed to the first text channel the bot can send in. Use /giveaway in Discord for role requirements and custom images.</div>
       </div>
@@ -305,7 +305,7 @@
       <h1 class="pg-title">Auto-Mod</h1>
       <p class="pg-sub">Configure automated moderation rules, filters, and exclusions. <span class="rfsh-tm" id="rfsh-automod"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="amSrvSelect" onchange="loadAutomod()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="amSrvSelect" data-fn="loadAutomod" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="automodContent"></div>
     </div>
@@ -315,7 +315,7 @@
       <h1 class="pg-title">Reaction Roles</h1>
       <p class="pg-sub">Manage self-assignable reaction roles. <span class="rfsh-tm" id="rfsh-reaction-roles"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="rrSrvSelect" onchange="loadReactionRoles()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="rrSrvSelect" data-fn="loadReactionRoles" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="reactionRolesContent"></div>
     </div>
@@ -325,7 +325,7 @@
       <h1 class="pg-title">Role Menus</h1>
       <p class="pg-sub">Manage self-assignable role dropdown menus. <span class="rfsh-tm" id="rfsh-role-menus"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="rmSrvSelect" onchange="loadRoleMenus()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="rmSrvSelect" data-fn="loadRoleMenus" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="roleMenusContent"></div>
     </div>
@@ -335,7 +335,7 @@
       <h1 class="pg-title">Voice Presence</h1>
       <p class="pg-sub">Manage the bot's 24/7 voice channel presence. <span class="rfsh-tm" id="rfsh-voice-presence"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="vpSrvSelect" onchange="loadVoicePresence()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="vpSrvSelect" data-fn="loadVoicePresence" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="voicePresenceContent"></div>
     </div>
@@ -345,7 +345,7 @@
       <h1 class="pg-title">Temp Voice Channels</h1>
       <p class="pg-sub">Configure join-to-create voice channels and control panels. <span class="rfsh-tm" id="rfsh-temp-voice"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="tvSrvSelect" onchange="loadTempVoice()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="tvSrvSelect" data-fn="loadTempVoice" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="tempVoiceContent"></div>
     </div>
@@ -355,7 +355,7 @@
       <h1 class="pg-title">Warning Thresholds</h1>
       <p class="pg-sub">Configure auto-punishment at warning milestones. <span class="rfsh-tm" id="rfsh-warning-thresholds"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="wtSrvSelect" onchange="loadWarningThresholds()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="wtSrvSelect" data-fn="loadWarningThresholds" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="warningThresholdsContent"></div>
     </div>
@@ -365,8 +365,8 @@
       <h1 class="pg-title">Ban Appeals</h1>
       <p class="pg-sub">Review and manage ban appeals. <span class="rfsh-tm" id="rfsh-ban-appeals"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="baSrvSelect" onchange="loadBanAppeals()" style="flex:1;"><option value="">Select a server...</option></select>
-        <select id="baStatusFilter" onchange="loadBanAppeals()" style="flex:0 0 150px;">
+        <select id="baSrvSelect" data-fn="loadBanAppeals" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="baStatusFilter" data-fn="loadBanAppeals" style="flex:0 0 150px;">
           <option value="">All Statuses</option>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
@@ -382,7 +382,7 @@
       <h1 class="pg-title">Polls & Announcements</h1>
       <p class="pg-sub">Create and manage polls and announcements. <span class="rfsh-tm" id="rfsh-polls-announcements"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="paSrvSelect" onchange="loadPollsAnnouncements()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="paSrvSelect" data-fn="loadPollsAnnouncements" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="pollsAnnouncementsContent"></div>
     </div>
@@ -392,7 +392,7 @@
       <h1 class="pg-title">Greetings Editor</h1>
       <p class="pg-sub">Visual editor for welcome and goodbye messages with live preview. <span class="rfsh-tm" id="rfsh-greetings-editor"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="geSrvSelect" onchange="loadGreetingsEditor()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="geSrvSelect" data-fn="loadGreetingsEditor" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="greetingsEditorContent"></div>
     </div>
@@ -402,7 +402,7 @@
       <h1 class="pg-title">Prefix Commands</h1>
       <p class="pg-sub">Manage text command prefix and view prefix usage stats. <span class="rfsh-tm" id="rfsh-prefix-commands"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="pcSrvSelect" onchange="loadPrefixCommands()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="pcSrvSelect" data-fn="loadPrefixCommands" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="prefixCommandsContent"></div>
     </div>
@@ -419,7 +419,7 @@
       <h1 class="pg-title">Tickets</h1>
       <p class="pg-sub">Manage ticket panels, types, and configuration. <span class="rfsh-tm" id="rfsh-tickets"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="tkSrvSelect" onchange="loadTickets()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="tkSrvSelect" data-fn="loadTickets" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="ticketsContent"></div>
     </div>
@@ -429,7 +429,7 @@
       <h1 class="pg-title">Webhooks</h1>
       <p class="pg-sub">Manage server webhooks. <span class="rfsh-tm" id="rfsh-webhooks"></span></p>
       <div class="srv-search" style="margin-bottom:16px;">
-        <select id="whSrvSelect" onchange="loadWebhooks()" style="flex:1;"><option value="">Select a server...</option></select>
+        <select id="whSrvSelect" data-fn="loadWebhooks" style="flex:1;"><option value="">Select a server...</option></select>
       </div>
       <div id="webhooksContent"></div>
     </div>
@@ -449,7 +449,7 @@
             <option value="admin:all">Full Access</option>
           </select>
           <input type="number" id="apiTokenExpiry" placeholder="Expiry (days, 0=never)" min="0" max="3650" style="flex:0 0 150px;">
-          <button class="btn btn-s" onclick="createApiToken()" style="padding:9px 14px;font-size:11px;">Create Token</button>
+          <button class="btn btn-s" data-fn="createApiToken" style="padding:9px 14px;font-size:11px;">Create Token</button>
         </div>
       </div>
       <div id="apiTokensList"></div>
@@ -467,12 +467,12 @@
       <h1 class="pg-title">Bot Activity</h1>
       <p class="pg-sub">Recent bot activity timeline. <span class="rfsh-tm" id="rfsh-bot-activity"></span></p>
       <div class="stg-inl" style="margin-bottom:16px;">
-        <select id="activityDays" onchange="loadBotActivity()" style="flex:0 0 150px;">
+        <select id="activityDays" data-fn="loadBotActivity" style="flex:0 0 150px;">
           <option value="1">Last 24h</option>
           <option value="7" selected>Last 7 days</option>
           <option value="30">Last 30 days</option>
         </select>
-        <select id="activityType" onchange="loadBotActivity()" style="flex:0 0 150px;">
+        <select id="activityType" data-fn="loadBotActivity" style="flex:0 0 150px;">
           <option value="">All Types</option>
           <option value="command">Commands</option>
           <option value="event">Events</option>
@@ -488,7 +488,7 @@
       <h1 class="pg-title">Server Comparison</h1>
       <p class="pg-sub">Compare servers by metrics. <span class="rfsh-tm" id="rfsh-server-compare"></span></p>
       <div class="stg-inl" style="margin-bottom:16px;">
-        <select id="compareMetric" onchange="loadServerCompare()" style="flex:1;">
+        <select id="compareMetric" data-fn="loadServerCompare" style="flex:1;">
           <option value="members">Members</option>
           <option value="growth">Net Growth</option>
           <option value="joins">Joins</option>
@@ -496,7 +496,7 @@
           <option value="boosts">Boosts</option>
           <option value="channels">Channels</option>
         </select>
-        <select id="compareLimit" onchange="loadServerCompare()" style="flex:0 0 150px;">
+        <select id="compareLimit" data-fn="loadServerCompare" style="flex:0 0 150px;">
           <option value="5">Top 5</option>
           <option value="10" selected>Top 10</option>
           <option value="25">Top 25</option>
@@ -511,7 +511,7 @@
       <h1 class="pg-title">Command Heatmap</h1>
       <p class="pg-sub">Command usage across servers. <span class="rfsh-tm" id="rfsh-cmd-heatmap"></span></p>
       <div class="stg-inl" style="margin-bottom:16px;">
-        <select id="heatmapDays" onchange="loadCmdHeatmap()" style="flex:0 0 150px;">
+        <select id="heatmapDays" data-fn="loadCmdHeatmap" style="flex:0 0 150px;">
           <option value="1">Last 24h</option>
           <option value="7" selected>Last 7 days</option>
           <option value="30">Last 30 days</option>
@@ -528,7 +528,7 @@
         <div class="stg"><label>Theme Presets</label><div class="thm-grid" id="themeGrid"></div></div>
         <div class="stg"><label>Color Palette</label><div class="pal-grid" id="paletteGrid"></div><div class="stg-hint">Full interface color schemes (backgrounds, surfaces, borders). Applies to dark mode; light mode keeps its standard surfaces.</div></div>
         <div class="stg"><label>Interface Font</label>
-          <select id="dashFont" onchange="previewFont(this.value)">
+          <select id="dashFont" data-fn="previewFont" data-args='["@value"]'>
             <option value="inter">Inter (default)</option>
             <option value="system">System UI</option>
             <option value="grotesk">Space Grotesk</option>
@@ -536,50 +536,50 @@
             <option value="mono">JetBrains Mono</option>
           </select></div>
         <div class="stg"><label>Corner Radius</label>
-          <select id="dashRadius" onchange="previewRadius(this.value)">
+          <select id="dashRadius" data-fn="previewRadius" data-args='["@value"]'>
             <option value="compact">Compact</option>
             <option value="rounded">Rounded</option>
             <option value="pill">Pill</option>
           </select></div>
         <div class="stg"><label>Border Intensity</label>
-          <select id="dashBorder" onchange="previewBorder(this.value)">
+          <select id="dashBorder" data-fn="previewBorder" data-args='["@value"]'>
             <option value="subtle">Subtle</option>
             <option value="normal">Normal</option>
             <option value="strong">Strong</option>
           </select></div>
-        <div class="stg"><label>Accent Color</label><div class="stg-inl"><input type="color" id="dashColor" value="#5865F2" oninput="previewColor(this.value)"><span style="font-size:12px;color:var(--text-dim);font-family:monospace;" id="colorVal">#5865F2</span></div></div>
-        <div class="stg"><label>Dashboard Title</label><input type="text" id="dashTitle" placeholder="Dashboard" oninput="previewTitle(this.value)"></div>
+        <div class="stg"><label>Accent Color</label><div class="stg-inl"><input type="color" id="dashColor" value="#5865F2" data-fn="previewColor" data-args='["@value"]'><span style="font-size:12px;color:var(--text-dim);font-family:monospace;" id="colorVal">#5865F2</span></div></div>
+        <div class="stg"><label>Dashboard Title</label><input type="text" id="dashTitle" placeholder="Dashboard" data-fn="previewTitle" data-args='["@value"]'></div>
         
         <div class="stg"><label>Bot Avatar</label>
-          <div class="stg-inl" style="margin-bottom:6px;"><input type="url" id="dashAvatarUrl" placeholder="https://cdn.discordapp.com/...avatar.png" style="flex:1;"><button class="btn btn-s" onclick="showToast('Avatar URL saved with settings')" style="padding:9px 14px;font-size:11px;">Set</button></div>
+          <div class="stg-inl" style="margin-bottom:6px;"><input type="url" id="dashAvatarUrl" placeholder="https://cdn.discordapp.com/...avatar.png" style="flex:1;"><button class="btn btn-s" data-fn="showToast" data-args='["Avatar URL saved with settings"]' style="padding:9px 14px;font-size:11px;">Set</button></div>
           <div class="stg-hint">Paste a direct image URL for the bot avatar display.</div></div>
 
         <div class="stg"><label>Navbar Logo</label>
           <div class="stg-inl" style="margin-bottom:6px;"><input type="url" id="dashLogoUrl" placeholder="https://...png or upload below" style="flex:1;"></div>
-          <div class="stg-inl"><input type="file" id="logoFileInput" accept="image/*" onchange="uploadBrandAsset(this,'logo')" style="flex:1;"><button class="btn btn-s" onclick="clearBrandAsset('logo')" style="padding:9px 14px;font-size:11px;">Clear</button></div>
+          <div class="stg-inl"><input type="file" id="logoFileInput" accept="image/*" data-fn="uploadBrandAsset" data-args='["@el","logo"]' style="flex:1;"><button class="btn btn-s" data-fn="clearBrandAsset" data-args='["logo"]' style="padding:9px 14px;font-size:11px;">Clear</button></div>
           <div class="stg-hint">Shown in the top navigation bar instead of the default icon. Also used on the login page.</div></div>
 
         <div class="stg"><label>Favicon</label>
           <div class="stg-inl" style="margin-bottom:6px;"><input type="url" id="dashFaviconUrl" placeholder="https://...png or upload below" style="flex:1;"></div>
-          <div class="stg-inl"><input type="file" id="faviconFileInput" accept="image/*" onchange="uploadBrandAsset(this,'favicon')" style="flex:1;"><button class="btn btn-s" onclick="clearBrandAsset('favicon')" style="padding:9px 14px;font-size:11px;">Clear</button></div>
+          <div class="stg-inl"><input type="file" id="faviconFileInput" accept="image/*" data-fn="uploadBrandAsset" data-args='["@el","favicon"]' style="flex:1;"><button class="btn btn-s" data-fn="clearBrandAsset" data-args='["favicon"]' style="padding:9px 14px;font-size:11px;">Clear</button></div>
           <div class="stg-hint">Browser tab icon for both the dashboard and login page.</div></div>
 
         <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Background Effect</label>
           <div class="bg-style-grid" id="bgStyleGrid"></div></div>
         
         <div class="stg"><label>Custom Background</label>
-          <div class="stg-inl" style="margin-bottom:6px;"><select id="bgType" onchange="toggleBgType()"><option value="none">Disabled</option><option value="url">From URL</option><option value="upload">Upload</option></select></div>
-          <div id="bgUrlWrap" style="display:none;margin-bottom:6px;"><div style="display:flex;gap:6px;"><input type="url" id="dashBgUrl" placeholder="https://...jpg" style="flex:1;"><button class="btn btn-s" onclick="previewBg()" style="padding:9px 14px;font-size:11px;">Preview</button></div></div>
-          <div id="bgUploadWrap" style="display:none;margin-bottom:6px;"><input type="file" id="bgFileInput" accept="image/*" onchange="uploadBgFile(this)"></div>
+          <div class="stg-inl" style="margin-bottom:6px;"><select id="bgType" data-fn="toggleBgType"><option value="none">Disabled</option><option value="url">From URL</option><option value="upload">Upload</option></select></div>
+          <div id="bgUrlWrap" style="display:none;margin-bottom:6px;"><div style="display:flex;gap:6px;"><input type="url" id="dashBgUrl" placeholder="https://...jpg" style="flex:1;"><button class="btn btn-s" data-fn="previewBg" style="padding:9px 14px;font-size:11px;">Preview</button></div></div>
+          <div id="bgUploadWrap" style="display:none;margin-bottom:6px;"><input type="file" id="bgFileInput" accept="image/*" data-fn="uploadBgFile" data-args='["@el"]'></div>
           <div class="bg-pv" id="bgPreview">No background set.</div>
         </div>
-        <div class="stg"><label>Background Blur</label><select id="dashBgBlur" onchange="previewBgBlur(this.value)"><option value="0">None</option><option value="sm">Light</option><option value="md" selected>Medium</option><option value="lg">Heavy</option></select></div>
+        <div class="stg"><label>Background Blur</label><select id="dashBgBlur" data-fn="previewBgBlur" data-args='["@value"]'><option value="0">None</option><option value="sm">Light</option><option value="md" selected>Medium</option><option value="lg">Heavy</option></select></div>
         
         <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Dashboard Look</label>
           <div id="lookGrid">
-            <button class="bg-style-opt active" data-look="neo" onclick="setLook('neo')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Neo</button>
-            <button class="bg-style-opt" data-look="classic" onclick="setLook('classic')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Classic</button>
-            <button class="bg-style-opt" data-look="minimal" onclick="setLook('minimal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>Minimal</button>
+            <button class="bg-style-opt active" data-look="neo" data-fn="setLook" data-args='["neo"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Neo</button>
+            <button class="bg-style-opt" data-look="classic" data-fn="setLook" data-args='["classic"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>Classic</button>
+            <button class="bg-style-opt" data-look="minimal" data-fn="setLook" data-args='["minimal"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg>Minimal</button>
           </div>
           <div class="stg-hint">Switch between Neo (modern glass), Classic (solid panels), or Minimal (border-only).</div></div>
         <div class="stg"><label>Card Style</label>
@@ -594,43 +594,43 @@
           <select id="dashAnimSpeed"><option value="0.5">0.5x Slow</option><option value="0.75">0.75x Relaxed</option><option value="1" selected>1x Normal</option><option value="1.25">1.25x Fast</option><option value="1.5">1.5x Turbo</option></select></div>
 
         <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Dashboard Access</label>
-          <div class="stg-inl" style="margin-bottom:10px;"><input type="text" id="dashUserIdInput" placeholder="Discord user ID (right-click → Copy User ID)" style="flex:1;"><button class="btn btn-s" onclick="addDashUserUI()" style="padding:9px 14px;font-size:11px;">Add</button></div>
+          <div class="stg-inl" style="margin-bottom:10px;"><input type="text" id="dashUserIdInput" placeholder="Discord user ID (right-click → Copy User ID)" style="flex:1;"><button class="btn btn-s" data-fn="addDashUserUI" style="padding:9px 14px;font-size:11px;">Add</button></div>
           <div id="dashUsersList"></div>
           <div class="stg-hint">Users who can log into this dashboard (Discord ID + access token). Removing revokes access instantly. Same list as the /dashaccess command.</div>
         </div>
 
         <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Bot Presence</label>
           <div class="stg-inl" style="margin-bottom:6px;"><select id="botPresenceType" style="flex:0 0 120px;"><option value="playing">Playing</option><option value="watching">Watching</option><option value="listening">Listening to</option><option value="competing">Competing in</option></select><input type="text" id="botPresenceText" placeholder="e.g. with code..." style="flex:1;"></div>
-          <button class="btn btn-s" onclick="updateBotPresence()" style="padding:7px 16px;font-size:11px;">Update Presence</button>
+          <button class="btn btn-s" data-fn="updateBotPresence" style="padding:7px 16px;font-size:11px;">Update Presence</button>
           <div class="stg-hint">Changes the bot's Discord activity status immediately.</div></div>
         
         <div class="stg"><label>Bot Username</label>
-          <div class="stg-inl"><input type="text" id="botNameInput" placeholder="New bot name..." maxlength="32" style="flex:1;"><button class="btn btn-s" onclick="updateBotName()" style="padding:7px 16px;font-size:11px;">Rename</button></div>
+          <div class="stg-inl"><input type="text" id="botNameInput" placeholder="New bot name..." maxlength="32" style="flex:1;"><button class="btn btn-s" data-fn="updateBotName" style="padding:7px 16px;font-size:11px;">Rename</button></div>
           <div class="stg-hint">Discord limits username changes to 2 per hour.</div></div>
         
         <div class="stg"><label>Bot Avatar</label>
-          <div class="stg-inl"><input type="url" id="botAvatarInput" placeholder="https://cdn.discordapp.com/..." style="flex:1;"><button class="btn btn-s" onclick="updateBotAvatar()" style="padding:7px 16px;font-size:11px;">Set Avatar</button></div>
+          <div class="stg-inl"><input type="url" id="botAvatarInput" placeholder="https://cdn.discordapp.com/..." style="flex:1;"><button class="btn btn-s" data-fn="updateBotAvatar" style="padding:7px 16px;font-size:11px;">Set Avatar</button></div>
           <div class="stg-hint">Paste a direct image URL (must end in .png/.jpg/.gif).</div></div>
 
         <div class="stg"><label>Card Glow Effect</label>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" id="glowToggle"></div><div class="tg-lbl">Mouse-tracking card border glow</div></div></div>
+          <div class="tg-wr" data-fn="togW" data-args='["@el"]'><div class="tg on" id="glowToggle"></div><div class="tg-lbl">Mouse-tracking card border glow</div></div></div>
         <div class="stg"><label>Ambient Light</label>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" id="ambientToggle"></div><div class="tg-lbl">Mouse-following radial light</div></div></div>
+          <div class="tg-wr" data-fn="togW" data-args='["@el"]'><div class="tg on" id="ambientToggle"></div><div class="tg-lbl">Mouse-following radial light</div></div></div>
 
-        <div class="stg"><label>Dashboard Theme</label><div class="tg-wr" onclick="toggleTheme()"><div class="tg on" id="themeToggle"></div><div class="tg-lbl">Dark Mode<small>Switch between light and dark dashboard theme</small></div></div></div>
-        <div class="stg"><label>Show Section Labels</label><div class="tg-wr" onclick="togW(this)"><div class="tg on" id="labelToggle"></div><div class="tg-lbl">Text labels on nav bar</div></div></div>
-        <div class="stg"><label>Compact Mode</label><div class="tg-wr" onclick="toggleCompact()"><div class="tg" id="compactToggle"></div><div class="tg-lbl">Tighter spacing throughout</div></div></div>
+        <div class="stg"><label>Dashboard Theme</label><div class="tg-wr" data-fn="toggleTheme"><div class="tg on" id="themeToggle"></div><div class="tg-lbl">Dark Mode<small>Switch between light and dark dashboard theme</small></div></div></div>
+        <div class="stg"><label>Show Section Labels</label><div class="tg-wr" data-fn="togW" data-args='["@el"]'><div class="tg on" id="labelToggle"></div><div class="tg-lbl">Text labels on nav bar</div></div></div>
+        <div class="stg"><label>Compact Mode</label><div class="tg-wr" data-fn="toggleCompact"><div class="tg" id="compactToggle"></div><div class="tg-lbl">Tighter spacing throughout</div></div></div>
 
         <div class="stg" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)"><label>Refresh Interval</label><select id="dashRefresh"><option value="3">3s</option><option value="5" selected>5s</option><option value="10">10s</option><option value="30">30s</option><option value="60">60s</option></select></div>
         
         <div class="stg"><label>Visible Sections</label>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" data-w="status"></div><div class="tg-lbl">Status & Stats</div></div>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" data-w="analytics"></div><div class="tg-lbl">Analytics<small>Growth charts</small></div></div>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" data-w="activity"></div><div class="tg-lbl">Activity<small>Recent events</small></div></div>
-          <div class="tg-wr" onclick="togW(this)"><div class="tg on" data-w="system"></div><div class="tg-lbl">System<small>Host & memory</small></div></div>
+          <div class="tg-wr" data-fn="togW" data-args='["@el"]'><div class="tg on" data-w="status"></div><div class="tg-lbl">Status & Stats</div></div>
+          <div class="tg-wr" data-fn="togW" data-args='["@el"]'><div class="tg on" data-w="analytics"></div><div class="tg-lbl">Analytics<small>Growth charts</small></div></div>
+          <div class="tg-wr" data-fn="togW" data-args='["@el"]'><div class="tg on" data-w="activity"></div><div class="tg-lbl">Activity<small>Recent events</small></div></div>
+          <div class="tg-wr" data-fn="togW" data-args='["@el"]'><div class="tg on" data-w="system"></div><div class="tg-lbl">System<small>Host & memory</small></div></div>
         </div>
         
-        <button class="btn" onclick="saveSettings()" style="margin-top:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save All Settings</button>
+        <button class="btn" data-fn="saveSettings" style="margin-top:8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save All Settings</button>
       </div>
     </div>
   </main>
