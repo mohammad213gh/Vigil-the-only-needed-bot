@@ -1,17 +1,17 @@
 <div align="center">
 
-# NLux Bot
+# Vigil
 
-**v1.0.0** · The self-hosted Discord bot that doesn't charge you monthly for basic features
+**v1.0.0 · The self-hosted Discord bot that runs your server like you own it. Because you do.**
 
 ![Node](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)
 ![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2?logo=discord&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
-![Tests](https://img.shields.io/badge/130%20tests%20passing-3ba55c)
+![Tests](https://img.shields.io/badge/160%20tests%20passing-3ba55c)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red)](LICENSE)
 
-**70 slash commands · full web dashboard · own your data · no subscription, ever**
+**70 slash commands · full web dashboard · one Node process · one SQLite file · no subscription, ever**
 
 Logging · Moderation · Tickets · Ban Appeals · Auto-Mod · Invite Tracking · Reaction Roles · Polls · Reminders · Temp Voice · and a lot more
 
@@ -41,11 +41,13 @@ Logging · Moderation · Tickets · Ban Appeals · Auto-Mod · Invite Tracking �
 
 ## The short version
 
-I run a Discord server, and I got tired of paying monthly for bots that charge you extra to *see who left* or *add a reaction role*. So I built my own — everything my server needed, from scratch, over a long time of actually running it.
+Every Discord bot with real features eventually asks for your credit card. Reaction roles? Premium. See who left the server? Premium. Search a message someone deleted? That's two tiers up. I ran servers, I kept hitting that wall, and eventually I stopped renewing subscriptions and started building.
 
-This is that bot. You host it, you own it, you pay once (or nothing, if you're me). There's no "premium tier" hiding the good stuff, because there's no company behind it trying to upsell you. It's a single Node.js process with a SQLite database and a full web dashboard, and it does a genuinely absurd amount for something you run yourself.
+**Vigil** is what came out of that. It's a single Node.js process backed by one SQLite file, with a full web dashboard, 70 slash commands, and every moderation/logging/ticket feature I ever needed running a real community. It has been live in production for a long time — this isn't a portfolio piece, it's infrastructure.
 
-**What you won't find here:** music, leveling, or an economy. I never needed them, so I never built them.
+The economics are simple: you host it, you own it, you pay nothing monthly. There's no premium tier because there's no one to upsell you. The trade is that you're also the sysadmin — more on that in the [reality check](#reality-check), which I wrote because most READMEs won't.
+
+**What you won't find here:** music, leveling, or an economy. I never needed them, so I never built them — and I'd rather tell you that upfront than bury it.
 
 ---
 
@@ -273,13 +275,13 @@ A dozen of them, for when the server's quiet: `8ball`, `coinflip`, `dice`, `rps`
 - `/track` — manage tracked channels (owner-only logging helpers)
 - `/status`, `/botinfo` — health and info
 
-**Every command works as a slash command *and* a prefix command** (default prefix `;`, per-server configurable), so old habits and new UI coexist.
+**Every command works as a slash command *and* a prefix command** (default prefix `;`, per-server configurable), and both surfaces run through the exact same code — same handlers, same cooldowns, same permission checks. Old habits and new UI coexist without drift.
 
 ---
 
 ## The command reference
 
-All **70 top-level slash commands**, grouped as `/help` groups them. Commands marked 🔓 are public (anyone in the server); everything else requires the bot owner or a `/perm` grant. `G` marks commands that also gate on the guild/perm layer.
+All **70 top-level slash commands**, grouped as `/help` groups them. Commands marked 🔓 are public (anyone in the server); everything else requires the bot owner or a `/perm` grant.
 
 ### ℹ️ Info — 🔓 public
 
@@ -388,7 +390,7 @@ All **70 top-level slash commands**, grouped as `/help` groups them. Commands ma
 
 ## The dashboard
 
-The dashboard is where this stops feeling like a hobby bot. It's a full web UI — one single-page app, no reloads — that runs from the same process as the bot. Log in from a browser (`/dashboard` in Discord gives you the link) and you can run your whole server without touching Discord or a terminal.
+This is where Vigil stops feeling like a hobby bot. It's a full single-page web app served from the same process as the bot — log in from a browser (`/dashboard` in Discord gives you the link) and run your whole server without touching Discord or a terminal. Most of this bot is actually operated from here, not from commands.
 
 **Two ways in:**
 
@@ -397,7 +399,7 @@ The dashboard is where this stops feeling like a hobby bot. It's a full web UI �
 
 ### The pages
 
-The UI is split into **server management** (pick a server you're in, then per-server tabs) and **global panels** (things that apply to all servers or the bot itself):
+The UI splits into **server management** (pick a server, then per-server tabs) and **global panels** (bot-wide):
 
 **Server tabs**
 
@@ -439,8 +441,6 @@ The UI is split into **server management** (pick a server you're in, then per-se
 - **Mobile layout** — it's not a desktop-only afterthought; the sidebar collapses into a proper mobile nav
 - Live previews everywhere (greetings, ticket panels, role menus), skeletons while loading, toasts for feedback
 
-It's not a thin remote control for a handful of settings. The dashboard is where most of the bot is actually operated.
-
 ---
 
 ## Quick start
@@ -453,7 +453,7 @@ It's not a thin remote control for a handful of settings. The dashboard is where
 
 ```bash
 git clone <your-repo-url>
-cd discord-bot
+cd vigil
 npm install
 cp .env.example .env      # then fill in BOT_TOKEN, OWNER_ID, DASHBOARD_PASSWORD
 npm start
@@ -471,7 +471,7 @@ Then, in your server, run **`/deploy` once** — and again after every update th
 
 The bot tells you in the boot logs if something's missing.
 
-**First boot does:** DB schema creation → JSON-to-SQLite migration (if you have legacy files) → retention sweep catch-up → slash command registration (`/deploy` is also available manually) → dashboard server start.
+**First boot does:** DB schema creation → versioned migrations → JSON-to-SQLite migration (if you have legacy files) → retention sweep catch-up → slash command registration (`/deploy` is also available manually) → dashboard server start.
 
 ---
 
@@ -515,6 +515,8 @@ The bot used to store JSON config files; it's **SQLite-only now**. These are no 
 
 Everything — configs, warnings, cases, tickets, logs, stats — lives in **one SQLite database** (`bot.db` inside `DATA_DIR`) accessed through `better-sqlite3`. No separate database server, no Redis, nothing to operate. It's 48 tables covering: guild configs, permissions, reaction roles, role menus, tickets (panels/types/messages/ratings/blacklist), warnings & thresholds, mod cases, temp bans, reminders, giveaways, invite tracking, staff notes, message logs, automod rules/filters, voice presence, temp VC, server stats, poll votes, dashboard users/tokens, audit trail, error logs, command usage, activity counts, and API tokens.
 
+Schema changes are **versioned migrations** recorded in a `schema_migrations` table — they run once each, in order, inside transactions, and a real failure stops the boot loudly instead of limping on. Upgrades from older databases self-heal automatically.
+
 ### Retention — the database doesn't grow forever
 
 A daily sweeper (which also runs once at boot) prunes the tables that would otherwise grow unbounded:
@@ -543,7 +545,7 @@ Discord ← discord.js v14 →  bot logic  →  SQLite (better-sqlite3)
                         Express dashboard
 ```
 
-The bot and the dashboard run in the same Node.js process and share one SQLite file. ~80–120 MB of RAM on a server with a few hundred members. No microservices, no separate database, no containers required. It's deliberately boring.
+The bot and the dashboard run in the same Node.js process and share one SQLite file. ~80–120 MB of RAM on a server with a few hundred members. No microservices, no separate database, no containers required. It's deliberately boring — boring is what survives redeploys.
 
 ### The code, file by file
 
@@ -579,7 +581,7 @@ src/
 │   └── registry.js       Maps command names → handlers (the wiring hub)
 ├── events/               ready, messages, reactions, members, roles,
 │                         server, voice, extras
-├── dashboard.js          Thin entry → re-exports dashboard-backend (public API unchanged)
+├── dashboard.js          Thin entry → re-exports dashboard-backend
 ├── dashboard-backend/    The dashboard server, split like the frontend parts:
 │   ├── index.js          Assembles the app; parts register in original route order
 │   ├── core.js           Shared state: client, sessions, rate limiters, stores, uploads
@@ -596,6 +598,7 @@ src/
 │       └── 11-ops.js        Tokens, backups, export/import, health, frontend shell
 └── dashboard/            Frontend (served at /static — backend code must NOT live here)
     ├── index.html        The single page
+    ├── login.html        The login page
     └── parts/            Frontend as real ES modules:
         00-entry.mjs      Imports all parts + window bridge
         01-foundation.mjs Pure foundation: state, helpers, boot chain
@@ -612,10 +615,10 @@ src/
 
 ### Things worth knowing if you read the code
 
-- **The frontend used to be one ~4,100-line file.** It's now 10 ES modules under `src/dashboard/parts/` with explicit `import`/`export` boundaries, loaded as `<script type="module">`. Because module scope isn't global scope, the entry module attaches the ~166 functions that inline HTML handlers (`onclick="…"`) call to `window` — an explicit bridge instead of an accident. The conversion was mechanical and verified (acyclic graph, no unresolved names, strict-mode parse of every module).
-- **`scripts/analyze-modules.mjs`** re-verifies the module graph: every part parses in strict mode, no unresolved names, no cycles, no implicit-global writes. Run it after touching the dashboard.
 - **One command pipeline, two surfaces.** Slash and prefix commands share the same execution path (`src/commandPipeline.js`): cooldown → permission guard → handler → usage tracking → friendly errors. Prefix arguments are parsed against the *same* `deploy.js` schema Discord uses (`src/prefixAdapter.js`), so the two surfaces can't drift — a fix to a slash handler automatically applies to its prefix twin. Only four prefix commands (`giveaway`, `serverstats`, `vc`, `tempvc`) keep bespoke argument parsing, because their prefix CLI (flags like `--desc`, member-VC fallbacks) is intentionally different.
 - **Database schema changes are versioned migrations.** Column/table additions live in named migrations recorded in `schema_migrations`, run once each, in order, inside a transaction. A real migration failure now fails loudly at boot instead of being silently swallowed by a try/catch and surfacing later as "no such column" somewhere else. Migrations are also self-healing: they check `PRAGMA table_info` first, so databases upgraded by the older boot-time ALTERs skip cleanly.
+- **The frontend used to be one ~4,100-line file.** It's now 10 ES modules under `src/dashboard/parts/` with explicit `import`/`export` boundaries, loaded as `<script type="module">`. Because module scope isn't global scope, the entry module attaches the ~166 functions that inline HTML handlers (`onclick="…"`) call to `window` — an explicit bridge instead of an accident. The conversion was mechanical and verified (acyclic graph, no unresolved names, strict-mode parse of every module).
+- **`scripts/analyze-modules.mjs`** re-verifies the module graph: every part parses in strict mode, no unresolved names, no cycles, no implicit-global writes. Run it after touching the dashboard.
 - **Every event handler is wrapped** so a rejected promise logs to the error DB instead of killing the process.
 - **A circuit breaker** guards Discord API calls so a rate limit doesn't cascade into a crash loop.
 - **Graceful shutdown** is real: it stops loops (giveaways, temp bans, retention, server stats, voice), closes the database, and exits cleanly.
@@ -644,7 +647,7 @@ Early on, one unremoved event listener made memory climb from 60 MB to 400+ MB w
 | `dashboard-frontend.test.js` | **The real frontend boots**: jsdom installs browser globals, dynamically imports the actual module graph, and asserts the whole boot chain — auth → config → every data loader → background engine → refresh loop — completes with zero uncaught errors |
 | `giveaways` / `tempVoice` / `voicePresence` / `serverStats` | The background systems |
 
-**What the tests do *not* cover — read this twice:** there is no real-browser end-to-end testing, no click-through automation, and the two biggest server files still have large untested surfaces. Green CI means *it doesn't obviously crash*, not *the new feature works in every browser*. The bot has shipped bugs that only showed up in production — one set of dashboard routes referenced functions that didn't exist, and static analysis found them months later. Take that as a fair warning about what "tested" means here.
+**What the tests do *not* cover — read this twice:** there is no real-browser end-to-end testing, no click-through automation, and some server surfaces still have room for more coverage. Green CI means *it doesn't obviously crash*, not *the new feature works in every browser*. Bugs have shipped that only showed up in production. Take that as a fair warning about what "tested" means here.
 
 **Development scripts:**
 
@@ -660,13 +663,13 @@ node scripts/analyze-modules.mjs   # verify the frontend module graph
 
 The dashboard is the sensitive part, and it gets real treatment:
 
-- **Rate-limited login** (10 attempts/min per IP)
-- **Password or Discord-ID login** — password from env, or a per-user access token granted via `/dashaccess`
+- **Rate-limited login** (10 attempts/min per IP) and a global API rate limit
+- **Password or Discord-ID login** — password from env, or a per-user access token granted via `/dashaccess` (tokens are stored hashed; the raw token is shown exactly once)
 - **Constant-time password comparison**, random session tokens, sessions invalidated on access revocation
-- **Fail-closed tenant scoping** on server routes — every `/api/server/:id/...` checks that the session may act on that server
+- **Session hygiene**: HttpOnly + SameSite=Strict cookies, an idle TTL *and* an absolute cap, sliding renewal that can't outlive the cap
+- **Fail-closed tenant scoping** on server routes — every `/api/server/:id/...` checks that the session may act on that server, and scoped users with zero grants see zero servers
 - **Parameterized SQL everywhere** — no string-built queries into the database
-- **Ephemeral replies** for sensitive commands; a granular permission system so trusted people get exactly the commands they need
-- **`/server_leave`** to cut a server loose instantly
+- **CSP headers** with no `unsafe-inline` scripts; uploads are type/size-validated
 - **Audit trail** records sensitive dashboard/configuration actions
 
 **The honest limits:** the primary auth is a shared dashboard password from an env var, sessions live in memory (gone on restart), and there's no per-user rate limiting beyond login. That's appropriate for a self-hosted bot; it is not enterprise SSO. Put the dashboard behind your host's auth or a VPN if you're paranoid, and don't reuse the password anywhere.
@@ -687,8 +690,8 @@ The bot is plain Node + a persistent folder. Any host that gives you both works.
 ### Docker
 
 ```bash
-docker build -t discord-bot .
-docker run -p 3000:3000 --env-file .env -v /host/data:/data -e DATA_DIR=/data discord-bot
+docker build -t vigil .
+docker run -p 3000:3000 --env-file .env -v /host/data:/data -e DATA_DIR=/data vigil
 ```
 
 ### Discloud / Fly.io / any VPS
@@ -714,6 +717,9 @@ Check the error log panel in the dashboard — it's the bot's own console. The m
 **The bot won't boot and the error mentions SQLite.**
 `better-sqlite3` is a native module — it must compile for your Node version (the project pins Node 20/22 in CI). Reinstall with `npm install` on the target machine.
 
+**The bot won't boot and the error mentions a migration.**
+A schema migration failed for a real reason (locked file, disk full, corrupted page). Unlike older versions, this fails loudly on purpose — fix the underlying issue and restart; migrations re-run cleanly.
+
 **Can I run it in multiple servers?**
 Yes — global commands work everywhere, configs are per-server, and the dashboard has a server switcher plus a server-comparison view.
 
@@ -733,7 +739,7 @@ No music. No leveling/XP. No economy. No dashboard-as-a-service, no SaaS, no "pr
 Since the internet is full of READMEs that overpromise, here's the part nobody writes:
 
 - **It works — and it's actually running.** This bot has been live in real servers, deployed continuously, with CI gating every push.
-- **It's a solo project that grew fast.** The two biggest monoliths are gone — the dashboard server is split into 11 focused modules (like the frontend before it) and both command surfaces run through one shared pipeline — but parts of the frontend are still legacy-style (`var`, one-letter names, HTML built by string concatenation). It's navigable and it works; it is not a showcase of perfect architecture. The code *inside* the split modules is still the old code, honestly moved — that's on the list, and every change is protected by the boot test.
+- **It's a solo project that grew fast.** The two biggest monoliths are gone — the dashboard server is split into focused modules (like the frontend before it) and both command surfaces run through one shared pipeline — but parts of the frontend are still legacy-style (`var`, one-letter names, HTML built by string concatenation). It's navigable and it works; it is not a showcase of perfect architecture. The code *inside* the split modules is still the old code, honestly moved — that's on the list, and every change is protected by the boot test.
 - **1.0.0 means "it runs," not "it's done."** Version numbers here track *working*, not *polish*.
 - **You are the SLA.** When it goes down, it's your host that went down. Backups, uptime, and security are yours to own — which is the whole point of self-hosting, but don't pretend otherwise.
 - **Tests are a safety net, not a proof.** The suite is real and it has caught genuine bugs, but the highest-value verification is a human clicking through the dashboard in a browser — the thing no automated test here does yet.
@@ -756,5 +762,5 @@ In short:
 ---
 
 <div align="center">
-Built by franc · Discord: .nlux. (1200828694088917114)
+**Vigil** — built by franc · Discord: .nlux. (1200828694088917114)
 </div>

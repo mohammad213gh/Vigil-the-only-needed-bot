@@ -1,5 +1,5 @@
 {
-  "name": "discord-log-bot",
+  "name": "vigil",
   "version": "1.0.0",
   "main": "index.js",
   "engines": {
