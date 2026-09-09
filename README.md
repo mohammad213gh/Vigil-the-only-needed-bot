@@ -8,7 +8,7 @@
 ![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2?logo=discord&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
-[![CI](https://github.com/mohammad213gh/Discord-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammad213gh/Discord-bot/actions/workflows/ci.yml)
+[![CI](https://github.com/mohammad213gh/Vigil/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammad213gh/Vigil/actions/workflows/ci.yml)
 ![Tests](https://img.shields.io/badge/160%20tests%20passing-3ba55c)
 [![License: Community Source](https://img.shields.io/badge/License-Community_Source-5865F2)](LICENSE)
 
