@@ -2,551 +2,398 @@
 
 # Vigil
 
-**v1.0.0 · The self-hosted Discord bot that runs your server like you own it. Because you do.**
+**The self-hosted Discord bot that doesn't want your credit card.**
 
-![Node](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)
-![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2?logo=discord&logoColor=white)
-![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+70 slash commands (each also a prefix command) · full web dashboard · SQLite persistence · one Node process · zero subscriptions
+
 [![CI](https://github.com/mohammad213gh/Vigil/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammad213gh/Vigil/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/160%20tests%20passing-3ba55c)
-[![License: Community Source](https://img.shields.io/badge/License-Community_Source-5865F2)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-160%20passing-3fb950)](#testing)
+[![Node](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![Discord.js](https://img.shields.io/badge/discord.js-v14-5865F2?logo=discord&logoColor=white)](https://discord.js.org)
+[![License](https://img.shields.io/badge/license-Community%20Source-5865F2)](LICENSE)
 
-**70 slash commands · full web dashboard · one Node process · one SQLite file · no subscription, ever**
+[Features](#features) · [Dashboard](#the-dashboard) · [Quick start](#quick-start) · [Configuration](#configuration) · [Architecture](#architecture) · [Troubleshooting](#troubleshooting--faq) · [License](#license)
 
-Logging · Moderation · Tickets · Ban Appeals · Auto-Mod · Invite Tracking · Reaction Roles · Polls · Reminders · Temp Voice · and a lot more
+*(Screenshots: the dashboard login, the Overview page, and a live log embed in Discord.)*
 
 </div>
 
 ---
 
-## Contents
+Vigil is a moderation, logging, and community-management bot for Discord, built to be run **by you, on your own server**. Everything it does is covered in this document — every command, every configuration variable, every design decision. If a README ever saved you an hour, this one tries to.
 
-1. [The short version](#the-short-version)
-2. [What it does — every feature, explained](#what-it-does--every-feature-explained)
-3. [The command reference](#the-command-reference)
-4. [The dashboard](#the-dashboard)
-5. [Quick start](#quick-start)
-6. [Configuration](#configuration)
-7. [Data, storage & backups](#data-storage--backups)
-8. [Architecture](#architecture)
-9. [Testing](#testing)
-10. [Security](#security)
-11. [Deploying](#deploying)
-12. [Troubleshooting & FAQ](#troubleshooting--faq)
-13. [What it deliberately is not](#what-it-deliberately-is-not)
-14. [Reality check](#reality-check)
-15. [Support & license](#support--license)
+It was built by someone who ran servers, got tired of reaction roles sitting behind a "Premium" tab, and stopped renewing subscriptions. It has been running real communities continuously. It is infrastructure, not a portfolio piece.
+
+**Philosophy, in four lines:**
+
+- **You host it, you own it.** One Node process, one SQLite file. No accounts, no cloud, no monthly fee, no feature tier.
+- **One command surface.** Every slash command also works as a prefix command (`;` by default), through the exact same code path — same handlers, same cooldowns, same permission checks.
+- **Boring on purpose.** No microservices, no required containers, no Redis. Boring is what survives redeploys.
+- **Honest limits.** No music, no leveling, no economy — never needed, never built. This README says what the bot *doesn't* do as clearly as what it does.
 
 ---
 
-## The short version
+## Table of contents
 
-Every Discord bot with real features eventually asks for your credit card. Reaction roles? Premium. See who left the server? Premium. Search a message someone deleted? That's two tiers up. I ran servers, I kept hitting that wall, and eventually I stopped renewing subscriptions and started building.
-
-**Vigil** is what came out of that. It's a single Node.js process backed by one SQLite file, with a full web dashboard, 70 slash commands, and every moderation/logging/ticket feature I ever needed running a real community. It has been live in production for a long time — this isn't a portfolio piece, it's infrastructure.
-
-The economics are simple: you host it, you own it, you pay nothing monthly. There's no premium tier because there's no one to upsell you. The trade is that you're also the sysadmin — more on that in the [reality check](#reality-check), which I wrote because most READMEs won't.
-
-**What you won't find here:** music, leveling, or an economy. I never needed them, so I never built them — and I'd rather tell you that upfront than bury it.
+1. [Features](#features) — every capability, explained in detail
+2. [The dashboard](#the-dashboard) — the web panel, with screenshots
+3. [Quick start](#quick-start) — from zero to a running bot
+4. [Configuration](#configuration) — every environment variable
+5. [Data, storage & backups](#data-storage--backups) — the one-file design
+6. [Architecture](#architecture) — how it's built, file by file
+7. [Testing](#testing) — what's tested, what isn't
+8. [Security](#security) — what protects the dashboard, and its honest limits
+9. [Deploying](#deploying) — Railway, Docker, VPS
+10. [Troubleshooting & FAQ](#troubleshooting--faq) — the answers you'll actually need
+11. [License](#license) — free, with two rules
 
 ---
 
-## What it does — every feature, explained
+## Features
 
-### 🛡️ Moderation, done properly
+All 70 top-level commands work as slash commands **and** prefix commands (default prefix `;`, per-server configurable). Commands marked 🔓 are public; everything else requires the bot owner or a [`/perm`](#-the-permissions-model) grant.
 
-**The usual suite — kick, ban, temp bans, timeouts, warnings:**
+### 🛡️ Moderation
+
+The standard suite — with the detail that separates a real mod bot from a toy: **every action opens a numbered case**, so your staff team always has an auditable record of who did what to whom, and why.
 
 | Command | What it does |
 |---|---|
-| `/kick` | Kick a member with an optional reason |
-| `/ban` | Ban a member, optionally deleting their recent messages |
-| `/tempban` | Ban for a duration (e.g. `2d`). The unban **survives restarts** — a background sweeper tracks when each ban expires and lifts it even if the bot was offline at the deadline |
-| `/unban` | Unban a user by ID |
-| `/timeout` / `/untimeout` | Time a member out for a duration, or lift it |
-| `/warn` | Warn a member (they get a DM), optionally with an interactive form for the reason |
-| `/warnings` / `/clearwarnings` | View or clear a member's warning history |
-| `/lock` / `/unlock` | Lock a channel so nobody can send, then unlock it |
+| `/kick` | Kick a member, with reason |
+| `/ban` | Ban a member, optionally purging their recent messages |
+| `/tempban` | Time-based ban (`2d`, `12h`…). The unban **survives restarts** — expiry dates live in the database, and a background sweeper lifts them even if the bot was offline at the deadline |
+| `/unban` | Unban by user ID |
+| `/timeout` / `/untimeout` | Time a member out, or lift it |
+| `/warn` | Warn a member (DMs them), with interactive reason form |
+| `/warnings` / `/clearwarnings` | View or clear a member's history |
+| `/lock` / `/unlock` | Channel lockdown |
 | `/purge` | Bulk-delete up to 100 messages |
-| `/slowmode` | Set a channel slowmode in seconds |
+| `/slowmode` | Set channel slowmode |
 | `/nickname` | Change a member's nickname |
 
-**Every single action is recorded in a numbered case system.** When you warn, kick, ban, or timeout someone, the bot opens a case: who did it, who it was done to, when, why, and what was done. Then:
+**The case system.** Every warn/kick/ban/timeout opens a case: actor, target, timestamp, reason, action. Then:
 
-- `/history @user` — that user's full moderation history
-- `/case 12` — details of one specific case
-- `/reason 12 appeal approved, lifted early` — update the reason later, which is how you keep your audit trail honest when a punishment is reversed
-
-Temp bans that auto-unban **even across restarts** were the original pain point that justified the whole design — timers that live in memory die with the process, so expiry dates live in the database and a sweeper checks them.
+- `/history @user` — a member's full moderation history
+- `/case 12` — one case in detail
+- `/reason 12 appeal approved, lifted early` — amend a case's reason later, so the audit trail stays honest when a punishment gets reversed
 
 ### 📜 Logging — 16 categories, ~40 event types
 
-The bot watches your server and writes a log entry for almost everything that happens, grouped into 16 independently-configured categories:
+Vigil writes a log embed for almost everything that happens in your server. The channel-creation embed below is real output — that's what every logged event looks like in your mod channel:
+
+<p align="center"><img src="docs/screenshots/log-embed.png" alt="A Vigil log embed in Discord: a voice channel creation event, with the actor, channel name, type, and ID laid out cleanly" width="420"></p>
+
+The 16 categories, each independently routed and toggleable:
 
 `messages` · `reactions` · `members` · `roles` · `server` · `voice` · `threads` · `emojis` · `bans` · `invites` · `stickers` · `automod` · `scheduled` · `stage` · `webhooks` · `integrations`
 
-For each category you decide, independently:
+Per category, you control:
 
-- **Where it goes** — `/log channel type:messages #mod-logs` routes that category to its own channel, or leave it unset to use the default
+- **Where it goes** — `/log channel type:messages #mod-logs` routes one category to its own channel, or leave it unset for the default
 - **Whether it's on** — `/log toggle category:messages enabled:true`
-- **What it looks like** — every log embed inherits your server's embed config (color, footer)
+- **How it looks** — every embed inherits your server's embed config (color, footer) via `/embedconfig`
 
-What gets logged includes message edits/deletes (with before → after content), reaction changes, joins/leaves, role changes, channel & permission changes, voice moves, threads, bans, invite use, emoji/sticker changes, and automod actions. Logged **deleted messages stay searchable** after the fact via `/logs` or the dashboard — Discord gives you nothing for free there.
+Logged deleted messages **stay searchable** — see the next section. That's the feature Discord doesn't give you for free.
 
-### 🔍 Log search
+### 🔍 Message log search
 
-`/logs search` digs through the stored message log by:
+`/logs search` digs through stored message logs by **user**, **keyword**, and **action** (deleted/edited only), up to 50 results. This is the "someone said something awful and deleted it" feature. It has settled real disputes.
 
-- **User** — everything a specific person said, including deleted messages
-- **Keyword** — every logged message containing a phrase
-- **Action** — filter to deleted or edited only
-- **Limit** — up to 50 results
+### 🤖 Auto-mod
 
-This is the "someone said something awful and deleted it" feature. It has settled real disputes.
+Five independent rules, each with its own trigger, thresholds, and action:
 
-### 🤖 Auto-mod & protections
-
-Five independent rules, each with its own trigger and its own action:
-
-| Rule | Trigger | Options |
+| Rule | Trigger | Configurable |
 |---|---|---|
-| **Spam** | X messages in Y seconds | threshold, time window |
+| **Spam** | X messages in Y seconds | threshold, window |
 | **Mass mentions** | more than X mentions in one message | threshold |
-| **Banned words** | a word on your blocklist | pattern list |
-| **Links** | any link (or a link not on your allowlist) | allowlist |
-| **Excessive caps** | message is >70% caps and >20 chars | threshold % |
+| **Banned words** | word on your blocklist | pattern list |
+| **Links** | any link, or any not on an allowlist | allowlist |
+| **Excessive caps** | >70% caps in a >20-char message | threshold |
 
-Each rule can take one of four actions: **warn** the user, **delete** the message, **timeout** them, or **kick** them — and timeout actions can carry a duration.
+Each rule takes one of four actions: **warn**, **delete**, **timeout** (with duration), or **kick**. Words and links are managed as filters (`/automod filter type:words pattern:spam`), and there's a full **exemption system** — channels where automod doesn't run, roles above the rules — all editable from the dashboard with whole-config import/export.
 
-Words and links are managed as **filters**: `/automod filter type:words pattern:spam` adds a banned word, `/automod filter type:links pattern:youtube.com` adds a link-allowlist entry. There's also a **channel/role exemption system** — choose channels where automod doesn't run and roles that are above the rules — all configurable from the dashboard with an import/export for your whole rule set.
+### ⚖️ Warning thresholds — the escalation ladder
 
-### ⚖️ Warning thresholds — an escalation ladder
+Warnings are only as good as what happens when someone collects them:
 
-Warnings are only as good as what happens when someone collects them. The thresholds system turns warning counts into automatic action:
+```
+/thresholds add warnings:3 action:timeout duration:60   → 3 warnings = 1h timeout
+/thresholds add warnings:5 action:kick                  → 5 warnings = kick
+/thresholds add warnings:7 action:ban                   → 7 warnings = ban
+```
 
-- `/thresholds add warnings:3 action:timeout duration:60` — three warnings = 1-hour timeout
-- `/thresholds add warnings:5 action:kick`
-- `/thresholds add warnings:7 action:ban`
-
-Each server builds its own ladder (timeout → kick → ban), and it's all configurable from the dashboard too.
+Each server builds its own ladder. Dashboard-editable, like everything else.
 
 ### 🔐 The permissions model
 
-Instead of "trusted role can do everything," this bot does command-level grants:
+Instead of one "trusted role" that can do everything, Vigil grants **one specific command to one specific person**:
 
-- **The bot owner** (from `OWNER_ID`) can always use anything.
-- **`/perm grant @user /ban`** gives one specific person one specific command. `/perm revoke`, `/perm list`, and `/perm user` manage it.
-- Grants are **per-server** (they live in the database keyed by guild ID) and cached for 30 seconds, so a revoke takes effect almost immediately.
+```
+/perm grant @mod /ban        → this person can ban
+/perm grant @trial-mod /kick → this one can only kick
+/perm user @mod              → audit what someone can do
+```
 
-This is how you let a moderator kick without handing them the ability to change the bot's avatar or wipe the warning history. There's no "half-admin" role that secretly does too much.
+Grants are per-server, stored in the database, and cached for 30 seconds (so a revoke takes effect almost immediately). The bot owner can always do anything. There's no "half-admin" role that secretly does too much.
 
-### 🎫 Tickets — the deepest feature in the bot
+### 🎫 Tickets
 
-The ticket system is built around **panels and types**. A panel is a message (or dashboard widget) that people click to open a ticket; a panel contains one or more **types**, which are different flavors of ticket.
+The deepest system in the bot, built on **panels** (what users click) and **types** (different flavors of ticket within a panel, each with its own support team and questions).
 
-**Setting up:**
+**Setup:** `/ticket panel_create name:Support` → `/ticket type_add panel:Support name:General` → configure each type:
 
-- `/ticket panel_create name:Support` — create a panel
-- `/ticket type_add panel:Support name:General` — add a type to it (emoji optional)
-- `/ticket type_category` — which category spawned ticket channels live in
-- `/ticket type_role` — which support role can see this type's tickets (per-type support teams!)
-- `/ticket type_welcome` — the message posted inside the ticket when it opens
-- `/ticket type_question` — custom questions users answer before the ticket opens (e.g. "What's your issue?", required or optional). Answers appear in the ticket
-- `/ticket panel_send` — post the panel to a channel
+- `type_category` — where ticket channels spawn
+- `type_role` — which support role sees this type (per-type support teams)
+- `type_welcome` — the message posted inside the ticket on open
+- `type_question` — custom questions users must answer before the channel opens (required or optional); answers appear in the ticket
 
-**During a ticket's life:**
+**Lifecycle:** `/ticket claim` · `add`/`remove` (members) · `rename` · `close` (with reason)
 
-- `/ticket claim` — take responsibility for the ticket (it's visibly yours now)
-- `/ticket add @user` / `/ticket remove @user` — manage who's in the channel
-- `/ticket rename` — rename the channel
-- `/ticket close` — close and archive the ticket with an optional reason
+**Rules:** `blacklist_add` (ban someone from opening tickets) · `type_inactivity hours:24` (auto-close stale tickets) · `close_on_leave` (auto-close when the member leaves) · `log_channel` (where transcripts go)
 
-**Rules and cleanup:**
-
-- `/ticket blacklist_add @user` — stop someone from opening tickets entirely
-- `/ticket type_inactivity hours:24` — auto-close tickets for a type after inactivity
-- `/ticket close_on_leave` — auto-close open tickets when the member leaves the server
-- `/ticket log_channel` — where transcripts go when tickets close
-
-When a ticket closes, the bot **snapshots the full transcript** into the database (message-by-message, with authors and timestamps), so a closed ticket is a permanent record — not a deleted channel.
-
-The dashboard takes this further: visual panel builders, clone panel, drag-free reordering of types, a "frequently used configs" system, an unsaved-changes bar, and a live preview of what the panel will look like. (Details in the dashboard section.)
+When a ticket closes, Vigil **snapshots the full transcript into the database** — message by message, with authors and timestamps. A closed ticket is a permanent record, not a deleted channel.
 
 ### ⚖️ Ban appeals
 
-Banned users can appeal — no access to your server required. The appeal lands in the **dashboard** (there's no slash command for it by design: appealing users are banned, so Discord commands are off the table):
-
-1. The banned user opens the appeal URL and writes their side.
-2. You see open appeals in the dashboard with the original ban reason and the ban case.
-3. You approve (the ban is lifted) or deny — the user sees the outcome.
+Banned users can appeal through a web URL — no server access needed (and no slash command *possible*: they're banned, Discord commands are off the table). Appeals land in the dashboard with the original ban reason and case attached; you approve (unbans them) or deny, and the user sees the outcome.
 
 ### 🌟 Reaction roles & role menus
 
-Two ways to let people self-assign roles:
+Two ways to let members self-serve roles:
 
-- **Reaction roles** — a message with emoji reactions; clicking the emoji toggles the role. `/reactionrole add channel:#roles role:@Pingable emoji:🔔` or build it in the dashboard with drag-and-drop preview.
-- **Role menus** — a dropdown select on a message; users pick from the list. `/rolemenu create`, then `add` roles with labels and emoji, then `publish` to turn it into a working dropdown.
+- **Reaction roles** — react to toggle: `/reactionrole add channel:#roles role:@Pingable emoji:🔔`
+- **Role menus** — a dropdown on a message: `/rolemenu create` → `add` (with labels and emoji) → `publish`
 
-Both support add/remove/list management and per-option labels and emoji. The dashboard version lets you compose the whole thing visually and publish it without touching a command.
+Both are fully buildable in the dashboard with live preview.
 
-### 👋 Welcome & goodbye messages
+### 👋 Welcome & goodbye
 
-Fully customizable embeds for join and leave events. `/welcome` and `/goodbye` each expose: `channel`, `toggle`, `message` (plain text above the embed), `title`, `description`, `color`, `footer` (text + icon), `thumbnail`, `image`, `author`, `show`, `test`, `reset`.
+Custom embeds for joins and leaves, configured by command or the dashboard's live-preview editor:
 
-Messages support **8 placeholders**:
+```
+/welcome channel #general toggle on message "Welcome!" title "New member" color #5865F2
+```
 
-| Placeholder | Becomes |
-|---|---|
-| `{user}` | Mention of the new member |
-| `{username}` | Their `name#0000` |
-| `{userid}` | Their Discord ID |
-| `{server}` | Server name |
-| `{membercount}` | Total members |
-| `{members}` | Same as `{membercount}` |
-| `{age}` | How old the account is (e.g. `2y 3m`) |
-| `{created}` | Account creation date (relative timestamp) |
-
-So `Welcome {user} to **{server}**! We now have {membercount} members` becomes a real, rendered message. The dashboard has a **live preview** editor with a clickable placeholder reference, so you never guess.
+Eight placeholders work in any text: `{user}` `{username}` `{userid}` `{server}` `{membercount}` `{members}` `{age}` `{created}`. Example: `Welcome {user} — member #{membercount} of {server}!`
 
 ### 📨 Invite tracking
 
-The bot records every invite it sees and — crucially — **which invite code actually brought each member in**. `/invites check @user` shows their invites; `/invites top` ranks your best inviters; `/invites stats` gives server totals. When someone joins with a fake/vanity code, the log shows the real code.
+Every invite is recorded, and — the point — **which invite code actually brought each member in**:
+
+- `/invites check @user` — someone's invites
+- `/invites top` — your best recruiters
+- `/invites stats` — server totals
+
+Fake or vanity join codes resolve to the real code in the logs.
 
 ### 🎁 Giveaways
 
-`/giveaway start` with prize, duration (`1h`, `2d`, `1h30m`), number of winners, optional description, entry color, image, and — the useful bit — a **required role** and a **banned role** (e.g. "must have @Member", "no @Suspicious"). Then `end` (early), `reroll`, `cancel`, `list`. Winner picking is stored and audited, and giveaways survive restarts — the giveaway state lives in the database with its own check loop.
+`/giveaway start` with prize, duration (`1h30m` parses), winner count, description, color, image — plus a **required role** and a **banned role** ("must have @Member", "no @Suspicious"). `end` early, `reroll`, `cancel`, `list`. Winner selection is stored and auditable. Giveaways survive restarts.
 
-### 📊 Polls & announcements
+### 📊 Polls, announcements, reminders
 
-`/poll` takes a question and up to 4 options, with `multi` (multi-vote) and `anonymous` toggles and an optional `duration` for timed auto-finalize. `/announce` posts a titled, colored announcement embed to a channel of your choice.
+- `/poll` — up to 4 options, `multi` and `anonymous` modes, optional timed auto-finalize
+- `/announce` — titled, colored announcement embed to any channel
+- `/remindme 30s drink water` — DMs you later; `30s` `5m` `2h` `1d` `1h30m` all parse. Persistent across restarts. `/reminders list` / `cancel`
 
-### ⏰ Reminders
+### 🎧 Temp voice ("join to create")
 
-`/remindme 30s drink water` — the bot DMs you when the time is up. Durations parse naturally (`30s`, `5m`, `2h`, `1d`, `1h30m`). `/reminders list` and `/reminders cancel` manage them, and they're **persistent** — stored in the database, so a restart doesn't eat your reminders.
+1. `/tempvc set channel:#Join-To-Create`
+2. Someone joins → Vigil spawns a private channel named from your template (`{name}`, `{number}`)
+3. The owner controls it: `/tempvc rename` · `limit` · `lock`/`unlock` · `claim` — or via the **button panel** (`/tempvc panel`) so they never touch a command
 
-### 🎧 Temp voice channels
+Empty channels auto-delete; the trigger channel frees up instantly.
 
-The "join to create" pattern:
+### 🎙️ Voice presence & live stat channels
 
-1. `/tempvc set channel:#Join-To-Create` — designate a trigger channel (optionally a category where spawned channels go)
-2. When someone joins it, the bot **spawns a private channel for them** named by your template (`/tempvc name template:"{name}'s channel"` — `{name}` and `{number}` available)
-3. The owner controls it: `/tempvc rename`, `/tempvc limit`, `/tempvc lock` / `unlock`, and `/tempvc claim` if the original owner left
-
-There's also a **button control panel** (`/tempvc panel`) that gives the channel owner clickable rename/lock/limit buttons instead of commands, and the whole thing auto-cleans: when everyone leaves an empty temp channel, it's deleted and the trigger channel is free again.
-
-### 🎙️ Voice presence
-
-`/vc` (owner only) makes the bot itself chill in a voice channel — join, move it around, leave — with an optional `status` text that shows as "Listening to …". Useful for a bot that should appear present in a community VC, and it's wired through `@discordjs/voice` with rejoin logic if the bot gets disconnected.
-
-### 📈 Server stats channels
-
-`/serverstats add` turns a channel name into a **live counter**. Pick a type — members, humans, bots, online, boosting, boost tier, channels, roles, or emojis — and the bot keeps the channel name current as the number changes. `/serverstats remove` and `list` manage them.
+- `/vc` (owner) — the bot chills in a voice channel with an optional "Listening to…" status, with rejoin logic if disconnected
+- `/serverstats add` — turns a channel into a **live counter**: members, humans, bots, online, boosting, boost tier, channels, roles, or emojis — the channel name updates itself
 
 ### 📝 Staff notes
 
-Private notes about users, visible only to your team: `/note add @user`, `/note list`, `/note edit`, `/note remove`. Notes are per-server and never shown to the user. Great for "appealed a ban three times," "previously traded nitro," or "actually the victim, do not bait."
+Private, per-server notes about users that the user never sees: `/note add @user` · `list` · `edit` · `remove`. For context like "appealed three times" or "actually the victim, don't bait."
 
-### 📊 Stats & activity
+### 📈 Analytics
 
-The bot tracks what actually happens in your server:
-
-- **Member growth** — daily join/leave snapshots, kept for 90 days, charted in the dashboard
-- **Command usage** — every command run, per server, per command, timestamped — charted as totals and as a **heatmap** (hour × weekday) that shows when your server is alive
+- **Member growth** — daily join/leave snapshots (90 days), charted in the dashboard
+- **Command usage** — every command, per server, charted as totals and as an hour × weekday **heatmap** of when your server is alive
 - **Activity counts** — top users and channels over time
-- **Server comparison** — how your servers stack up against each other (dashboard)
-- **Bot activity** — uptime, memory, message/command counters (dashboard)
+- `/stats server` · `/stats growth` cover the basics in Discord; the good charts live in the dashboard
 
-`/stats server` and `/stats growth` cover the basics in Discord; the interesting stuff lives in the dashboard.
+### 🎮 Fun
 
-### 🎮 Fun commands
-
-A dozen of them, for when the server's quiet: `8ball`, `coinflip`, `dice`, `rps`, `joke`, `fact`, `advice`, `quote`, `reverse`, `mock`, `random`, and `worldcup` (predict a match score).
-
-### 👑 Owner commands
-
-- `/deploy` — re-register all slash commands (run after updates)
-- `/dashboard` — get your dashboard link
-- `/dashaccess` — grant/revoke/list Discord-ID-based dashboard access
-- `/server_leave` — force-leave a server by ID
-- `/shutdown` — graceful shutdown
-- `/presence`, `/botavatar`, `/botname` — the bot's public identity
-- `/embedconfig` — default embed footer + color for your server's embeds
-- `/prefix` — view/change the prefix for prefix commands (default `;`)
-- `/track` — manage tracked channels (owner-only logging helpers)
-- `/status`, `/botinfo` — health and info
-
-**Every command works as a slash command *and* a prefix command** (default prefix `;`, per-server configurable), and both surfaces run through the exact same code — same handlers, same cooldowns, same permission checks. Old habits and new UI coexist without drift.
-
----
-
-## The command reference
-
-All **70 top-level slash commands**, grouped as `/help` groups them. Commands marked 🔓 are public (anyone in the server); everything else requires the bot owner or a `/perm` grant.
-
-### ℹ️ Info — 🔓 public
-
-| Command | Description |
-|---|---|
-| `/help` | Show all commands, a category, or help for one command |
-| `/ping` | Bot + API latency |
-| `/status` | Bot status, uptime, memory, server count |
-| `/botinfo` | Version, library, invite info |
-| `/userinfo` | Member info: joined, created, roles, permissions |
-| `/avatar` | A user's avatar |
-| `/stats` | Server / growth / command-usage statistics |
-
-### 🎮 Fun — 🔓 public
-
-| Command | Description |
-|---|---|
-| `/8ball` · `/coinflip` · `/dice [sides]` · `/rps` | Classic games |
-| `/joke` · `/fact` · `/advice` · `/quote` | Random content |
-| `/reverse` · `/mock` · `/random min max` | Text & number toys |
-| `/worldcup team1 team2` | Predict a match score |
-
-### ⏰ Reminders — 🔓 public
-
-| Command | Description |
-|---|---|
-| `/remindme time text` | DM reminder (`30s`, `5m`, `2h`, `1d`, `1h30m`) |
-| `/reminders list` / `cancel` | Manage your reminders |
-
-### 🛠️ Admin & utility
-
-| Command | Description |
-|---|---|
-| `/role add / remove / list` | Manage a user's roles |
-| `/purge [amount]` | Bulk delete messages |
-| `/slowmode [seconds]` | Channel slowmode |
-| `/nickname user nickname` | Change a member's nickname |
-| `/say` / `/embed` | Make the bot say or embed something |
-| `/announce channel title message color` | Formatted announcements |
-| `/poll question option1-4 multi anonymous duration` | Polls |
-| `/deploy` | Re-register slash commands (owner) |
-| `/track add/remove/list` | Tracked channels (owner) |
-| `/log channel/toggle/list` | Logging config |
-| `/prefix [new_prefix]` | Per-server prefix |
-
-### 🛡️ Moderation & cases
-
-| Command | Description |
-|---|---|
-| `/kick` · `/ban` · `/unban` | Standard actions |
-| `/tempban user duration` | Time-based ban, survives restarts |
-| `/timeout` / `/untimeout` | Timeout management |
-| `/warn` · `/warnings` · `/clearwarnings` | The warning system |
-| `/lock` / `/unlock` | Channel lockdown |
-| `/history user` | Full moderation history |
-| `/case id` | One case's details |
-| `/reason id text` | Amend a case's reason |
-
-### ⚙️ Config & customization
-
-| Command | Description |
-|---|---|
-| `/embedconfig footer/color/show` | Embed appearance |
-| `/presence type text` | Bot activity status |
-| `/botavatar url` · `/botname name` | Bot identity |
-| `/automod config/filter/filters/list` | Auto-mod rules & word/link filters |
-| `/thresholds add/remove/list` | Warning escalation ladder |
-| `/perm grant/revoke/list/user` | Command-level permissions |
-| `/welcome` · `/goodbye` | Join/leave embeds |
-| `/rolemenu create/add/remove/publish/list` | Dropdown role menus |
-| `/reactionrole add/remove/list` | Emoji reaction roles |
-| `/invites check/top/stats` | Invite tracking |
-| `/note add/list/edit/remove` | Staff notes |
-| `/logs search` | Message-log search |
-
-### 🎫 Tickets, temp voice & voice
-
-| Command | Description |
-|---|---|
-| `/ticket` | Full panel/type system — `panel_create/delete/list/send`, `type_add/remove/list/category/role/welcome/question/question_remove/inactivity`, `blacklist_add/remove/list`, `config_show`, `toggle`, `close_on_leave`, `log_channel`, `add`, `remove`, `close`, `claim`, `rename` |
-| `/tempvc` | `set/unset/name/list/panel/rename/limit/lock/unlock/claim` |
-| `/vc` | Voice presence — `join/move/leave/status` (owner) |
+A dozen quiet-afternoon commands: `8ball` · `coinflip` · `dice` · `rps` · `joke` · `fact` · `advice` · `quote` · `reverse` · `mock` · `random` · `worldcup`
 
 ### 👑 Owner
 
-| Command | Description |
-|---|---|
-| `/dashboard` · `/dashaccess add/remove/list` | Dashboard link & access |
-| `/server_leave server_id` | Force-leave a server |
-| `/shutdown` | Graceful stop |
-
-### 📊 Server stats
-
-| Command | Description |
-|---|---|
-| `/serverstats add/remove/list` | Live counter channels (members/humans/bots/online/boosting/tier/channels/roles/emojis) |
-
-### 🎁 Giveaways
-
-| Command | Description |
-|---|---|
-| `/giveaway start` | Prize, duration, winners, description, required/banned roles, color, image |
-| `/giveaway end id` · `reroll id` · `cancel id` · `list` | Manage them |
+`/deploy` (re-register slash commands after updates) · `/dashboard` (get the panel link) · `/dashaccess` (grant Discord-ID dashboard logins) · `/server_leave` · `/shutdown` · `/presence` · `/botavatar` · `/botname` · `/embedconfig` · `/prefix` · `/track` · `/status` · `/botinfo`
 
 ---
 
 ## The dashboard
 
-This is where Vigil stops feeling like a hobby bot. It's a full single-page web app served from the same process as the bot — log in from a browser (`/dashboard` in Discord gives you the link) and run your whole server without touching Discord or a terminal. Most of this bot is actually operated from here, not from commands.
+Slash commands run a server; the dashboard *operates* one. It's a full single-page web app served from the **same process** as the bot — no second service to deploy. Log in from a browser (`/dashboard` in Discord gives you the link) and manage everything without touching Discord or a terminal.
 
 **Two ways in:**
 
 1. **Password** — the shared `DASHBOARD_PASSWORD` from your env
-2. **Discord ID + token** — grant specific people access with `/dashaccess add @user`, and they log in with their Discord ID and a per-user token
+2. **Discord ID + token** — grant specific people scoped access with `/dashaccess add @user`; they log in with their Discord ID and a per-user token, and see only the servers you granted
 
-### The pages
+The gate:
 
-The UI splits into **server management** (pick a server, then per-server tabs) and **global panels** (bot-wide):
+<p align="center"><img src="docs/screenshots/login.png" alt="The Vigil dashboard login page: a centered dark card with a Password / Discord ID tab switcher, a password field, and a Sign In button" width="720"></p>
 
-**Server tabs**
+After login, the **Overview** lands you on live vitals — connection status with a live ping readout, uptime, server and member counts, memory, pending reminders, member-growth sparkline. This updates in real time over SSE:
 
-- **Mod tools** — search members, view member profiles (cases, notes, warnings, invites), warn / kick / ban / timeout from the browser, mod stats, server insights, invite leaderboard
-- **Logging** — per-category channel routing and toggles, plus a **message search** that shows deleted/edited content with highlights
-- **Server settings** — prefix, tracked channels, server name/icon display, compact mode
-- **Greetings** — the visual welcome/goodbye editor with live preview
-- **Auto-mod** — rule builder (thresholds, actions, durations), word/link filter management, channel/role exemptions, whole-config import/export
-- **Reaction roles & role menus** — build, edit, delete, and publish from the browser
-- **Tickets** — full panel CRUD with modals: create/edit/clone panels, add types, edit questions inline, reorder, preview what members will see, role-chip pickers, an unsaved-changes bar, frequently-used configs, and the recent-tickets view
-- **Temp voice** — trigger channels, spawn categories, name templates, live temp-channel list with cleanup
-- **Warning thresholds** — the escalation ladder as a form
-- **Voice presence** — join/move/leave the bot's VC, set its status
-- **Webhooks & API tokens** — create webhooks and API tokens for integrations
-- **Rate limits** — configure per-command cooldowns from the UI
+<p align="center"><img src="docs/screenshots/overview.png" alt="The Vigil dashboard Overview page: stat cards for connection (Ready, 16ms ping), uptime, servers, memory, pending reminders, total growth with sparkline, and active servers, under a grouped top navigation" width="960"></p>
 
-**Global panels**
+The top nav groups everything into seven places: **Overview · Analytics · Operate · Activity · Engage · Manage · System**.
 
-- **Overview** — uptime, memory, members, message counters at a glance
-- **Servers** — every server the bot is in, with per-server management entry
-- **Audit trail** — the bot's own record of sensitive actions (config changes, permissions, deletions)
-- **Ban appeals** — review open appeals, see ban context, approve/deny
-- **Giveaways** — start/end/reroll/cancel with winner history
-- **Reminders** — view and cancel any user's reminders
-- **Command heatmap** — usage by hour × weekday
-- **Server comparison** — activity across your servers
+### Server management (per-server)
+
+Pick a server from **Servers**, then:
+
+| Tab | What you do there |
+|---|---|
+| **Mod tools** | Search members, open profiles (cases, notes, warnings, invites), warn/kick/ban/timeout from the browser, mod stats, invite leaderboard |
+| **Logging** | Route and toggle the 16 log categories, search message logs (deleted/edited content with highlights) |
+| **Server settings** | Prefix, tracked channels, compact mode |
+| **Greetings** | Visual welcome/goodbye editor, live preview |
+| **Auto-mod** | Rule builder, word/link filters, exemptions, config import/export |
+| **Reaction roles & role menus** | Build, edit, and publish visually |
+| **Tickets** | Panel CRUD with modals, clone, inline question editing, reorder, live member-facing preview, unsaved-changes bar |
+| **Temp voice** | Trigger channels, spawn categories, name templates, live channel list |
+| **Warning thresholds** | The escalation ladder as a form |
+| **Voice presence** | Bot VC join/move/leave and status |
+| **Webhooks & API tokens** | Integrations |
+| **Rate limits** | Per-command cooldowns from the UI |
+
+### Global panels (bot-wide)
+
+- **Overview** — the vitals page above
+- **Analytics** — growth charts, command heatmap, server comparison
+- **Servers** — every server, one click to manage
+- **Audit trail** — the bot's record of sensitive dashboard actions
+- **Ban appeals** — review, approve, deny with full ban context
+- **Giveaways / Reminders** — manage everything from one place
 - **Bot activity** — uptime, memory, event counters over time
-- **Error log** — the bot's console errors, searchable, filterable, with a clear button
+- **Error log** — the bot's console, searchable and filterable
 - **Backups** — one-click SQLite backups with integrity verification and download
 - **Dashboard access** — grant/revoke Discord-ID logins
 - **Bot customization** — name, avatar, presence, brand name
-- **Settings** — theme (dark/light), accent color, background image/upload, blur/glass effects, animations, font, border radius, compact mode, and a **look switcher** (Neo / Classic / Minimal)
+- **Settings** — theme, accent color, fonts, radius, background, plus a look switcher (Neo / Classic / Minimal)
 
-**The polish that makes it feel like a real product:**
+### The details that make it feel like a product
 
 - **Ctrl+K command palette** for jumping anywhere
-- **Keyboard shortcuts** throughout (details in the dashboard's shortcut list)
-- **SSE live events** — the page updates in real time as messages get deleted or edited on the server
-- **Mobile layout** — it's not a desktop-only afterthought; the sidebar collapses into a proper mobile nav
-- Live previews everywhere (greetings, ticket panels, role menus), skeletons while loading, toasts for feedback
+- **Keyboard shortcuts** throughout (listed in the dashboard itself)
+- **SSE live events** — the page updates as messages are deleted/edited on Discord
+- **Mobile layout** — a real collapsing nav, not a desktop afterthought
+- Live previews everywhere, skeletons while loading, toasts for feedback
 
 ---
 
 ## Quick start
 
-**You need:**
-
-- **Node.js 20+**
-- A bot application + token from the [Discord Developer Portal](https://discord.com/developers/applications)
-- The bot invited with the `applications.commands` scope (for slash commands)
+**You need:** Node.js 20+, a bot application + token from the [Discord Developer Portal](https://discord.com/developers/applications), and the bot invited to your server with the `applications.commands` scope.
 
 ```bash
-git clone <your-repo-url>
-cd vigil
+git clone https://github.com/mohammad213gh/Vigil.git
+cd Vigil
 npm install
 cp .env.example .env      # then fill in BOT_TOKEN, OWNER_ID, DASHBOARD_PASSWORD
 npm start
 ```
 
-Then, in your server, run **`/deploy` once** — and again after every update that adds or changes commands — so the command list stays in sync.
+Then in your server, run **`/deploy` once** — and again after every update that adds or changes commands — so Discord's command list stays in sync.
 
-**Intents.** The bot uses a specific intent set. When you create the application, enable these in the Developer Portal (Bot → Privileged Gateway Intents):
+**Enable the privileged intents.** In the Developer Portal (Bot → Privileged Gateway Intents), turn on:
 
-- **Message Content** — needed for prefix commands and message filtering
-- **Server Members** — needed for join/leave logging and member stats
-- **Presence** — needed for presence-based features
+- **Message Content** — prefix commands and message filtering
+- **Server Members** — join/leave logging and member stats
+- **Presence** — presence-based features
 - **Voice States** — voice events
-- **Scheduled Events**, **Guild Moderation**, **Guild Expressions** — as used by the event handlers
+- **Scheduled Events**, **Guild Moderation**, **Guild Expressions** — used by their event handlers
 
-The bot tells you in the boot logs if something's missing.
+The boot logs tell you if something's missing.
 
-**First boot does:** DB schema creation → versioned migrations → JSON-to-SQLite migration (if you have legacy files) → retention sweep catch-up → slash command registration (`/deploy` is also available manually) → dashboard server start.
+**What first boot does:** DB schema creation → versioned migrations → legacy JSON migration (if applicable) → retention sweep → slash command registration → dashboard start.
 
 ---
 
 ## Configuration
 
-All configuration is environment variables. Copy `.env.example` → `.env` and fill it in.
+Everything is environment variables. Copy `.env.example` → `.env`.
 
 ### Required
 
 | Variable | What it's for |
 |---|---|
-| `BOT_TOKEN` | From the Discord Developer Portal |
+| `BOT_TOKEN` | From the Developer Portal |
 | `OWNER_ID` | Your Discord user ID — gates owner commands and full dashboard access |
-| `DASHBOARD_PASSWORD` | The dashboard login password (rate-limited: 10 attempts/min/IP) |
+| `DASHBOARD_PASSWORD` | Dashboard login password (login is rate-limited: 10 attempts/min/IP) |
 
 ### Strongly recommended
 
 | Variable | What it's for |
 |---|---|
-| `GUILD_ID` | Your server's ID — commands register there **instantly** instead of the ~1h global propagation |
-| `DASHBOARD_URL` | Public URL of the dashboard, used by `/dashboard`. (Railway: `RAILWAY_PUBLIC_DOMAIN` is picked up automatically if unset) |
-| `DATA_DIR` | Where all bot data lives. **If unset, data is wiped on every redeploy** (default `./data/`) — mount a persistent volume and point this at it |
+| `GUILD_ID` | Your server's ID — commands register **instantly** instead of ~1h global propagation |
+| `DASHBOARD_URL` | Public dashboard URL, used by `/dashboard` (Railway: `RAILWAY_PUBLIC_DOMAIN` is picked up automatically) |
+| `DATA_DIR` | Where all data lives. **Unset, a redeploy wipes your data.** Mount a persistent volume and point this at it |
 
 ### Optional
 
 | Variable | Default | What it's for |
 |---|---|---|
 | `PORT` | `3000` | Dashboard HTTP port |
-| `BRAND_NAME` | — | Shown in the dashboard footer |
-| `UPLOADS_DIR` | `./uploads` | Where uploaded dashboard backgrounds go |
+| `BRAND_NAME` | — | Dashboard footer text |
+| `UPLOADS_DIR` | `./uploads` | Dashboard background uploads |
+| `DASHBOARD_SESSION_HOURS` | `12` | Idle session TTL (hours) |
+| `DASHBOARD_SESSION_MAX_DAYS` | `7` | Absolute session cap (days) |
+| `LOG_LEVEL` | `info` | Log verbosity |
 
 ### Retired
 
-The bot used to store JSON config files; it's **SQLite-only now**. These are no longer used: `CONFIG_PATH`, `REMINDERS_PATH`, `LOG_CHANNEL_ID`. If you have old JSON files from a pre-SQLite version, the bot migrates them into the database on first boot automatically.
+Vigil is **SQLite-only** now. Legacy `CONFIG_PATH` / `REMINDERS_PATH` / `LOG_CHANNEL_ID` vars do nothing; pre-SQLite JSON files are auto-migrated into the database on first boot.
 
 ---
 
 ## Data, storage & backups
 
-### One file
+**Everything lives in one SQLite database** (`bot.db` inside `DATA_DIR`, via `better-sqlite3`): configs, warnings, cases, tickets and transcripts, logs, stats, reminders, giveaways, dashboard users, the audit trail — 48 tables. No database server, nothing to operate.
 
-Everything — configs, warnings, cases, tickets, logs, stats — lives in **one SQLite database** (`bot.db` inside `DATA_DIR`) accessed through `better-sqlite3`. No separate database server, no Redis, nothing to operate. It's 48 tables covering: guild configs, permissions, reaction roles, role menus, tickets (panels/types/messages/ratings/blacklist), warnings & thresholds, mod cases, temp bans, reminders, giveaways, invite tracking, staff notes, message logs, automod rules/filters, voice presence, temp VC, server stats, poll votes, dashboard users/tokens, audit trail, error logs, command usage, activity counts, and API tokens.
+Schema changes are **versioned migrations** (recorded in `schema_migrations`): each runs once, in order, inside a transaction. A real failure stops the boot loudly — no silent `try/catch ALTER` limping into "no such column" three days later. Older databases self-heal across the old migration path.
 
-Schema changes are **versioned migrations** recorded in a `schema_migrations` table — they run once each, in order, inside transactions, and a real failure stops the boot loudly instead of limping on. Upgrades from older databases self-heal automatically.
+### Retention — the DB doesn't grow forever
 
-### Retention — the database doesn't grow forever
-
-A daily sweeper (which also runs once at boot) prunes the tables that would otherwise grow unbounded:
+A daily sweeper (plus a catch-up run at boot) prunes the unbounded tables:
 
 | Table | Kept for |
 |---|---|
 | `command_usage` | 180 days |
 | `activity_counts` (inactive entries) | 180 days |
-| `ticket_messages` | 365 days after the ticket *closed* — transcripts are snapshotted at close, so the record survives |
+| `ticket_messages` | 365 days after the ticket closes — transcripts are snapshotted at close, so the record survives |
 
-Deliberately **not** pruned: invite stats (the leaderboard is the point), and per-guild daily member-growth snapshots (kept 90 days by the snapshot logic itself). The error log is capped at the most recent 500 entries.
+Invite stats are deliberately never pruned (the leaderboard *is* the point); growth snapshots self-cap at 90 days; the error log holds the most recent 500 entries.
 
 ### Backups
 
-From the dashboard (System → Backups) you can create a backup **with an integrity check**, verify an existing backup, download it, and delete old ones. Backups are SQLite `VACUUM INTO` snapshots — safe to take while the bot is running.
+Dashboard → System → Backups: create (SQLite `VACUUM INTO`, safe while running), verify integrity, download, delete. Do this before every update. It takes ten seconds.
 
 ---
 
 ## Architecture
 
-**One process. That's the whole architecture.**
+**One process is the whole architecture:**
 
 ```
-Discord ← discord.js v14 →  bot logic  →  SQLite (better-sqlite3)
-                             ↕ shared
-                        Express dashboard
+Discord ←─ discord.js v14 ─→  bot logic  ─→  SQLite (better-sqlite3)
+                               ↕ shared
+                         Express dashboard
 ```
 
-The bot and the dashboard run in the same Node.js process and share one SQLite file. ~80–120 MB of RAM on a server with a few hundred members. No microservices, no separate database, no containers required. It's deliberately boring — boring is what survives redeploys.
+Bot and dashboard share one Node process and one database file. ~80–120 MB RAM for a few hundred members. No containers required, no microservices — deliberately boring, boring survives redeploys.
 
 ### The code, file by file
 
@@ -578,14 +425,14 @@ src/
 ├── logging.js            The 16-category log dispatcher
 ├── logError.js           Error logging (DB + console)
 ├── helpers.js            Formatting, truncation, ownership checks
-├── commands/             One file per command group (see the registry)
+├── commands/             One file per command group
 │   └── registry.js       Maps command names → handlers (the wiring hub)
 ├── events/               ready, messages, reactions, members, roles,
 │                         server, voice, extras
 ├── dashboard.js          Thin entry → re-exports dashboard-backend
-├── dashboard-backend/    The dashboard server, split like the frontend parts:
-│   ├── index.js          Assembles the app; parts register in original route order
-│   ├── core.js           Shared state: client, sessions, rate limiters, stores, uploads
+├── dashboard-backend/    The dashboard server:
+│   ├── index.js          Assembles the app; parts register in route order
+│   ├── core.js           Shared state: client, sessions, rate limiters, stores
 │   └── parts/
 │       ├── 02-auth.js       Sessions, rate limits, login, guards, tenant scoping
 │       ├── 03-dash-admin.js Dash users, uploads, dash config, bot customization
@@ -602,7 +449,7 @@ src/
     ├── login.html        The login page
     └── parts/            Frontend as real ES modules:
         00-entry.mjs      Imports all parts + window bridge
-        01-foundation.mjs Pure foundation: state, helpers, boot chain
+        01-foundation.mjs State, helpers, boot chain
         02-ui-shell.mjs   Shell, tabs, server mgmt, greetings editor, log config
         03-mod-tools.mjs  Mod tools, profiles, insights, invites
         04-tickets.mjs    Ticket panel builder UI
@@ -614,79 +461,76 @@ src/
         10-polls.mjs      Polls/announcements + keyboard & mobile support
 ```
 
-### Things worth knowing if you read the code
+### Design decisions worth knowing
 
-- **One command pipeline, two surfaces.** Slash and prefix commands share the same execution path (`src/commandPipeline.js`): cooldown → permission guard → handler → usage tracking → friendly errors. Prefix arguments are parsed against the *same* `deploy.js` schema Discord uses (`src/prefixAdapter.js`), so the two surfaces can't drift — a fix to a slash handler automatically applies to its prefix twin. Only four prefix commands (`giveaway`, `serverstats`, `vc`, `tempvc`) keep bespoke argument parsing, because their prefix CLI (flags like `--desc`, member-VC fallbacks) is intentionally different.
-- **Database schema changes are versioned migrations.** Column/table additions live in named migrations recorded in `schema_migrations`, run once each, in order, inside a transaction. A real migration failure now fails loudly at boot instead of being silently swallowed by a try/catch and surfacing later as "no such column" somewhere else. Migrations are also self-healing: they check `PRAGMA table_info` first, so databases upgraded by the older boot-time ALTERs skip cleanly.
-- **The frontend used to be one ~4,100-line file.** It's now 10 ES modules under `src/dashboard/parts/` with explicit `import`/`export` boundaries, loaded as `<script type="module">`. Because module scope isn't global scope, the entry module attaches the ~166 functions that inline HTML handlers (`onclick="…"`) call to `window` — an explicit bridge instead of an accident. The conversion was mechanical and verified (acyclic graph, no unresolved names, strict-mode parse of every module).
-- **`scripts/analyze-modules.mjs`** re-verifies the module graph: every part parses in strict mode, no unresolved names, no cycles, no implicit-global writes. Run it after touching the dashboard.
-- **Every event handler is wrapped** so a rejected promise logs to the error DB instead of killing the process.
-- **A circuit breaker** guards Discord API calls so a rate limit doesn't cascade into a crash loop.
-- **Graceful shutdown** is real: it stops loops (giveaways, temp bans, retention, server stats, voice), closes the database, and exits cleanly.
+- **One command pipeline, two surfaces.** Slash and prefix share one execution path (`commandPipeline.js`): cooldown → permission guard → handler → usage tracking → friendly errors. Prefix arguments are parsed against the *same* `deploy.js` schema Discord uses (`prefixAdapter.js`), so the surfaces can't drift — a slash fix automatically fixes the prefix twin. Four prefix commands (`giveaway`, `serverstats`, `vc`, `tempvc`) keep bespoke parsing on purpose: their CLI surface (flags like `--desc`, VC fallbacks) is genuinely different.
+- **Schema changes are versioned migrations** (see [storage](#data-storage--backups)). Loud failure beats silent corruption.
+- **The frontend is real ES modules** — 12 files with explicit `import`/`export` under `src/dashboard/parts/`, loaded as `<script type="module">`. The entry module bridges ~166 functions to `window` for the HTML event-delegation system; `scripts/analyze-modules.mjs` verifies the graph stays acyclic and fully resolved.
+- **Every event handler is wrapped** — a rejected promise logs to the error DB instead of killing the process.
+- **A circuit breaker** guards Discord API calls so one rate limit can't cascade into a crash loop.
+- **Graceful shutdown is real:** background loops stop, the database closes, the process exits cleanly.
 
 ### The memory leak that almost killed the project
 
-Early on, one unremoved event listener made memory climb from 60 MB to 400+ MB within hours. Weeks of hunting, and it was one line. I nearly scrapped the whole thing over it. It's fixed — but it's also why this bot takes graceful shutdown and cleanup seriously, and why "it works on my machine for a day" was never an acceptable bar.
+Early on, one unremoved event listener took memory from 60 MB to 400+ MB in hours. Weeks of hunting; one line to fix; nearly scrapped the project over it. It's fixed — and it's why cleanup and graceful shutdown are treated as features here, and why "it works on my machine for a day" was never the bar.
 
 ---
 
 ## Testing
 
-**160 tests**, run with `node --test`, on every push via GitHub Actions (Node 20 **and** 22) alongside ESLint:
+**160 tests** via `node --test`, plus ESLint and the frontend data-args verifier, on every push — on **both Node 20 and 22** in GitHub Actions:
 
-| Area | What's covered |
+| Suite | What's covered |
 |---|---|
 | `db.test.js` | Schema creation, error logs, retention pruning, backups |
-| `migrations.test.js` | The versioned migrations: fresh-DB application, idempotent re-open, self-healing upgrades of legacy databases |
-| `deploy.test.js` | Command definitions are well-formed |
-| `permissions` / `automod` | Permission grants & the rule engine |
-| `tickets` / `banAppeals` | Ticket lifecycle, transcripts, appeals |
-| `prefixCommands` / `prefixAdapter` | The prefix dispatcher and the message→interaction shim (parsing, aliases, shared pipeline routing, cooldowns, gating) |
-| `dashboard.test.js` | Dashboard boots and `/health` responds correctly |
-| `dashboard-auth.test.js` | Dashboard security: cookie flags (HttpOnly/Strict/Secure), owner gating, fail-closed tenant scoping, idle-TTL expiry, absolute session cap, access revocation, logout |
-| `dashboard-ratelimit.test.js` | Login rate limiting: 10 attempts per minute per IP, then 429 |
-| `dashboard-frontend.test.js` | **The real frontend boots**: jsdom installs browser globals, dynamically imports the actual module graph, and asserts the whole boot chain — auth → config → every data loader → background engine → refresh loop — completes with zero uncaught errors |
-| `giveaways` / `tempVoice` / `voicePresence` / `serverStats` | The background systems |
-
-**What the tests do *not* cover — read this twice:** there is no real-browser end-to-end testing, no click-through automation, and some server surfaces still have room for more coverage. Green CI means *it doesn't obviously crash*, not *the new feature works in every browser*. Bugs have shipped that only showed up in production. Take that as a fair warning about what "tested" means here.
-
-**Development scripts:**
+| `migrations.test.js` | Fresh-DB migration, idempotent re-open, self-healing legacy upgrades |
+| `deploy.test.js` | Command definitions well-formed |
+| permissions / automod | Grants & the rule engine |
+| `tickets` / `banAppeals` | Lifecycle, transcripts, appeals |
+| `prefixCommands` / `prefixAdapter` | Prefix dispatcher, message→interaction shim, shared pipeline routing, cooldowns, gating |
+| `dashboard.test.js` | Boots, `/health` correct |
+| `dashboard-auth.test.js` | Cookie flags, owner gating, fail-closed tenant scoping, idle TTL, absolute cap, revocation, logout |
+| `dashboard-ratelimit.test.js` | 10 logins/min/IP, then 429 |
+| `dashboard-frontend.test.js` | **The real frontend boots**: jsdom globals + dynamic import of the actual module graph, asserting the full boot chain completes with zero uncaught errors |
+| giveaways / tempVoice / voicePresence / serverStats | The background systems |
 
 ```bash
-npm test          # run the full suite
-npm run lint      # ESLint over everything
-node scripts/analyze-modules.mjs   # verify the frontend module graph
+npm test                              # the full suite
+npm run lint                          # ESLint
+node scripts/verify-data-args.mjs     # frontend data-args contract (also in CI)
+node scripts/analyze-modules.mjs      # frontend module graph check
 ```
+
+**What tests don't cover — read this twice:** no real-browser end-to-end tests, no click-through automation. Green CI means *nothing obviously broke*, not *the feature works in every browser*. Bugs have shipped that only appeared in production. The highest-value verification is a human clicking through the dashboard — do that after updates.
 
 ---
 
 ## Security
 
-The dashboard is the sensitive part, and it gets real treatment:
+The dashboard is the sensitive surface; it gets real treatment:
 
-- **Rate-limited login** (10 attempts/min per IP) and a global API rate limit
-- **Password or Discord-ID login** — password from env, or a per-user access token granted via `/dashaccess` (tokens are stored hashed; the raw token is shown exactly once)
-- **Constant-time password comparison**, random session tokens, sessions invalidated on access revocation
-- **Session hygiene**: HttpOnly + SameSite=Strict cookies, an idle TTL *and* an absolute cap, sliding renewal that can't outlive the cap
-- **Fail-closed tenant scoping** on server routes — every `/api/server/:id/...` checks that the session may act on that server, and scoped users with zero grants see zero servers
-- **Parameterized SQL everywhere** — no string-built queries into the database
-- **CSP headers** with no `unsafe-inline` scripts; uploads are type/size-validated
-- **Audit trail** records sensitive dashboard/configuration actions
+- **Rate-limited login** — 10 attempts/min per IP, plus a global API rate limit
+- **Two login modes** — shared password, or per-user Discord-ID tokens granted via `/dashaccess` (tokens stored hashed, shown exactly once)
+- **Constant-time password comparison**; random session tokens; sessions die instantly when access is revoked
+- **Session hygiene** — HttpOnly + SameSite=Strict cookies, an idle TTL *and* an absolute cap; sliding renewal can't outlive the cap
+- **Fail-closed tenant scoping** — every `/api/server/:id/...` route verifies the session may act on that server; scoped users with zero grants see zero servers
+- **Parameterized SQL everywhere**; **CSP** with no `unsafe-inline` scripts; uploads type/size-validated
+- **Audit trail** for sensitive dashboard actions
 
-**The honest limits:** the primary auth is a shared dashboard password from an env var, sessions live in memory (gone on restart), and there's no per-user rate limiting beyond login. That's appropriate for a self-hosted bot; it is not enterprise SSO. Put the dashboard behind your host's auth or a VPN if you're paranoid, and don't reuse the password anywhere.
+**The honest limits:** primary auth is a shared password from an env var; sessions are in-memory (restart = log in again); no per-user rate limiting beyond login. Right for self-hosting; not enterprise SSO. Put the dashboard behind your host's auth if you're cautious, and don't reuse the password anywhere.
 
 ---
 
 ## Deploying
 
-The bot is plain Node + a persistent folder. Any host that gives you both works.
+Plain Node + one persistent folder. Any host offering both works.
 
-### Railway (what I actually use)
+### Railway
 
-1. New project → Deploy from GitHub repo.
-2. Variables: `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `GUILD_ID`, `DATA_DIR=/data`.
-3. Volumes → add volume mounted at `/data` (**this is what makes data survive redeploys**).
-4. Generate a domain in Settings → Networking (`DASHBOARD_URL` is set automatically from `RAILWAY_PUBLIC_DOMAIN`).
+1. New project → Deploy from GitHub repo
+2. Variables: `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `GUILD_ID`, `DATA_DIR=/data`
+3. **Volumes → mount at `/data`** — this is what makes data survive redeploys
+4. Settings → Networking → Generate Domain (`DASHBOARD_URL` auto-derives from `RAILWAY_PUBLIC_DOMAIN`)
 
 ### Docker
 
@@ -697,84 +541,82 @@ docker run -p 3000:3000 --env-file .env -v /host/data:/data -e DATA_DIR=/data vi
 
 ### Discloud / Fly.io / any VPS
 
-It's Node + a folder that must persist. Discloud's app data folder, Fly volumes, or a plain systemd service on a VPS with a directory that survives restarts all work. The bot auto-registers slash commands at boot (`/deploy` available too) and the dashboard listens on `PORT`.
+Node + a folder that persists. A systemd service on a VPS with a real data directory, Discloud's app data folder, or a Fly volume all work. Slash commands auto-register at boot (`/deploy` for manual re-sync); the dashboard listens on `PORT`.
 
 ---
 
 ## Troubleshooting & FAQ
 
 **Slash commands don't show up.**
-Set `GUILD_ID` to your server and run `/deploy` (or restart). Global commands take up to an hour to appear; guild commands are instant.
+Set `GUILD_ID` to your server and run `/deploy`. Guild commands are instant; global commands take up to an hour to propagate.
 
 **Everything resets on redeploy.**
-`DATA_DIR` isn't set (or isn't pointing at a mounted volume). Default is `./data/` inside the project folder, which redeploys wipe. Mount a volume and set `DATA_DIR` to it.
+`DATA_DIR` isn't pointing at a mounted volume. Default `./data/` lives inside the project folder, which redeploys wipe. Mount a volume; point `DATA_DIR` at it.
 
-**The bot doesn't see messages / joins / etc.**
-Privileged intents (Message Content, Server Members, Presence) are off in the Developer Portal, or the bot isn't re-invited after they were enabled. The boot logs warn about this.
+**The bot doesn't see messages / joins / voice.**
+Privileged intents are off in the Developer Portal, or the bot wasn't re-invited after enabling them. Boot logs warn about this.
 
-**A dashboard page shows "Failed to load".**
-Check the error log panel in the dashboard — it's the bot's own console. The most common causes are API errors visible there.
+**A dashboard page shows "Failed to load."**
+Open the Error log panel (System) — it's the bot's own console; the real API error is in there.
 
-**The bot won't boot and the error mentions SQLite.**
-`better-sqlite3` is a native module — it must compile for your Node version (the project pins Node 20/22 in CI). Reinstall with `npm install` on the target machine.
+**Won't boot; the error mentions SQLite.**
+`better-sqlite3` is a native module and compiles per Node version. Run `npm install` on the target machine (CI pins Node 20/22; `.nvmrc` says 20).
 
-**The bot won't boot and the error mentions a migration.**
-A schema migration failed for a real reason (locked file, disk full, corrupted page). Unlike older versions, this fails loudly on purpose — fix the underlying issue and restart; migrations re-run cleanly.
+**Won't boot; the error mentions a migration.**
+A migration failed for a real reason — locked file, full disk, corrupted page. This fails loudly *on purpose*; fix the cause and restart. Migrations re-run cleanly.
 
 **Can I run it in multiple servers?**
-Yes — global commands work everywhere, configs are per-server, and the dashboard has a server switcher plus a server-comparison view.
+Yes. Global commands work everywhere, configs are per-server, and the dashboard has a server switcher plus a comparison view.
 
 **Does it survive restarts?**
-Data-wise, yes: SQLite + restart-surviving temp bans, giveaways, and reminders. Session-wise, no: dashboard sessions are in memory, so you log in again after a restart.
+Data: yes — SQLite, and temp bans, giveaways, and reminders are all DB-backed. Sessions: no — dashboard logins are in-memory by design; log in again after a restart.
+
+**How do I update the bot?**
+`git pull` → `npm install` → restart → `/deploy` if commands changed. Take a dashboard backup first (ten seconds). Migrations apply themselves on boot.
 
 ---
 
 ## What it deliberately is not
 
-No music. No leveling/XP. No economy. No dashboard-as-a-service, no SaaS, no "premium tier." The feature set is exactly what running a real community server needed — nothing was built to fill a pricing page. Tickets and appeals work and are in active use, but they could go deeper; a music or leveling system would be a separate project, not a v1.1.
+No music. No leveling/XP. No economy. No dashboard-as-a-service, no SaaS, no premium tier. The feature set is exactly what running a real community server needed — nothing was built to fill a pricing page. Tickets and appeals work and are in daily use, but they could go deeper; music or leveling would be a separate project, not a v1.x feature.
 
 ---
 
 ## Reality check
 
-Since the internet is full of READMEs that overpromise, here's the part nobody writes:
+Most READMEs oversell. Here's the other direction:
 
-- **It works — and it's actually running.** This bot has been live in real servers, deployed continuously, with CI gating every push.
-- **It's a solo project that grew fast.** The two biggest monoliths are gone — the dashboard server is split into focused modules (like the frontend before it) and both command surfaces run through one shared pipeline — but parts of the frontend are still legacy-style (`var`, one-letter names, HTML built by string concatenation). It's navigable and it works; it is not a showcase of perfect architecture. The code *inside* the split modules is still the old code, honestly moved — that's on the list, and every change is protected by the boot test.
-- **1.0.0 means "it runs," not "it's done."** Version numbers here track *working*, not *polish*. v1.0.0 marks the unified command pipeline, the modular dashboard backend, versioned database migrations, and a 160-test suite gating every push.
-- **You are the SLA.** When it goes down, it's your host that went down. Backups, uptime, and security are yours to own — which is the whole point of self-hosting, but don't pretend otherwise.
-- **Tests are a safety net, not a proof.** The suite is real and it has caught genuine bugs, but the highest-value verification is a human clicking through the dashboard in a browser — the thing no automated test here does yet.
-- **The code is free, not ownerless.** Use it, modify it, share your forks — just keep the credit intact and don't sell the code itself. Selling services around it (installing, hosting, custom work) is fine. The fine print lives in [LICENSE](LICENSE).
+- **It works, and it's running.** Live in real servers, deployed continuously, every push gated by CI on two Node versions.
+- **It's a solo project that grew fast.** The two big monoliths are gone — the dashboard backend is split into focused modules, the frontend into real ES modules, and both command surfaces share one pipeline — but code *inside* some modules is still legacy-style (`var`, one-letter names, string-built HTML). It works and it's navigable; it isn't a showcase. It's protected by the boot test while it gets cleaned up.
+- **Versions mean "working," not "done."** v1.0.0 marked the unified pipeline, the modular dashboard, versioned migrations, and the 160-test gate. The numbers move when things work, not when things look nice.
+- **You are the SLA.** When it's down, your host is down. Backups, uptime, and security are yours — that's self-hosting, stated plainly.
+- **Tests are a safety net, not proof.** They've caught real bugs (including a fail-closed tenant-scoping bug during a refactor). They don't click through a browser. You should.
+- **The code is free, not ownerless.** Use it, modify it, share forks — keep the credit, don't sell the code. Services around it (installs, hosting, custom work) are fine. [LICENSE](LICENSE) has the fine print.
 
-If that trade sounds fair — owning everything, paying nothing monthly, in exchange for running it yourself — welcome. It's a good bot.
+If that trade sounds fair — everything owned, nothing paid monthly, in exchange for running it yourself — welcome. It's a good bot.
 
 ---
 
-## Support & license
+## License
 
-Found a bug or want something added? DM me on Discord: **.nlux.** (ID: 1200828694088917114).
+Vigil is free and open under the **Vigil Community Source License** — in short:
 
-This project is distributed under the **Vigil Community Source License**. See [LICENSE](LICENSE) for the full, hyper-specific terms.
-
-In short:
-- ✅ Run it anywhere, on any number of servers — including monetized communities
+- ✅ Run it anywhere, unlimited servers, including monetized communities
 - ✅ Modify it, fork it, share your version freely (same license, credit intact)
-- ✅ Charge for services around it — installs, hosting, maintenance, custom features
-- ❌ Sell the software itself or put it behind a paywall
-- ❌ Claim you wrote it or strip the attribution
+- ✅ Charge for services *around* it — installs, hosting, maintenance, custom features
+- ❌ Sell the software itself or paywall it
+- ❌ Claim you wrote it or strip attribution
 
-Gray areas (paid servers, donations, managed hosting, forks) are answered explicitly in section 5 of the license — no guessing required.
+Gray areas (paid servers, donations, managed hosting, forks) are answered explicitly in [section 5 of the license](LICENSE).
+
+Found a bug or want a feature? Open an issue, or DM **.nlux.** on Discord (ID `1200828694088917114`).
 
 ---
-
-## Contributor tooling
-
-There's no CONTRIBUTING.md because there are no contributors yet — but if you're poking at the code, three things live in `scripts/`:
-
-- **`verify-data-args.mjs`** — sanity-checks every `data-args` attribute in the dashboard frontend against the shape the delegated event dispatcher expects. Runs automatically in CI; run it yourself with `node scripts/verify-data-args.mjs` after touching any dashboard HTML or `.mjs` part. Exits non-zero on failure.
-- **`convert-inline-handlers.mjs`** — the one-time codemod that converted the old inline `onclick=` handlers to the CSP-safe `data-fn`/`data-args` system. Already applied; kept for reference if you ever add pages.
-- **`migrate-data-args.mjs`** — the companion pass that wrapped bare `data-args` values in the JSON-array format. Also already applied, kept for the same reason.
 
 <div align="center">
+
 **Vigil** — built by franc · Discord: .nlux. (1200828694088917114)
+
+If Vigil runs your server, a star on the repo is the whole ask.
+
 </div>
