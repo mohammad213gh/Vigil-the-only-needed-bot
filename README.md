@@ -10,7 +10,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 [![CI](https://github.com/mohammad213gh/Discord-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammad213gh/Discord-bot/actions/workflows/ci.yml)
 ![Tests](https://img.shields.io/badge/160%20tests%20passing-3ba55c)
-[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red)](LICENSE)
+[![License: Community Source](https://img.shields.io/badge/License-Community_Source-5865F2)](LICENSE)
 
 **70 slash commands · full web dashboard · one Node process · one SQLite file · no subscription, ever**
 
@@ -744,7 +744,7 @@ Since the internet is full of READMEs that overpromise, here's the part nobody w
 - **1.0.0 means "it runs," not "it's done."** Version numbers here track *working*, not *polish*. v1.0.0 marks the unified command pipeline, the modular dashboard backend, versioned database migrations, and a 160-test suite gating every push.
 - **You are the SLA.** When it goes down, it's your host that went down. Backups, uptime, and security are yours to own — which is the whole point of self-hosting, but don't pretend otherwise.
 - **Tests are a safety net, not a proof.** The suite is real and it has caught genuine bugs, but the highest-value verification is a human clicking through the dashboard in a browser — the thing no automated test here does yet.
-- It's **proprietary** — you can run it and modify it for yourself, but not redistribute it. See the license.
+- **The code is free, not ownerless.** Use it, modify it, share your forks — just keep the credit intact and don't sell the code itself. Selling services around it (installing, hosting, custom work) is fine. The fine print lives in [LICENSE](LICENSE).
 
 If that trade sounds fair — owning everything, paying nothing monthly, in exchange for running it yourself — welcome. It's a good bot.
 
@@ -754,11 +754,16 @@ If that trade sounds fair — owning everything, paying nothing monthly, in exch
 
 Found a bug or want something added? DM me on Discord: **.nlux.** (ID: 1200828694088917114).
 
-This project is distributed under a **Proprietary License**. All rights reserved. See [LICENSE](LICENSE) for the full terms.
+This project is distributed under the **Vigil Community Source License**. See [LICENSE](LICENSE) for the full, hyper-specific terms.
 
 In short:
-- ✅ Run it on your own Discord server(s), modify it for your own use
-- ❌ Share or resell the source code
+- ✅ Run it anywhere, on any number of servers — including monetized communities
+- ✅ Modify it, fork it, share your version freely (same license, credit intact)
+- ✅ Charge for services around it — installs, hosting, maintenance, custom features
+- ❌ Sell the software itself or put it behind a paywall
+- ❌ Claim you wrote it or strip the attribution
+
+Gray areas (paid servers, donations, managed hosting, forks) are answered explicitly in section 5 of the license — no guessing required.
 
 ---
 

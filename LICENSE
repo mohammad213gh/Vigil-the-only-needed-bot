@@ -1,62 +1,258 @@
-NLux Bot — Proprietary License
+VIGIL COMMUNITY SOURCE LICENSE
+Version 1.0
 
-Copyright © 2026 franc (Discord: .nlux.)
+Copyright (c) 2026 franc (Discord: .nlux. — ID 1200828694088917114)
 
-All rights reserved.
+════════════════════════════════════════════════════════════════════
 
-This software and its accompanying source code are protected by copyright law. 
-Unauthorized copying, distribution, modification, or use of this software, 
-via any medium, is strictly prohibited without the express written permission 
-of the copyright holder.
+0. THE SHORT VERSION
 
-──────────────────────────────────────────────
-                    LICENSE
-──────────────────────────────────────────────
+This is a plain-English summary for humans. It is not the license —
+the binding terms are in sections 1–10 below. If they ever disagree,
+the detailed terms win.
 
-1. GRANT OF LICENSE
+  FREE — you may:
+   ✅  Run Vigil on any Discord server you want, including servers
+       you monetize (paid memberships, donations, ads, boosts).
+   ✅  Read, change, and extend the source code however you like.
+   ✅  Share the original or your modified version with anyone —
+       for free, under this same license, with credit intact.
+   ✅  Charge for your own work around the software: installing it,
+       hosting it for a client, maintaining it, or building custom
+       features on it. Your labor is yours.
+   ✅  Rebrand your own deployment (dashboard title, bot username,
+       accent colors) — that's configuration the product supports.
 
-   Upon purchasing a license, you are granted a non-exclusive, 
-   non-transferable, non-sublicensable license to:
+  NOT FREE — you may not:
+   ❌  Sell the software itself, or any modified version of it —
+       no price tags on the code, no code marketplaces, no
+       "buy access" repos, no license-key paywalls.
+   ❌  Present it as your own original work, strip the copyright
+       and attribution notices, or claim you wrote Vigil.
+   ❌  Use the "Vigil" name or logo to brand a different product,
+       or register them as your own trademark.
 
-   a) Use the software on your own Discord server(s).
-   b) Modify the source code for your own personal use.
-   c) Host the software on any infrastructure you control.
+The one-sentence version: **use it, change it, share it — but the code
+stays free, the credit stays with the author, and nobody sells Vigil.
+Not you, not anyone — the author included.**
 
-2. RESTRICTIONS
+════════════════════════════════════════════════════════════════════
 
-   You may NOT:
+1. DEFINITIONS
 
-   a) Redistribute, share, or publish the source code (modified or 
-       unmodified) to any person who has not purchased a license.
-   b) Sell, resell, sublicense, or rent the software or its source code 
-       to any third party.
-   c) Remove or alter any copyright, trademark, or attribution notices 
-       contained in the software.
-   d) Claim authorship or ownership of the original work.
-   e) Use the software in violation of applicable law or Discord's 
-       Terms of Service.
+ 1.1  "Licensor" means franc (Discord: .nlux., ID 1200828694088917114),
+      the author and copyright holder of the Software.
 
-3. UPDATES
+ 1.2  "Software" means the Vigil Discord bot: its source code, the web
+      dashboard, its build and configuration files, and its bundled
+      documentation, as published by the Licensor in the original
+      repository, including any release or commit thereof.
 
-   The licensor may provide updates or modifications at their sole 
-   discretion. This license covers any updates provided to you while 
-   the project is actively maintained.
+ 1.3  "Modifications" means any changes you make to the Software or to
+      a Modified Version — including additions, deletions, patches,
+      ports, plugins that link or load against it, and translations.
 
-4. DISCLAIMER OF WARRANTY
+ 1.4  "Modified Version" means the Software with your Modifications
+      applied, in source or runnable form.
 
-   THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
-   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
-   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND 
-   NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE 
-   FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE USE OF 
-   THIS SOFTWARE.
+ 1.5  "Notice Files" means the LICENSE file, copyright and attribution
+      notices in source headers, the license field of package.json,
+      and any "powered by" or authorship notices shipped with the
+      Software.
 
-5. TERMINATION
+ 1.6  "Sell" means to demand payment or other consideration *for the
+      Software or a Modified Version itself* — including charging for
+      access to it, licensing it onward, sublicensing it, renting it
+      out as code, or listing it on any marketplace or code store.
+      "Sell" does NOT mean charging for services (see 2.5) and does
+      NOT mean a community you run with the Software happens to
+      generate revenue (see 5.2).
 
-   This license terminates automatically if you fail to comply with any 
-   of its terms. Upon termination, you must destroy all copies of the 
-   software in your possession.
+ 1.7  "You" means any individual or entity that receives or uses the
+      Software under this license.
 
-──────────────────────────────────────────────
+2. GRANTS — WHAT YOU MAY DO
 
-For license inquiries, contact: .nlux. on Discord (ID: 1200828694088917114)
+Subject to the conditions in section 3 and the restrictions in
+section 4, the Licensor grants you a worldwide, royalty-free,
+perpetual, non-exclusive license to:
+
+ 2.1  USE — Run unlimited instances of the Software on any
+      infrastructure you control or rent, for any lawful purpose, on
+      any number of Discord servers, whether personal, community, or
+      commercially operated.
+
+ 2.2  MODIFY — Study, alter, extend, and create Modifications for any
+      lawful purpose. You are not required to publish them.
+
+ 2.3  DISTRIBUTE — Redistribute the unmodified Software, or your
+      Modified Version, to anyone, in source or object form, free of
+      charge, provided every condition in section 3 is met.
+
+ 2.4  REBRAND DEPLOYMENTS — Configure the Software's user-facing
+      branding for your own deployment (dashboard title, bot name,
+      avatar, accent colors, footer text). This is use of a product
+      feature, not a violation of section 4.2.
+
+ 2.5  SELL SERVICES, NOT THE SOFTWARE — You may charge for your time
+      and labor around the Software: installation, hosting,
+      management, maintenance, support, training, or developing
+      custom Modifications for a client. Two conditions:
+        (a) the fee is for the service, not for the code; and
+        (b) any copy of the Software or Modified Version the client
+            receives is delivered under this license at no charge
+            for the code itself.
+
+ 2.6  CONTRIBUTE — If you submit a pull request, patch, or other
+      contribution to the Licensor's repository, you grant the
+      Licensor a perpetual, worldwide, royalty-free right to use,
+      modify, and redistribute that contribution as part of the
+      Software, with no restrictions and no attribution obligation
+      beyond this license.
+
+3. CONDITIONS — WHAT EVERY COPY MUST CARRY
+
+ 3.1  Keep the Notice Files intact in every copy you distribute,
+      and in the source of every Modified Version.
+
+ 3.2  If you distribute a Modified Version, it must:
+        (a) be licensed to its recipients under this same license
+            (Vigil Community Source License 1.0, or a later version
+            issued by the Licensor);
+        (b) carry a visible notice that it is modified from the
+            original Vigil and where the original can be found;
+        (c) not charge recipients for the code (section 4.1 applies
+            to your recipients through you).
+
+ 3.3  Attribution must be human-findable: a link or reference to the
+      original project in your fork's README or equivalent landing
+      page qualifies; buried minified code does not.
+
+4. RESTRICTIONS — WHAT YOU MAY NOT DO
+
+ 4.1  NO SELLING THE SOFTWARE. You may not Sell the Software or any
+      Modified Version (see 1.6 for exactly what that means). You may
+      not bundle the Software or a Modified Version into a paid
+      product where the code is what the buyer is paying for.
+
+ 4.2  NO PLAGIARISM. You may not claim authorship of the Software,
+      present it or any Modified Version as your own original work,
+      remove or obscure copyright or attribution notices from the
+      source, or misrepresent the origin of the code to anyone.
+
+ 4.3  NO TRADEMARK GRAB. The names "Vigil" and "NLux", the Vigil
+      logo, and similar marks are reserved for the Licensor and the
+      original project. You may not register them, or confusingly
+      similar marks, as your own trademark, service mark, or domain.
+      Your Modified Version must be named or presented so a reasonable
+      person can tell it is a fork of Vigil, not Vigil itself.
+
+ 4.4  NO FALSE ENDORSEMENT. You may not imply that the Licensor
+      endorses you, your fork, or your services.
+
+ 4.5  LAWFUL USE ONLY. You may not use the Software in violation of
+      applicable law or Discord's Terms of Service or Community
+      Rules.
+
+5. SCOPE CLARIFICATIONS — WHERE THE LINES ACTUALLY ARE
+
+These clauses exist because every license gets the same arguments.
+Here are the answers, in advance:
+
+ 5.1  Running the bot in a monetized community — a server with paid
+      memberships, donations, advertisements, or server boosts — is
+      USE under 2.1 and is expressly allowed. The community's revenue
+      is not "selling the Software".
+
+ 5.2  Accepting donations or tips for your work on a fork is allowed,
+      provided the fork's code itself remains available under this
+      license at no charge. Donations for the code's development are
+      not a fee for the code.
+
+ 5.3  Hosting Vigil for clients as a managed service is allowed under
+      2.5. You may bill for hosting, uptime, and maintenance. You may
+      not bill for the Software itself, and your client's copy falls
+      under this license.
+
+ 5.4  Publishing forks, mirrors, or archives of the Software is
+      allowed under section 3 — the code is meant to circulate. What
+      is not allowed is doing so commercially (4.1) or anonymously
+      claiming credit (4.2).
+
+ 5.5  Using the Software in courses, tutorials, screenshots, videos,
+      or write-ups is allowed; attribute the original project where
+      reasonably possible.
+
+ 5.6  Training machine-learning models on the Software's source is
+      permitted only if the resulting model is not used to provide a
+      code-generation product trained primarily on this codebase.
+      Honest private study and research are always fine.
+
+ 5.7  If a use case is not listed anywhere above, apply the principle
+      the whole license is built on: the code stays free, the credit
+      stays with the author, and nobody sells Vigil — the author
+      included. When genuinely unsure, ask (section 10).
+
+6. PATENTS
+
+To the extent the Licensor holds patents covering the Software, you
+receive the same rights under this license, solely to exercise the
+rights granted here. If you or your affiliates file a patent claim
+asserting that the Software (as originally published) infringes,
+your license under section 2 ends immediately.
+
+7. TERM AND TERMINATION
+
+ 7.1  This license applies for as long as the copyright lasts, unless
+      you breach it.
+
+ 7.2  Your rights under section 2 terminate automatically on any
+      material breach.
+
+ 7.3  First breach, cured fast: if you receive notice of breach and
+      fully cure it within 30 days, your rights are reinstated. A
+      second breach of the same term, or any breach of 4.1, 4.2, or
+      4.3, terminates this license permanently.
+
+ 7.4  Sections 1, 4, 6, 7, 8, and 9 survive termination. On
+      termination you must stop distributing the Software and
+      Modified Versions, and destroy or cease all commercial use of
+      your copies.
+
+8. NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+NON-INFRINGEMENT. YOU BEAR ALL RISK OF USING IT. THE LICENSOR MAKES
+NO PROMISE THAT THE SOFTWARE IS BUG-FREE, UNINTERRUPTED, OR FIT FOR
+YOUR DISCORD SERVER.
+
+9. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR SHALL NOT BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL,
+OR PUNITIVE DAMAGES — INCLUDING LOST DATA, LOST PROFITS, OR SERVER
+DOWNTIME — ARISING FROM OR RELATED TO THE SOFTWARE, EVEN IF ADVISED
+OF THE POSSIBILITY. TOTAL LIABILITY UNDER THIS LICENSE IS LIMITED TO
+THE GREATER OF (A) $0, OR (B) THE SMALLEST AMOUNT PERMITTED BY
+APPLICABLE LAW. YOU RECEIVED THIS SOFTWARE FOR FREE; THE LICENSOR
+GIVES NO PAID-SUPPORT GUARANTEE HERE.
+
+10. CONTACT AND ACCEPTANCE
+
+ 10.1 License questions, commercial-use questions, or permission
+      requests: contact **franc** on Discord (`.nlux.`, ID
+      1200828694088917114) or open an issue in the original
+      repository.
+
+ 10.2 Using, copying, modifying, or distributing the Software means
+      you accept this license in full. If you do not accept it, do
+      not use the Software.
+
+ 10.3 The Licensor may publish future versions of this license. Only
+      a version issued by the Licensor is authoritative. Copies you
+      already received stay under the version they came with.
+
+                                              — franc, 2026
+════════════════════════════════════════════════════════════════════

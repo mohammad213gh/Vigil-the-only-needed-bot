@@ -1,6 +1,7 @@
 {
   "name": "vigil",
   "version": "1.1.0",
+  "license": "SEE LICENSE IN LICENSE",
   "main": "index.js",
   "engines": {
     "node": ">=20"
