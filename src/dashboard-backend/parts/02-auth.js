@@ -136,7 +136,7 @@ function register(app, ctx) {
         const { getDashboardConfig } = require('../core');
         const c = getDashboardConfig();
         res.json({
-            title: c.title || 'Bot Dashboard',
+            title: c.title || 'Vigil',
             accentColor: c.accentColor || '#5865F2',
             logoUrl: c.logoUrl || null,
             faviconUrl: c.faviconUrl || null,

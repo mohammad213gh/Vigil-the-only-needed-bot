@@ -914,3 +914,152 @@ body.light-mode input,body.light-mode select,body.light-mode textarea{background
 /* ═══ LEGIBILITY FLOOR (HIG audit C1) ═══ */
 .cmd-bdg,.du-meta,.err-extra,.a-tm,.rmd-tm{font-size:12px!important}
 .err-sub,.stg-hint,.empty-act,.mp-meta,.cmd-count{font-size:12px!important}
+/* ═══════════════════════════════════════════════════════════════
+   SAAS POLISH LAYER — v1.1 dashboard overhaul.
+   Appended block: everything here overrides the legacy rules
+   above via the cascade. Remove this block to revert the skin.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Design tokens ── */
+:root{
+  --bg:#060609;
+  --surface:rgba(255,255,255,0.033);
+  --surface-raised:rgba(255,255,255,0.055);
+  --border:rgba(255,255,255,0.075);
+  --border-hover:rgba(255,255,255,0.14);
+  --hairline:inset 0 1px 0 rgba(255,255,255,0.06),inset 0 0 0 1px rgba(255,255,255,0.025);
+  --shadow-card:0 1px 2px rgba(0,0,0,0.28),0 8px 24px -8px rgba(0,0,0,0.4);
+  --shadow-pop:0 8px 32px -6px rgba(0,0,0,0.55),0 2px 8px rgba(0,0,0,0.3);
+  --radius:14px;--radius-sm:10px;--radius-xs:8px;
+  --accent-soft:rgba(var(--accent-rgb),0.13);
+  --accent-glow:0 0 0 3px rgba(var(--accent-rgb),0.16);
+}
+body.light-mode{
+  --bg:#f6f6f9;
+  --surface:#ffffff;
+  --surface-raised:#ffffff;
+  --border:rgba(15,20,40,0.09);
+  --border-hover:rgba(15,20,40,0.18);
+  --shadow-card:0 1px 2px rgba(20,25,50,0.05),0 6px 20px -6px rgba(20,25,50,0.08);
+  --shadow-pop:0 10px 32px -8px rgba(20,25,50,0.14),0 2px 8px rgba(20,25,50,0.06);
+}
+html{color-scheme:dark}
+body.light-mode{color-scheme:light}
+
+/* ── 2. Background & main canvas ── */
+body{background:
+  radial-gradient(1100px 480px at 18% -8%,rgba(var(--accent-rgb),0.065),transparent 60%),
+  radial-gradient(900px 420px at 88% 4%,rgba(var(--accent-rgb),0.038),transparent 55%),
+  var(--bg);
+  background-attachment:fixed}
+body.light-mode{background:var(--bg)}
+.main{max-width:1240px;padding-top:calc(var(--notch-h) + 34px)}
+.pg-title{font-size:27px;font-weight:750;letter-spacing:-0.55px}
+.pg-sub{font-size:13px;margin-bottom:28px}
+
+/* ── 3. Notch navbar ── */
+.notch-side,.notch-body,.notch-corner-l,.notch-corner-r{
+  background:rgba(8,8,13,0.78)!important;
+  backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);
+  border-bottom-color:rgba(255,255,255,0.06)!important}
+body.light-mode .notch-side,body.light-mode .notch-body,
+body.light-mode .notch-corner-l,body.light-mode .notch-corner-r{background:rgba(250,250,253,0.82)!important;border-bottom-color:rgba(15,20,40,0.07)!important}
+.notch-link{padding:7px 11px;border-radius:9px}
+.notch-link.active{background:var(--accent-soft);box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),0.22)}
+body.light-mode .notch-link.active{box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),0.16)}
+
+/* ── 4. Cards ── */
+.card{background:var(--surface);box-shadow:var(--hairline),var(--shadow-card)}
+.card:hover{transform:translateY(-1px);border-color:var(--border-hover);background:var(--surface-raised);
+  box-shadow:var(--hairline),var(--shadow-pop),0 0 0 1px rgba(var(--accent-rgb),0.1)}
+.card .lbl{font-size:10.5px;letter-spacing:0.9px}
+.card .val{font-size:30px;font-weight:750;letter-spacing:-0.8px;
+  background:linear-gradient(180deg,#fff 20%,rgba(255,255,255,0.72));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+body.light-mode .card .val{background:none;-webkit-text-fill-color:currentColor;color:#141828;font-weight:700}
+.card .sub{font-size:12px;margin-top:3px}
+.card-stat{background:var(--surface);box-shadow:var(--hairline)}
+.card-stat:hover{background:var(--surface-raised);transform:translateX(2px)}
+.card-stat .ico{box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06)}
+.tw{background:var(--surface);box-shadow:var(--hairline),var(--shadow-card)}
+.tw-h{font-size:12.5px;padding:14px 18px;font-weight:650}
+.tw-h svg{opacity:0.65}
+
+/* ── 5. Status dot (replaces emoji status) ── */
+.st-dot{display:inline-flex;width:10px;height:10px;border-radius:50%;flex-shrink:0;vertical-align:middle}
+.st-dot::after{content:'';position:absolute;width:10px;height:10px;border-radius:50%;animation:stPulse 2.4s ease-out infinite}
+.st-dot.g{background:#30d158;box-shadow:0 0 8px rgba(48,209,88,0.55),0 0 0 3px rgba(48,209,88,0.14)}
+.st-dot.g::after{box-shadow:0 0 0 0 rgba(48,209,88,0.5)}
+.st-dot.y{background:#ffd60a;box-shadow:0 0 8px rgba(255,214,10,0.5),0 0 0 3px rgba(255,214,10,0.13)}
+.st-dot.y::after{box-shadow:0 0 0 0 rgba(255,214,10,0.45)}
+.st-dot.r{background:#ff453a;box-shadow:0 0 8px rgba(255,69,58,0.55),0 0 0 3px rgba(255,69,58,0.14)}
+.st-dot.r::after{box-shadow:0 0 0 0 rgba(255,69,58,0.5)}
+@keyframes stPulse{0%{transform:scale(1);opacity:.7}70%{transform:scale(2.6);opacity:0}100%{transform:scale(2.6);opacity:0}}
+.ovc-conn{display:flex;align-items:center;gap:10px}
+.ovc-conn .st-dot{position:relative;top:1px}
+
+/* ── 6. Page header block ── */
+.pg-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.rfsh-tm{font-size:10.5px;opacity:0.75}
+
+/* ── 7. Buttons & focus states ── */
+.btn{font-weight:600;transition:all .18s var(--ease-apple)}
+.btn-s{box-shadow:var(--hairline)}
+.btn-s:hover{transform:translateY(-1px);box-shadow:var(--hairline),0 4px 14px -4px rgba(0,0,0,0.4)}
+.btn:not(.btn-s){box-shadow:0 1px 2px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.07)}
+.btn:not(.btn-s):hover{filter:brightness(1.07);transform:translateY(-1px);box-shadow:0 6px 20px -6px rgba(var(--accent-rgb),0.5),inset 0 1px 0 rgba(255,255,255,0.09)}
+.btn:focus-visible{outline:none;box-shadow:var(--accent-glow)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:rgba(var(--accent-rgb),0.55)!important;box-shadow:var(--accent-glow)}
+
+/* ── 8. Tables, tags ── */
+.tbl th{font-size:10px;letter-spacing:0.7px;color:var(--text-muted);text-transform:uppercase}
+.tag{font-weight:650}
+.tag.green{box-shadow:inset 0 0 0 1px rgba(48,209,88,0.25)}
+.tag.red{box-shadow:inset 0 0 0 1px rgba(255,69,58,0.25)}
+
+/* ── 9. Charts ── */
+.mgc{height:56px;padding-top:8px}
+.tw svg text{font-family:var(--font)}
+
+/* ── 10. Skeleton shimmer ── */
+.skl{background:linear-gradient(100deg,var(--surface) 40%,var(--surface-raised) 50%,var(--surface) 60%);background-size:200% 100%;animation:sklShim 1.4s ease-in-out infinite}
+@keyframes sklShim{to{background-position:-200% 0}}
+
+/* ── 11. Nav dropdown groups ── */
+.ndrop{position:relative}
+.ndrop-btn{display:flex;align-items:center;gap:5px;padding:7px 11px;border-radius:9px;border:none;background:transparent;color:rgba(255,255,255,0.56);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;line-height:1}
+.ndrop-btn svg{width:15px;height:15px;opacity:0.55;transition:opacity .15s}
+.ndrop-btn .nd-caret{width:9px;height:9px;opacity:.4;transition:transform .2s}
+.ndrop-btn:hover{color:rgba(255,255,255,0.92);background:rgba(255,255,255,0.055)}
+.ndrop-btn:hover svg{opacity:1}
+.ndrop.open .ndrop-btn{color:rgba(255,255,255,0.95);background:rgba(255,255,255,0.07)}
+.ndrop.open .ndrop-btn .nd-caret{transform:rotate(180deg)}
+.ndrop.open .ndrop-btn .nd-main-ic{opacity:1;color:var(--accent)}
+.ndrop-menu{position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%) translateY(-6px);min-width:208px;background:rgba(16,16,22,0.92);backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);border:1px solid rgba(255,255,255,0.09);border-radius:14px;padding:6px;opacity:0;visibility:hidden;transition:opacity .18s var(--ease-apple),transform .18s var(--ease-apple),visibility .18s;box-shadow:0 16px 48px -8px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.07);z-index:60}
+.ndrop.open .ndrop-menu{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.nd-item{display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;border-radius:9px;background:transparent;color:rgba(255,255,255,0.62);font-size:12.5px;font-weight:500;cursor:pointer;transition:all .13s;font-family:inherit;text-align:left}
+.nd-item svg{width:15px;height:15px;opacity:0.5;flex-shrink:0}
+.nd-item:hover{color:#fff;background:rgba(var(--accent-rgb),0.13);box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),0.18)}
+.nd-item:hover svg{opacity:0.9}
+.nd-item.active{color:var(--accent);background:var(--accent-soft)}
+.nd-item.active svg{opacity:1;color:var(--accent)}
+.nd-label{padding:7px 10px 4px;font-size:9.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.28);user-select:none}
+body.light-mode .ndrop-btn{color:rgba(15,20,40,0.5)}
+body.light-mode .ndrop-btn:hover,body.light-mode .ndrop.open .ndrop-btn{color:rgba(15,20,40,0.9);background:rgba(15,20,40,0.05)}
+body.light-mode .ndrop-menu{background:rgba(255,255,255,0.96);border-color:rgba(15,20,40,0.09);box-shadow:0 16px 48px -8px rgba(20,25,50,0.2),inset 0 1px 0 rgba(255,255,255,0.8)}
+body.light-mode .nd-item{color:rgba(15,20,40,0.6)}
+body.light-mode .nd-item:hover{color:#141828;background:rgba(var(--accent-rgb),0.09);box-shadow:inset 0 0 0 1px rgba(var(--accent-rgb),0.14)}
+body.light-mode .nd-item.active{color:var(--accent);background:rgba(var(--accent-rgb),0.08)}
+body.light-mode .nd-label{color:rgba(15,20,40,0.35)}
+
+/* ── 12. Login page additions ── */
+.login-brand{position:absolute;top:16px;left:20px;font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,0.22);z-index:2;user-select:none}
+body.light-mode .login-brand{color:rgba(15,20,40,0.3)}
+.login-card h1{font-size:24px}
+.login-card .sub{font-size:13px;color:rgba(255,255,255,0.42);margin-bottom:24px}
+body.light-mode .login-card .sub{color:rgba(15,20,40,0.45)}
+.login-card .icon-wrap{background:linear-gradient(135deg,var(--accent),rgba(var(--accent-rgb),0.72))!important;box-shadow:0 8px 24px -6px rgba(var(--accent-rgb),0.5),inset 0 1px 0 rgba(255,255,255,0.25)}
+.login-card .ft{color:rgba(255,255,255,0.25)!important}
+body.light-mode .login-card{background:rgba(255,255,255,0.88)!important;border-color:rgba(15,20,40,0.07)!important;box-shadow:0 24px 80px rgba(20,25,50,0.12)!important}
+body.light-mode .ft{color:rgba(15,20,40,0.35)!important}
+.login-footnote{position:fixed;bottom:14px;left:0;right:0;text-align:center;font-size:10px;letter-spacing:0.4px;color:rgba(255,255,255,0.1);z-index:1}
+body.light-mode .login-footnote{color:rgba(15,20,40,0.22)}

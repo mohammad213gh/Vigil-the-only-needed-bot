@@ -142,7 +142,7 @@ function verifyDashToken(row, candidate) {
 // ──── Dashboard Config (SQLite) ────
 const DEFAULT_DASHBOARD_CONFIG = {
     accentColor: '#5865F2',
-    title: 'Bot Dashboard',
+    title: 'Vigil',
     backgroundImage: null,
     backgroundType: 'none',
     backgroundBlur: 'md',

@@ -17,12 +17,25 @@ export function showSec(n){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.notch-link').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.notch-mobile-link').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nd-item').forEach(s=>s.classList.remove('active'));
   const sec=document.getElementById('sec-'+n);sec.classList.add('active');
   sec.classList.remove('sec-enter');void sec.offsetWidth;sec.classList.add('sec-enter');
   const nav=document.querySelector('.notch-link[data-sec="'+n+'"]');if(nav)nav.classList.add('active');
   const mnav=document.querySelector('.notch-mobile-link[data-sec="'+n+'"]');if(mnav)mnav.classList.add('active');
+  const ndi=document.querySelector('.nd-item[data-sec="'+n+'"]');if(ndi)ndi.classList.add('active');
+  document.querySelectorAll('.ndrop.open').forEach(d=>d.classList.remove('open'));
   setTimeout(()=>{document.querySelectorAll('#sec-'+n+' .sr').forEach(el=>srObs.observe(el))},50)
 }
+
+// ═══ NAV DROPDOWN GROUPS ═══
+// Toggle (or force-close) a top-bar dropdown group. data-fn driven from index.html.
+export function toggleNavDrop(id,closeOnly){
+  const drop=document.getElementById(id);if(!drop)return;
+  const wasOpen=drop.classList.contains('open');
+  document.querySelectorAll('.ndrop.open').forEach(d=>d.classList.remove('open'));
+  if(!wasOpen&&!closeOnly)drop.classList.add('open');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.ndrop'))document.querySelectorAll('.ndrop.open').forEach(d=>d.classList.remove('open'))});
 
 // ═══ SERVER MANAGEMENT ═══
 let srvMgmtTab='overview';

@@ -17,7 +17,7 @@ import './09-activity.mjs';
 import './10-polls.mjs';
 
 import { addDashUserUI, alertSrvChanged, backSrv, backupNow, cancelGw, clearBrandAsset, createGwUI, delBackup, dlBackup, endGw, errClearLog, errLoadMore, errSetFilter, errToggleStack, exportBotConfig, exportConfig, exportStats, filterCommands, filterServers, loadAudit, loadBackups, loadDashUsers, loadErrorAlert, loadErrors, loadGiveaways, loadServers, logout, populateGwServers, previewBg, previewBgBlur, previewBorder, previewColor, previewFont, previewRadius, previewTitle, removeDashUserUI, rerollGw, saveErrorAlert, saveSettings, saveUserScopes, setLook, showSrv, showToast, togW, toggleBgType, toggleLogCat, toggleMobileMenu, toggleTheme, toggleUserScopes, updateBotAvatar, updateBotName, updateBotPresence, uploadBgFile, uploadBrandAsset } from './01-foundation.mjs';
-import { addTrackedChannel, clearTrackedChannels, msgSearchFilterChange, onMsgSearchInput, palRun, removeTrackedChannel, resetGreetingConfig, saveAllLogSettings, saveGreetingConfig, saveSrvSettings, showSec, showSrvTab, toggleGreeting, updatePreview } from './02-ui-shell.mjs';
+import { addTrackedChannel, clearTrackedChannels, msgSearchFilterChange, onMsgSearchInput, palRun, removeTrackedChannel, resetGreetingConfig, saveAllLogSettings, saveGreetingConfig, saveSrvSettings, showSec, showSrvTab, toggleGreeting, toggleNavDrop, updatePreview } from './02-ui-shell.mjs';
 import { addSrvNote, banSrvMember, kickSrvMember, loadInsights, loadInvites, loadMemberProfile, loadMod, loadMpServers, loadSrvNotes, searchMembers, timeoutSrvMember, toggleCompact, warnSrvMember } from './03-mod-tools.mjs';
 import { addTicketType, createTicketPanel, deleteTicketType, editQuestions, editTicketTypeSettings, loadTickets, previewTicketPanel, ticketSetLog, ticketToggle, ticketToggleLeave, tkClonePanel, tkCloseModal, tkDeletePanel, tkEditMessage, tkEditPanel, tkMarkUnsaved, tkPrevCreate, tkPrevPick, tkRecFilterSet, tkRenamePanel, tkResetChanges, tkSaveChanges, tkSetCount, tkToggleFreq, tkToggleRoleChip } from './04-tickets.mjs';
 import { addAMFilter, bulkAMFilter, deleteAMFilter, exportAMConfig, importAMConfig, loadAutomod, saveAMChannels, saveAMRoles, saveAMRule, toggleAMChanMode, toggleAMChannel, toggleAMRole, toggleAMRule, uploadTxtFilter } from './05-auto-mod.mjs';
@@ -92,6 +92,7 @@ window.saveAllLogSettings = saveAllLogSettings;
 window.saveGreetingConfig = saveGreetingConfig;
 window.saveSrvSettings = saveSrvSettings;
 window.showSec = showSec;
+window.toggleNavDrop = toggleNavDrop;
 window.showSrvTab = showSrvTab;
 window.toggleGreeting = toggleGreeting;
 window.updatePreview = updatePreview;
