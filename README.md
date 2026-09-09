@@ -8,6 +8,7 @@
 ![Discord.js](https://img.shields.io/badge/Discord.js-v14-5865F2?logo=discord&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+[![CI](https://github.com/mohammad213gh/Discord-bot/actions/workflows/ci.yml/badge.svg)](https://github.com/mohammad213gh/Discord-bot/actions/workflows/ci.yml)
 ![Tests](https://img.shields.io/badge/160%20tests%20passing-3ba55c)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red)](LICENSE)
 
@@ -740,7 +741,7 @@ Since the internet is full of READMEs that overpromise, here's the part nobody w
 
 - **It works — and it's actually running.** This bot has been live in real servers, deployed continuously, with CI gating every push.
 - **It's a solo project that grew fast.** The two biggest monoliths are gone — the dashboard server is split into focused modules (like the frontend before it) and both command surfaces run through one shared pipeline — but parts of the frontend are still legacy-style (`var`, one-letter names, HTML built by string concatenation). It's navigable and it works; it is not a showcase of perfect architecture. The code *inside* the split modules is still the old code, honestly moved — that's on the list, and every change is protected by the boot test.
-- **1.0.0 means "it runs," not "it's done."** Version numbers here track *working*, not *polish*.
+- **1.0.0 means "it runs," not "it's done."** Version numbers here track *working*, not *polish*. v1.0.0 marks the unified command pipeline, the modular dashboard backend, versioned database migrations, and a 160-test suite gating every push.
 - **You are the SLA.** When it goes down, it's your host that went down. Backups, uptime, and security are yours to own — which is the whole point of self-hosting, but don't pretend otherwise.
 - **Tests are a safety net, not a proof.** The suite is real and it has caught genuine bugs, but the highest-value verification is a human clicking through the dashboard in a browser — the thing no automated test here does yet.
 - It's **proprietary** — you can run it and modify it for yourself, but not redistribute it. See the license.
@@ -760,6 +761,14 @@ In short:
 - ❌ Share or resell the source code
 
 ---
+
+## Contributor tooling
+
+There's no CONTRIBUTING.md because there are no contributors yet — but if you're poking at the code, three things live in `scripts/`:
+
+- **`verify-data-args.mjs`** — sanity-checks every `data-args` attribute in the dashboard frontend against the shape the delegated event dispatcher expects. Runs automatically in CI; run it yourself with `node scripts/verify-data-args.mjs` after touching any dashboard HTML or `.mjs` part. Exits non-zero on failure.
+- **`convert-inline-handlers.mjs`** — the one-time codemod that converted the old inline `onclick=` handlers to the CSP-safe `data-fn`/`data-args` system. Already applied; kept for reference if you ever add pages.
+- **`migrate-data-args.mjs`** — the companion pass that wrapped bare `data-args` values in the JSON-array format. Also already applied, kept for the same reason.
 
 <div align="center">
 **Vigil** — built by franc · Discord: .nlux. (1200828694088917114)

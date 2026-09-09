@@ -47,3 +47,6 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+
+      - name: Verify dashboard data-args attributes
+        run: node scripts/verify-data-args.mjs
