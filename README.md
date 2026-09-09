@@ -14,22 +14,20 @@
 
 [Features](#features) · [Dashboard](#the-dashboard) · [Quick start](#quick-start) · [Configuration](#configuration) · [Architecture](#architecture) · [Troubleshooting](#troubleshooting--faq) · [License](#license)
 
-*(Screenshots: the dashboard login, the Overview page, and a live log embed in Discord.)*
-
 </div>
 
 ---
 
-Vigil is a moderation, logging, and community-management bot for Discord, built to be run **by you, on your own server**. Everything it does is covered in this document — every command, every configuration variable, every design decision. If a README ever saved you an hour, this one tries to.
+Vigil is a moderation, logging, and community-management bot for Discord that you run yourself, on your own machine. I wrote this doc the way I always wished a README worked: every command is in here, every environment variable, and the reasoning behind the weird decisions. It's long. That's on purpose — hit Ctrl+F and search it.
 
-It was built by someone who ran servers, got tired of reaction roles sitting behind a "Premium" tab, and stopped renewing subscriptions. It has been running real communities continuously. It is infrastructure, not a portfolio piece.
+The short backstory: I run servers. I got tired of reaction roles living behind a "Premium" tab, so I stopped renewing subscriptions and started building. Vigil has been running my communities ever since, more or less nonstop. It's infrastructure first and a project second.
 
-**Philosophy, in four lines:**
+The idea, quickly:
 
-- **You host it, you own it.** One Node process, one SQLite file. No accounts, no cloud, no monthly fee, no feature tier.
-- **One command surface.** Every slash command also works as a prefix command (`;` by default), through the exact same code path — same handlers, same cooldowns, same permission checks.
-- **Boring on purpose.** No microservices, no required containers, no Redis. Boring is what survives redeploys.
-- **Honest limits.** No music, no leveling, no economy — never needed, never built. This README says what the bot *doesn't* do as clearly as what it does.
+- **You host it, you own it.** One Node process, one SQLite file. No accounts, no cloud, no subscription, and no feature tier — there's nobody here to upsell you.
+- **Every command works two ways.** Slash and prefix (`;` by default) run the exact same code. Same handlers, same cooldowns, same permission checks. Your old habits and your keyboard both work.
+- **Boring on purpose.** No microservices, no Redis, no required Docker. Boring is what survives redeploys.
+- **I'll tell you what it doesn't do.** No music, no leveling, no economy. I never needed them, so I never built them. More at the [bottom](#what-it-deliberately-is-not).
 
 ---
 
@@ -55,7 +53,7 @@ All 70 top-level commands work as slash commands **and** prefix commands (defaul
 
 ### 🛡️ Moderation
 
-The standard suite — with the detail that separates a real mod bot from a toy: **every action opens a numbered case**, so your staff team always has an auditable record of who did what to whom, and why.
+The standard suite, with the detail that separates a real mod bot from a toy: **every action opens a numbered case**. Who did it, to who, when, why. Your staff team always has the receipt.
 
 | Command | What it does |
 |---|---|
@@ -79,7 +77,7 @@ The standard suite — with the detail that separates a real mod bot from a toy:
 
 ### 📜 Logging — 16 categories, ~40 event types
 
-Vigil writes a log embed for almost everything that happens in your server. The channel-creation embed below is real output — that's what every logged event looks like in your mod channel:
+Here's what a log entry actually looks like in your mod channel (a real one, not a mockup):
 
 <p align="center"><img src="docs/screenshots/log-embed.png" alt="A Vigil log embed in Discord: a voice channel creation event, with the actor, channel name, type, and ID laid out cleanly" width="420"></p>
 
@@ -93,11 +91,11 @@ Per category, you control:
 - **Whether it's on** — `/log toggle category:messages enabled:true`
 - **How it looks** — every embed inherits your server's embed config (color, footer) via `/embedconfig`
 
-Logged deleted messages **stay searchable** — see the next section. That's the feature Discord doesn't give you for free.
+Deleted messages stay in the log **and stay searchable** (next section). Discord doesn't do that for you, and it matters more than you'd think.
 
 ### 🔍 Message log search
 
-`/logs search` digs through stored message logs by **user**, **keyword**, and **action** (deleted/edited only), up to 50 results. This is the "someone said something awful and deleted it" feature. It has settled real disputes.
+`/logs search` digs through stored message logs by **user**, **keyword**, and **action** (deleted/edited only), up to 50 results. Every mod team needs this eventually: someone says something awful and deletes it, not knowing you can still pull it up. It has quietly settled more disputes in my server than I can count.
 
 ### 🤖 Auto-mod
 
@@ -152,7 +150,7 @@ The deepest system in the bot, built on **panels** (what users click) and **type
 
 **Rules:** `blacklist_add` (ban someone from opening tickets) · `type_inactivity hours:24` (auto-close stale tickets) · `close_on_leave` (auto-close when the member leaves) · `log_channel` (where transcripts go)
 
-When a ticket closes, Vigil **snapshots the full transcript into the database** — message by message, with authors and timestamps. A closed ticket is a permanent record, not a deleted channel.
+When a ticket closes, Vigil **snapshots the entire transcript into the database** — every message, author, timestamp. A closed ticket becomes a permanent record instead of a deleted channel, which is exactly what you want the day someone says "I never said that."
 
 ### ⚖️ Ban appeals
 
@@ -233,12 +231,14 @@ A dozen quiet-afternoon commands: `8ball` · `coinflip` · `dice` · `rps` · `j
 
 ## The dashboard
 
-Slash commands run a server; the dashboard *operates* one. It's a full single-page web app served from the **same process** as the bot — no second service to deploy. Log in from a browser (`/dashboard` in Discord gives you the link) and manage everything without touching Discord or a terminal.
+Slash commands are for running a server in the moment. The dashboard is for actually operating one. It's a full single-page app served by the bot itself — same process, nothing extra to deploy. Type `/dashboard` in Discord, open the link, and run basically everything from the browser.
+
+I honestly operate my own servers almost entirely from here now. The commands are still there for when you're in Discord anyway.
 
 **Two ways in:**
 
-1. **Password** — the shared `DASHBOARD_PASSWORD` from your env
-2. **Discord ID + token** — grant specific people scoped access with `/dashaccess add @user`; they log in with their Discord ID and a per-user token, and see only the servers you granted
+1. **Password** — the `DASHBOARD_PASSWORD` you set in your env. Yours alone.
+2. **Discord ID + token** — run `/dashaccess add @user` and someone specific gets their own token, seeing only the servers you granted them. Good for co-owners and trusted mods.
 
 The gate:
 
@@ -296,7 +296,7 @@ Pick a server from **Servers**, then:
 
 ## Quick start
 
-**You need:** Node.js 20+, a bot application + token from the [Discord Developer Portal](https://discord.com/developers/applications), and the bot invited to your server with the `applications.commands` scope.
+**You need three things:** Node.js 20 or newer, a bot token from the [Discord Developer Portal](https://discord.com/developers/applications), and the bot invited with the `applications.commands` scope. Five minutes, all told.
 
 ```bash
 git clone https://github.com/mohammad213gh/Vigil.git
@@ -306,7 +306,7 @@ cp .env.example .env      # then fill in BOT_TOKEN, OWNER_ID, DASHBOARD_PASSWORD
 npm start
 ```
 
-Then in your server, run **`/deploy` once** — and again after every update that adds or changes commands — so Discord's command list stays in sync.
+Then run **`/deploy` once** in your server. That registers the slash commands with Discord. You'll run it again whenever an update adds commands, and if commands ever seem to vanish, this is why.
 
 **Enable the privileged intents.** In the Developer Portal (Bot → Privileged Gateway Intents), turn on:
 
@@ -324,7 +324,7 @@ The boot logs tell you if something's missing.
 
 ## Configuration
 
-Everything is environment variables. Copy `.env.example` → `.env`.
+All config lives in environment variables. Copy `.env.example` to `.env` and fill in the three required ones. The tables below explain every line, including the ones people get wrong.
 
 ### Required
 
@@ -361,7 +361,7 @@ Vigil is **SQLite-only** now. Legacy `CONFIG_PATH` / `REMINDERS_PATH` / `LOG_CHA
 
 ## Data, storage & backups
 
-**Everything lives in one SQLite database** (`bot.db` inside `DATA_DIR`, via `better-sqlite3`): configs, warnings, cases, tickets and transcripts, logs, stats, reminders, giveaways, dashboard users, the audit trail — 48 tables. No database server, nothing to operate.
+The whole bot runs on **one SQLite file** (`bot.db` inside `DATA_DIR`, via `better-sqlite3`). Configs, warnings, cases, ticket transcripts, logs, stats, reminders, giveaways, the audit trail: 48 tables in one file you can copy and hold in your hand. No database server to install, nothing to operate. I can't overstate how much pain this one decision has saved me.
 
 Schema changes are **versioned migrations** (recorded in `schema_migrations`): each runs once, in order, inside a transaction. A real failure stops the boot loudly — no silent `try/catch ALTER` limping into "no such column" three days later. Older databases self-heal across the old migration path.
 
@@ -379,7 +379,7 @@ Invite stats are deliberately never pruned (the leaderboard *is* the point); gro
 
 ### Backups
 
-Dashboard → System → Backups: create (SQLite `VACUUM INTO`, safe while running), verify integrity, download, delete. Do this before every update. It takes ten seconds.
+Dashboard → System → Backups. Create one (uses SQLite `VACUUM INTO`, safe while the bot is running), verify its integrity, download it, delete old ones. Take one before every update — it takes ten seconds and has saved me exactly once, which is once more than I needed it to.
 
 ---
 
@@ -393,7 +393,7 @@ Discord ←─ discord.js v14 ─→  bot logic  ─→  SQLite (better-sqlite3)
                          Express dashboard
 ```
 
-Bot and dashboard share one Node process and one database file. ~80–120 MB RAM for a few hundred members. No containers required, no microservices — deliberately boring, boring survives redeploys.
+Bot and dashboard are one Node process sharing one file. It idles around 80–120 MB of RAM with a few hundred members. People ask why there's no Redis, no Kubernetes, no microservices: because I have to fix this thing at 2am, and every moving part is a thing that wakes me up.
 
 ### The code, file by file
 
@@ -472,7 +472,7 @@ src/
 
 ### The memory leak that almost killed the project
 
-Early on, one unremoved event listener took memory from 60 MB to 400+ MB in hours. Weeks of hunting; one line to fix; nearly scrapped the project over it. It's fixed — and it's why cleanup and graceful shutdown are treated as features here, and why "it works on my machine for a day" was never the bar.
+A war story, because it explains how this code is written: early on, a single unremoved event listener was quietly eating memory. 60 MB to 400+ in a few hours. It took me weeks to find and was one line to fix, and I nearly quit the project somewhere in the middle of hunting it. That's why cleanup, graceful shutdown, and error isolation are treated as features here, and why "it ran on my machine for a day" was never good enough.
 
 ---
 
@@ -501,7 +501,7 @@ node scripts/verify-data-args.mjs     # frontend data-args contract (also in CI)
 node scripts/analyze-modules.mjs      # frontend module graph check
 ```
 
-**What tests don't cover — read this twice:** no real-browser end-to-end tests, no click-through automation. Green CI means *nothing obviously broke*, not *the feature works in every browser*. Bugs have shipped that only appeared in production. The highest-value verification is a human clicking through the dashboard — do that after updates.
+**What the tests don't cover, and I want to be straight about:** there's no real-browser testing here. No click-through automation. Green CI means nothing obviously broke — it does not mean the new feature works in your browser. I've shipped bugs that only showed up in production. So after an update, spend two minutes actually clicking through the dashboard. That's the real test.
 
 ---
 
@@ -517,7 +517,7 @@ The dashboard is the sensitive surface; it gets real treatment:
 - **Parameterized SQL everywhere**; **CSP** with no `unsafe-inline` scripts; uploads type/size-validated
 - **Audit trail** for sensitive dashboard actions
 
-**The honest limits:** primary auth is a shared password from an env var; sessions are in-memory (restart = log in again); no per-user rate limiting beyond login. Right for self-hosting; not enterprise SSO. Put the dashboard behind your host's auth if you're cautious, and don't reuse the password anywhere.
+**What it doesn't protect against:** the main login is one shared password that lives in your `.env`. Sessions sit in memory, so a restart logs everyone out. That's fine for a self-hosted bot and it is not enterprise SSO, and I'm not going to pretend otherwise. If that bothers you, put the dashboard behind your host's access controls — and don't reuse that password anywhere else, obviously.
 
 ---
 
@@ -525,7 +525,7 @@ The dashboard is the sensitive surface; it gets real treatment:
 
 Plain Node + one persistent folder. Any host offering both works.
 
-### Railway
+### Railway (what I run my own instance on)
 
 1. New project → Deploy from GitHub repo
 2. Variables: `BOT_TOKEN`, `OWNER_ID`, `DASHBOARD_PASSWORD`, `GUILD_ID`, `DATA_DIR=/data`
@@ -586,14 +586,14 @@ No music. No leveling/XP. No economy. No dashboard-as-a-service, no SaaS, no pre
 
 Most READMEs oversell. Here's the other direction:
 
-- **It works, and it's running.** Live in real servers, deployed continuously, every push gated by CI on two Node versions.
-- **It's a solo project that grew fast.** The two big monoliths are gone — the dashboard backend is split into focused modules, the frontend into real ES modules, and both command surfaces share one pipeline — but code *inside* some modules is still legacy-style (`var`, one-letter names, string-built HTML). It works and it's navigable; it isn't a showcase. It's protected by the boot test while it gets cleaned up.
-- **Versions mean "working," not "done."** v1.0.0 marked the unified pipeline, the modular dashboard, versioned migrations, and the 160-test gate. The numbers move when things work, not when things look nice.
-- **You are the SLA.** When it's down, your host is down. Backups, uptime, and security are yours — that's self-hosting, stated plainly.
-- **Tests are a safety net, not proof.** They've caught real bugs (including a fail-closed tenant-scoping bug during a refactor). They don't click through a browser. You should.
-- **The code is free, not ownerless.** Use it, modify it, share forks — keep the credit, don't sell the code. Services around it (installs, hosting, custom work) are fine. [LICENSE](LICENSE) has the fine print.
+- **It actually works.** Not "works in the demo" — it's been live in real servers for a long time: restarted, redeployed, and through every Discord API outage along the way.
+- **It's a solo project, and it shows in places.** The two big monoliths are gone (dashboard backend, frontend) and both command surfaces share one pipeline. But open a few frontend modules and you'll still find `var`, one-letter variables, and HTML glued together from strings. It all works, and it's easy to navigate. It's just not pretty, and I'd rather you hear that from me than find it yourself.
+- **Version numbers mean "it works," not "it's finished."** I bump them when things work, not when they look nice.
+- **When it goes down, you're the on-call.** Backups, uptime, security: all yours now. That's the deal you sign with any self-hosted thing. I think it's a good deal, but it *is* a deal.
+- **The tests are a seatbelt, not a guarantee.** They've caught real bugs — a tenant-scoping flaw during a refactor, a Node 20 crash CI never should have hidden. They can't click through a browser for you.
+- **Free, but not nameless.** Take it, change it, ship your fork. Keep my name on it and don't sell it. [LICENSE](LICENSE) says exactly what's allowed, in plain English.
 
-If that trade sounds fair — everything owned, nothing paid monthly, in exchange for running it yourself — welcome. It's a good bot.
+If that trade sounds fair — total ownership, zero monthly fees, and you're the sysadmin — I think you'll like it here. It's a good bot.
 
 ---
 
@@ -609,7 +609,7 @@ Vigil is free and open under the **Vigil Community Source License** — in short
 
 Gray areas (paid servers, donations, managed hosting, forks) are answered explicitly in [section 5 of the license](LICENSE).
 
-Found a bug or want a feature? Open an issue, or DM **.nlux.** on Discord (ID `1200828694088917114`).
+Found a bug? Open an issue. Want to talk to a human? DM **.nlux.** on Discord (ID `1200828694088917114`) — that's me, and I read all of them.
 
 ---
 
